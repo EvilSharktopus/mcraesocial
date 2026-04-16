@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/workbooks/10-2/:path*",
+      "destination": "https://mcraesocial.vercel.app/:path*"
+    },
+    {
+      "source": "/workbooks/10-2",
+      "destination": "https://mcraesocial.vercel.app/"
+    }
+  ]
+}
