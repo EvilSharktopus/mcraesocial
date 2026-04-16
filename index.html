@@ -1,221 +1,108 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mr. McRae's Classes — Social Studies</title>
-  <meta name="description" content="Mr. McRae's Social Studies class portal. Access the SS 10-2 Workbook, the Nationalism Game simulation, and more." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #090c14;
-      --surface: #111827;
-      --surface-hover: #1a2236;
-      --border: rgba(255,255,255,0.07);
-      --text: #e8eaf2;
-      --muted: #8892a4;
-      --accent-blue: #6c8cff;
-      --accent-red: #ff6b6b;
-      --accent-green: #56d48b;
-      --glow-blue: rgba(108,140,255,0.15);
-      --glow-red: rgba(255,107,107,0.12);
-    }
-
-    html, body {
-      min-height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100dvh;
-      padding: 2rem 1.5rem;
-      background-image:
-        radial-gradient(ellipse 60% 40% at 20% 10%, rgba(108,140,255,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(255,107,107,0.06) 0%, transparent 60%);
-    }
-
-    /* ── Header ── */
-    .header {
-      text-align: center;
-      margin-bottom: 3rem;
-    }
-
-    .header-icon {
-      font-size: 3rem;
-      margin-bottom: 0.75rem;
-      filter: drop-shadow(0 0 20px rgba(108,140,255,0.4));
-      animation: float 4s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50%       { transform: translateY(-6px); }
-    }
-
-    .header h1 {
-      font-size: clamp(2rem, 5vw, 2.75rem);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #ffffff 0%, #a0aec0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .header p {
-      margin-top: 0.5rem;
-      color: var(--muted);
-      font-size: 1rem;
-      letter-spacing: 0.02em;
-    }
-
-    /* ── Cards Grid ── */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.25rem;
-      width: 100%;
-      max-width: 780px;
-    }
-
-    .card {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 1.75rem;
-      text-decoration: none;
-      color: inherit;
-      overflow: hidden;
-      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-      cursor: pointer;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-    }
-
-    /* Blue card */
-    .card--blue::before  { background: var(--glow-blue); }
-    .card--blue:hover    { border-color: rgba(108,140,255,0.4); box-shadow: 0 8px 40px rgba(108,140,255,0.15); }
-    .card--blue:hover::before { opacity: 1; }
-
-    /* Red card */
-    .card--red::before   { background: var(--glow-red); }
-    .card--red:hover     { border-color: rgba(255,107,107,0.4); box-shadow: 0 8px 40px rgba(255,107,107,0.12); }
-    .card--red:hover::before { opacity: 1; }
-
-    .card-emoji {
-      font-size: 2.25rem;
-      margin-bottom: 1rem;
-      line-height: 1;
-    }
-
-    .card-tag {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 0.5rem;
-    }
-
-    .card--blue .card-tag  { color: var(--accent-blue); }
-    .card--red  .card-tag  { color: var(--accent-red); }
-
-    .card h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .card p {
-      font-size: 0.875rem;
-      color: var(--muted);
-      line-height: 1.6;
-      flex: 1;
-    }
-
-    .card-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      margin-top: 1.25rem;
-      font-size: 0.875rem;
-      font-weight: 600;
-      transition: gap 0.2s ease;
-    }
-
-    .card--blue .card-link { color: var(--accent-blue); }
-    .card--red  .card-link { color: var(--accent-red); }
-
-    .card:hover .card-link { gap: 0.55rem; }
-
-    /* ── Footer ── */
-    footer {
-      margin-top: 3rem;
-      color: var(--muted);
-      font-size: 0.75rem;
-      opacity: 0.6;
-      letter-spacing: 0.04em;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 480px) {
-      .cards { grid-template-columns: 1fr; }
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>McRae's Social Studies</title>
+  <meta name="description" content="Portal for Mr. McRae's Social Studies classes. Access Social 9, 10, 20, 30, and learning tools.">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-  <header class="header">
-    <div class="header-icon">🎓</div>
-    <h1>Mr. McRae's Classes</h1>
-    <p>Social Studies &middot; Select your activity</p>
-  </header>
+  <nav class="site-nav">
+    <div class="site-nav__inner">
+      <a href="/" class="site-nav__brand">MCRAE'S SOCIAL STUDIES</a>
+      <button class="site-nav__hamburger" aria-label="Toggle navigation" aria-expanded="false">â˜°</button>
+      <ul class="site-nav__links">
+        <li><a href="/" class="site-nav__link">Home</a></li>
+        <li><a href="/social-9/" class="site-nav__link">Social 9</a></li>
+        <li><a href="/social-10/" class="site-nav__link">Social 10</a></li>
+        <li><a href="/social-20/" class="site-nav__link">Social 20</a></li>
+        <li><a href="/social-30/" class="site-nav__link">Social 30</a></li>
+        <li class="site-nav__dropdown">
+          <span class="site-nav__link" style="cursor: pointer;">Workbooks ▾</span>
+          <div class="site-nav__dropdown-menu">
+            <a href="https://mcraesocial.vercel.app/workbooks/10-2" class="site-nav__dropdown-item" target="_blank">10-2 Digital Workbook</a>
+          </div>
+        </li>
+        <li><a href="https://nationalism.mcraesocial.com/" class="site-nav__link" target="_blank">Nationalism Game</a></li>
+      </ul>
+    </div>
+  </nav>
 
-  <main class="cards">
+  <!-- Hero Banner containing Course Links -->
+  <div class="home-hero">
+    <div class="home-hero__overlay"></div>
+    <div class="home-hero__content">
+      <div class="home-grid-2x2">
+        <a href="/social-9/" class="unit-grid__item">
+          <img class="unit-grid__img" src="/assets/images/home/social-9.jpg" alt="Social 9">
+          <span class="unit-grid__label">Social 9</span>
+        </a>
+        <a href="/social-10/" class="unit-grid__item">
+          <img class="unit-grid__img" src="/assets/images/home/social-10.jpg" alt="Social 10">
+          <span class="unit-grid__label">Social 10</span>
+        </a>
+        <a href="/social-20/" class="unit-grid__item">
+          <img class="unit-grid__img" src="/assets/images/home/social-20.jpg" alt="Social 20">
+          <span class="unit-grid__label">Social 20</span>
+        </a>
+        <a href="/social-30/" class="unit-grid__item">
+          <img class="unit-grid__img" src="/assets/images/home/social-30.jpg" alt="Social 30">
+          <span class="unit-grid__label">Social 30</span>
+        </a>
+      </div>
+    </div>
+  </div>
 
-    <a href="/workbooks/10-2" class="card card--blue" id="card-workbook">
-      <div class="card-emoji">📚</div>
-      <div class="card-tag">Globalization Unit</div>
-      <h2>SS 10-2 Workbook</h2>
-      <p>Self-paced digital workbook — activities, vocab, checkpoints, and feedback.</p>
-      <span class="card-link">Open <span>→</span></span>
-    </a>
+  <div class="page-content">
 
-    <a href="https://nationalism-game.vercel.app" class="card card--red" id="card-nationalism" target="_blank" rel="noopener">
-      <div class="card-emoji">🌍</div>
-      <div class="card-tag">Simulation</div>
-      <h2>Nationalism Game</h2>
-      <p>Multi-round classroom simulation exploring nationalism, factions, and conflict.</p>
-      <span class="card-link">Open <span>↗</span></span>
-    </a>
+    <!-- Utility Links -->
+    <div class="home-grid-3">
+      <a href="mailto:contact@mcraesocial.com" class="utility-btn">Ask or Submit</a>
+      <a href="/3-source-planner.html" class="utility-btn">3 Source Planner</a>
+      <a href="/position-paper-planner.html" class="utility-btn">Position Paper Planner</a>
+      <a href="https://mcraesocial.vercel.app/workbooks/10-2" target="_blank" class="utility-btn">SS 10-2 Digital Workbook</a>
+      <a href="https://nationalism.mcraesocial.com/" target="_blank" class="utility-btn">Nationalism Game</a>
+    </div>
 
-  </main>
+    <!-- Welcome & Calendar Split -->
+    <div class="split-layout">
+      
+      <div class="welcome-text">
+        <h2 style="margin-top: 0; margin-bottom: 2rem;">Welcome to the Wonderful World of Social Studies</h2>
+        <p>Welcome!</p>
+        <p>Navigate to your course using the menu at the top (or 3 lines if you're on mobile). There you will find notes, assignments and other materials that you may find useful in your learning.</p>
+        <p>If you need to contact me click the "Ask or Submit" button at the top of this page. Using this you can ask a question or submit a comment. Remember that you need an email address to use it and I will contact you either in class or via email (depending on your preference).</p>
+        <p>I hope you can find everything you're looking for!</p>
+        <p>- Mr. McRae</p>
+        <div class="logo-center">
+          <img src="/assets/images/home/mcrae-logo.jpg" alt="McRae Social Logo">
+        </div>
+      </div>
 
-  <footer>mcraesocial.com</footer>
+      <div class="calendar-container">
+        <!-- Google Calendar Embed -->
+        <iframe src="https://calendar.google.com/calendar/embed?src=en.canadian%23holiday%40group.v.calendar.google.com&ctz=America%2FEdmonton" style="border: 0" width="100%" height="600" frameborder="0" scrolling="no"></iframe>
+      </div>
 
+    </div>
+
+    <div style="border-top: 1px solid var(--border); padding-top: 3rem; text-align: center; margin-bottom: 3rem;">
+      <h3 style="margin-bottom: 2rem;">OTHER GREAT PEOPLE ON THE INTERNET!</h3>
+      <a href="https://mswilliams30.weebly.com/" target="_blank" style="display: inline-block; text-decoration: none; color: var(--text);">
+        <img src="/assets/images/home/williams-logo.jpg" alt="Ms. Williams" style="border-radius: 4px; border: 1px solid var(--border);">
+        <div style="margin-top: 0.5rem; font-size: 0.9rem;">Ms. Williams Social Studies 30</div>
+      </a>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">
+    mcraesocial.com
+  </footer>
+
+  <script src="/js/nav.js"></script>
 </body>
 </html>
+
