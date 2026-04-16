@@ -64,6 +64,38 @@ body {
   white-space: nowrap;
 }
 
+.site-nav__logo-link {
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.site-nav__logo-img {
+  height: 30px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  opacity: 0.9;
+  transition: opacity 0.15s ease;
+}
+
+.site-nav__logo-link:hover .site-nav__logo-img {
+  opacity: 1;
+}
+
+.utility-btn--logo {
+  padding: 0.6rem 1rem !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.utility-logo-img {
+  max-height: 52px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .site-nav__links {
   list-style: none;
   display: flex;
@@ -280,7 +312,9 @@ body {
   text-decoration: none;
   color: inherit;
   display: block;
+  position: relative;
   min-height: 44px;
+  overflow: hidden;
 }
 
 .unit-grid__img {
@@ -293,11 +327,17 @@ body {
 }
 
 .unit-grid__label {
-  display: block;
-  margin-top: 0.5rem;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.75rem;
+  background: rgba(45, 50, 64, 0.9);
   font-size: 0.9rem;
   color: var(--text-dim);
   text-align: center;
+  border: none;
 }
 
 .unit-grid__item:hover .unit-grid__label {
@@ -314,6 +354,44 @@ body {
 @media (max-width: 400px) {
   .unit-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── 2-col unit grid variant (Social 10) ── */
+
+.unit-grid--2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  max-width: 640px;
+  margin: 0 auto 0;
+}
+
+.unit-grid--2col .unit-grid__img {
+  max-height: 210px;
+}
+
+.unit-grid--solo {
+  display: flex;
+  justify-content: center;
+  max-width: 640px;
+  margin: 1.5rem auto 3rem;
+}
+
+.unit-grid--solo .unit-grid__item {
+  width: calc(50% - 0.75rem);
+}
+
+.unit-grid--solo .unit-grid__img {
+  max-height: 210px;
+}
+
+@media (max-width: 500px) {
+  .unit-grid--2col {
+    grid-template-columns: 1fr;
+  }
+  .unit-grid--solo .unit-grid__item {
+    width: 100%;
   }
 }
 
@@ -334,7 +412,7 @@ body {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   background: var(--bg);
-  opacity: 0.65;
+  opacity: 0.80;
 }
 
 .home-hero__content {
@@ -361,20 +439,7 @@ body {
 }
 
 .home-grid-2x2 .unit-grid__item {
-  position: relative;
   border: none;
-}
-
-.home-grid-2x2 .unit-grid__label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  margin: 0;
-  background: rgba(45, 50, 64, 0.9) !important;
-  text-align: center;
-  border: none;
-  padding: 0.75rem;
 }
 
 .home-grid-3 {
@@ -625,4 +690,31 @@ body {
   text-align: center;
   font-size: 0.8rem;
   color: var(--text-dim);
+}
+
+
+/* ── Page Zoom Transition ── */
+
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.zoom-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.home-hero .unit-grid__item .unit-grid__img {
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.home-hero .unit-grid__item.is-zooming .unit-grid__img {
+  transform: scale(1.06);
+  filter: brightness(1.15);
 }

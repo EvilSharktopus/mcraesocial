@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -6,6 +6,12 @@
   <title>McRae's Social Studies</title>
   <meta name="description" content="Portal for Mr. McRae's Social Studies classes. Access Social 9, 10, 20, 30, and learning tools.">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="McRae's Social Studies">
+  <meta property="og:description" content="Portal for Mr. McRae's Social Studies classes. Access Social 9, 10, 20, 30, and learning tools.">
+  <meta property="og:image" content="https://mcraesocial.com/assets/images/logo.png">
+  <meta property="og:url" content="https://mcraesocial.com/">
 </head>
 <body>
 
@@ -25,7 +31,7 @@
             <a href="https://mcraesocial.vercel.app/workbooks/10-2" class="site-nav__dropdown-item" target="_blank">10-2 Digital Workbook</a>
           </div>
         </li>
-        <li><a href="https://nationalism.mcraesocial.com/" class="site-nav__link" target="_blank">Nationalism Game</a></li>
+        <li><a href="https://nationalism.mcraesocial.com/" class="site-nav__link site-nav__logo-link" target="_blank"><img src="/assets/images/logo.png" alt="Nationalism Game" class="site-nav__logo-img"></a></li>
       </ul>
     </div>
   </nav>
@@ -60,10 +66,8 @@
     <!-- Utility Links -->
     <div class="home-grid-3">
       <a href="mailto:contact@mcraesocial.com" class="utility-btn">Ask or Submit</a>
-      <a href="/3-source-planner.html" class="utility-btn">3 Source Planner</a>
-      <a href="/position-paper-planner.html" class="utility-btn">Position Paper Planner</a>
-      <a href="https://mcraesocial.vercel.app/workbooks/10-2" target="_blank" class="utility-btn">SS 10-2 Digital Workbook</a>
-      <a href="https://nationalism.mcraesocial.com/" target="_blank" class="utility-btn">Nationalism Game</a>
+      <a href="https://nationalism.mcraesocial.com/" target="_blank" class="utility-btn utility-btn--logo"><img src="/assets/images/logo.png" alt="Nationalism Game" class="utility-logo-img"></a>
+      <a href="/workbooks/" class="utility-btn">Workbooks</a>
     </div>
 
     <!-- Welcome & Calendar Split -->
@@ -76,9 +80,6 @@
         <p>If you need to contact me click the "Ask or Submit" button at the top of this page. Using this you can ask a question or submit a comment. Remember that you need an email address to use it and I will contact you either in class or via email (depending on your preference).</p>
         <p>I hope you can find everything you're looking for!</p>
         <p>- Mr. McRae</p>
-        <div class="logo-center">
-          <img src="/assets/images/home/mcrae-logo.jpg" alt="McRae Social Logo">
-        </div>
       </div>
 
       <div class="calendar-container">
@@ -88,12 +89,8 @@
 
     </div>
 
-    <div style="border-top: 1px solid var(--border); padding-top: 3rem; text-align: center; margin-bottom: 3rem;">
-      <h3 style="margin-bottom: 2rem;">OTHER GREAT PEOPLE ON THE INTERNET!</h3>
-      <a href="https://mswilliams30.weebly.com/" target="_blank" style="display: inline-block; text-decoration: none; color: var(--text);">
-        <img src="/assets/images/home/williams-logo.jpg" alt="Ms. Williams" style="border-radius: 4px; border: 1px solid var(--border);">
-        <div style="margin-top: 0.5rem; font-size: 0.9rem;">Ms. Williams Social Studies 30</div>
-      </a>
+    <div class="logo-center" style="padding-top: 2rem; margin-bottom: 3rem;">
+      <img src="/assets/images/home/mcrae-logo.jpg" alt="McRae Social Logo">
     </div>
 
   </div>
@@ -103,6 +100,31 @@
   </footer>
 
   <script src="/js/nav.js"></script>
+  <script>
+    // Zoom page transition for home course tiles
+    (function () {
+      var overlay = document.createElement('div');
+      overlay.className = 'zoom-overlay';
+      document.body.appendChild(overlay);
+
+      document.querySelectorAll('.home-hero .unit-grid__item').forEach(function (item) {
+        item.addEventListener('click', function (e) {
+          e.preventDefault();
+          var href = this.getAttribute('href');
+          var self = this;
+          self.classList.add('is-zooming');
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              overlay.classList.add('active');
+            });
+          });
+          setTimeout(function () {
+            window.location.href = href;
+          }, 380);
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
 
