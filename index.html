@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mr. McRae's Classes — Social Studies</title>
+  <meta name="description" content="Mr. McRae's Social Studies class portal. Access the SS 10-2 Workbook, the Nationalism Game simulation, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #090c14;
+      --surface: #111827;
+      --surface-hover: #1a2236;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8eaf2;
+      --muted: #8892a4;
+      --accent-blue: #6c8cff;
+      --accent-red: #ff6b6b;
+      --accent-green: #56d48b;
+      --glow-blue: rgba(108,140,255,0.15);
+      --glow-red: rgba(255,107,107,0.12);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 2rem 1.5rem;
+      background-image:
+        radial-gradient(ellipse 60% 40% at 20% 10%, rgba(108,140,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(255,107,107,0.06) 0%, transparent 60%);
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .header-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+      filter: drop-shadow(0 0 20px rgba(108,140,255,0.4));
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-6px); }
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #a0aec0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Cards Grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 780px;
+    }
+
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      text-decoration: none;
+      color: inherit;
+      overflow: hidden;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      cursor: pointer;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    /* Blue card */
+    .card--blue::before  { background: var(--glow-blue); }
+    .card--blue:hover    { border-color: rgba(108,140,255,0.4); box-shadow: 0 8px 40px rgba(108,140,255,0.15); }
+    .card--blue:hover::before { opacity: 1; }
+
+    /* Red card */
+    .card--red::before   { background: var(--glow-red); }
+    .card--red:hover     { border-color: rgba(255,107,107,0.4); box-shadow: 0 8px 40px rgba(255,107,107,0.12); }
+    .card--red:hover::before { opacity: 1; }
+
+    .card-emoji {
+      font-size: 2.25rem;
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+
+    .card-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .card--blue .card-tag  { color: var(--accent-blue); }
+    .card--red  .card-tag  { color: var(--accent-red); }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .card-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: gap 0.2s ease;
+    }
+
+    .card--blue .card-link { color: var(--accent-blue); }
+    .card--red  .card-link { color: var(--accent-red); }
+
+    .card:hover .card-link { gap: 0.55rem; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      opacity: 0.6;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-icon">🎓</div>
+    <h1>Mr. McRae's Classes</h1>
+    <p>Social Studies &middot; Select your activity</p>
+  </header>
+
+  <main class="cards">
+
+    <a href="https://social102workbook.vercel.app" class="card card--blue" id="card-workbook" target="_blank" rel="noopener">
+      <div class="card-emoji">📚</div>
+      <div class="card-tag">Globalization Unit</div>
+      <h2>SS 10-2 Workbook</h2>
+      <p>Self-paced digital workbook — activities, vocab, checkpoints, and feedback.</p>
+      <span class="card-link">Open <span>→</span></span>
+    </a>
+
+    <a href="https://nationalism-game.vercel.app" class="card card--red" id="card-nationalism" target="_blank" rel="noopener">
+      <div class="card-emoji">🌍</div>
+      <div class="card-tag">Simulation</div>
+      <h2>Nationalism Game</h2>
+      <p>Multi-round classroom simulation exploring nationalism, factions, and conflict.</p>
+      <span class="card-link">Open <span>↗</span></span>
+    </a>
+
+  </main>
+
+  <footer>mcraesocial.com</footer>
+
+</body>
+</html>
