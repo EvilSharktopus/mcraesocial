@@ -52,7 +52,7 @@ NAV_HTML = """  <nav class="site-nav">
           <a href="/social-30/" class="site-nav__link">Social 30 &#x25BE;</a>
           <div class="site-nav__dropdown-menu">
             <a href="/social-30/intro-to-ideologies/" class="site-nav__dropdown-item">Intro to Ideologies</a>
-            <a href="/social-30/economics/" class="site-nav__dropdown-item">Economics of Ideology</a>
+            <a href="/social-30/economics/" class="site-nav__dropdown-item">Economics</a>
             <a href="/social-30/dictatorships/" class="site-nav__dropdown-item">Dictatorships</a>
             <a href="/social-30/democracy/" class="site-nav__dropdown-item">Democracy</a>
             <a href="/social-30/imposition/" class="site-nav__dropdown-item">Imposing Liberalism</a>

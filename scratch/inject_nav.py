@@ -1,4 +1,4 @@
-﻿"""
+"""
 Inject course-level dropdown nav into every HTML file in the site.
 Replaces the flat Social 9/10/20/30 links with hover dropdowns listing all units.
 """
@@ -49,7 +49,7 @@ NEW_NAV_LINKS = """      <ul class="site-nav__links">
           <a href="/social-30/" class="site-nav__link">Social 30 &#x25BE;</a>
           <div class="site-nav__dropdown-menu">
             <a href="/social-30/intro-to-ideologies/" class="site-nav__dropdown-item">Intro to Ideologies</a>
-            <a href="/social-30/economics/" class="site-nav__dropdown-item">Economics of Ideology</a>
+            <a href="/social-30/economics/" class="site-nav__dropdown-item">Economics</a>
             <a href="/social-30/dictatorships/" class="site-nav__dropdown-item">Dictatorships</a>
             <a href="/social-30/democracy/" class="site-nav__dropdown-item">Democracy</a>
             <a href="/social-30/imposition/" class="site-nav__dropdown-item">Imposing Liberalism</a>

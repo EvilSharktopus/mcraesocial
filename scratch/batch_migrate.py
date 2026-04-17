@@ -174,7 +174,7 @@ UNITS = [
         "url": f"{W}/economics.html",
         "out": f"{BASE_OUT}/social-30/economics",
         "course": "Social 30",
-        "title": "The Economics of Ideology",
+        "title": "Economics",
         "img": "/assets/images/social-30/economics.png",
     },
     {
