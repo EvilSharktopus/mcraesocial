@@ -298,6 +298,19 @@ body {
   color: var(--accent-hover);
 }
 
+.utility-links__primary {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 2px;
+}
+
+.utility-links__primary:hover {
+  color: #fff !important;
+  border-color: var(--accent-hover);
+}
+
 
 /* ── Image Grid (Unit Thumbnails) ── */
 
@@ -541,6 +554,275 @@ body {
   letter-spacing: 0.1em;
   color: var(--text-dim);
   margin-bottom: 1rem;
+}
+
+
+/* ── Utility Button ── */
+
+.utility-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  background: transparent;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.utility-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.utility-btn--work {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(123, 143, 181, 0.08);
+}
+
+.utility-btn--work:hover {
+  background: rgba(123, 143, 181, 0.18);
+  color: var(--accent-hover);
+}
+
+
+/* ── Unit Banner ── */
+
+.unit-banner {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.unit-banner__img {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+
+.unit-banner__overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30, 35, 45, 0.72);
+  z-index: 1;
+}
+
+.unit-banner__text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.unit-banner__course {
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+
+/* ── Unit Sections ── */
+
+.unit-section {
+  border-bottom: 1px solid var(--border);
+  padding: 2rem 1.5rem;
+}
+
+.unit-section:last-child {
+  border-bottom: none;
+}
+
+.unit-section__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 1.5rem;
+}
+
+.unit-para {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+}
+
+
+/* ── Stream Groups ── */
+
+.stream-group {
+  margin-bottom: 1.5rem;
+}
+
+.stream-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .stream-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* When a stream-group is hidden via JS (display:none), collapse grid to 1 col */
+.stream-groups:has([data-stream][style*="display: none"]) {
+  grid-template-columns: 1fr;
+}
+
+
+.stream-group__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+[data-stream] {
+  transition: opacity 0.15s ease;
+}
+
+
+/* ── Assignment Block ── */
+
+.assignment-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.assignment-block:last-child {
+  border-bottom: none;
+}
+
+.assignment-block__label {
+  flex: 1;
+  min-width: 200px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.assignment-block__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+
+/* ── PDF Thumbnail Tile ── */
+
+.pdf-thumb {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.15s;
+  margin-bottom: 1.25rem;
+}
+
+.pdf-thumb:hover {
+  border-color: var(--accent);
+}
+
+.pdf-thumb__img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--bg-alt);
+  overflow: hidden;
+}
+
+.pdf-thumb__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Fallback placeholder shown when no image file exists yet */
+.pdf-thumb__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--bg-alt);
+}
+
+.pdf-thumb__icon {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  width: 40px;
+  height: 48px;
+  border: 1px solid var(--accent);
+  background: rgba(123, 143, 181, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-thumb__label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+
+/* ── Utility Link Items (Handouts / Required Reading) ── */
+
+.utility-link-item {
+  display: block;
+  padding: 0.6rem 0;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  transition: color 0.15s;
+}
+
+.utility-link-item:last-child {
+  border-bottom: none;
+}
+
+.utility-link-item:hover {
+  color: var(--accent-hover);
 }
 
 
