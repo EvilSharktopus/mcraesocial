@@ -101,3 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// Fix blank screen when navigating back (bfcache restore)
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    document.body.style.opacity = '0.99';
+    requestAnimationFrame(() => { document.body.style.opacity = ''; });
+  }
+});
