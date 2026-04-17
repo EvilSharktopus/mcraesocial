@@ -1,18 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>To what extent does globalization contribute to sustainable prosperity for all people? - Social 10</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
+"""
+Inject course-level dropdown nav into every HTML file in the site.
+Replaces the flat Social 9/10/20/30 links with hover dropdowns listing all units.
+"""
+import os
+import re
 
-  <nav class="site-nav">
-    <div class="site-nav__inner">
-      <a href="/" class="site-nav__brand">MCRAE'S SOCIAL STUDIES</a>
-      <button class="site-nav__hamburger" aria-label="Toggle navigation" aria-expanded="false">&#x2630;</button>
-            <ul class="site-nav__links">
+BASE = "c:/Users/Owner/Desktop/mcraesocial"
+
+NEW_NAV_LINKS = """      <ul class="site-nav__links">
         <li><a href="/" class="site-nav__link">Home</a></li>
         <li class="site-nav__dropdown">
           <a href="/social-9/" class="site-nav__link">Social 9 &#x25BE;</a>
@@ -68,34 +63,34 @@
           </div>
         </li>
         <li><a href="https://nationalism.mcraesocial.com/" class="site-nav__link" target="_blank">Nationalism Game</a></li>
-      </ul>
-    </div>
-  </nav>
+      </ul>"""
 
-  <div class="unit-banner">
-    <img src="/assets/images/social-10/sustainable-prosperity.jpg" alt="To what extent does globalization contribute to sustainable prosperity for all people?" class="unit-banner__img">
-    <div class="unit-banner__overlay"></div>
-    <div class="unit-banner__text">
-      <h1 class="page-banner__title">To what extent does globalization contribute to sustainable prosperity for all people?</h1>
-      <p class="unit-banner__course">Social 10</p>
-    </div>
-  </div>
+# Pattern that matches the entire <ul class="site-nav__links">...</ul> block
+NAV_PATTERN = re.compile(
+    r'<ul class="site-nav__links">.*?</ul>',
+    re.DOTALL
+)
 
-  <div class="page-content">
-  <section class="unit-section" style="background: rgba(123,143,181,0.06);">
-    <h2 class="unit-section__title">REQUIRED READING</h2>
-    <a href="https://docs.google.com/document/d/10f3zon11JgmNkKGY8ijS2JjHFwvZvTVp4QzaH9PanZ0/edit?usp=sharing" target="_blank" class="utility-link-item">Three Source</a>
-    <a href="/uploads/1/5/8/7/15876062/1.1_economic_globalization" target="_blank" class="utility-link-item">here</a>
-    <a href="/uploads/1/5/8/7/15876062/2.0_free_trade_nafta_and_wto" target="_blank" class="utility-link-item">here</a>
-    <a href="/uploads/1/5/8/7/15876062/1.0_economic_globalization_timeline_-_handout.docx" target="_blank" class="utility-link-item">Download File</a>
-    <a href="/uploads/1/5/8/7/15876062/1.2_evaluating_the_imf_and_world_bank.doc" target="_blank" class="utility-link-item">Download File</a>
-  </section>
-  </div>
+updated = 0
+skipped = 0
 
-  <footer class="site-footer">
-    mcraesocial.com
-  </footer>
+for root, dirs, files in os.walk(BASE):
+    # Skip asset dumps and scratch files
+    dirs[:] = [d for d in dirs if d not in ('assets', 'scratch', '.git', '__pycache__')]
+    for fname in files:
+        if not fname.endswith('.html'):
+            continue
+        path = os.path.join(root, fname)
+        content = open(path, encoding='utf-8').read()
+        if 'site-nav__links' not in content:
+            skipped += 1
+            continue
+        new_content = NAV_PATTERN.sub(NEW_NAV_LINKS, content)
+        if new_content != content:
+            open(path, 'w', encoding='utf-8').write(new_content)
+            print(f"  Updated: {path.replace(BASE, '')}")
+            updated += 1
+        else:
+            skipped += 1
 
-  <script src="/js/nav.js"></script>
-</body>
-</html>
+print(f"\nDone. {updated} files updated, {skipped} unchanged/skipped.")
