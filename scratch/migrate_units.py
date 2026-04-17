@@ -353,7 +353,7 @@ def migrate_unit(url, output_dir, course_name, custom_title=None, image_path=Non
     {image_html}
     <div class="unit-banner__overlay"></div>
     <div class="unit-banner__text">
-      <h1 class="page-banner__title">{title}</h1>
+      <h1 class="unit-banner__title">{title}</h1>
       <p class="unit-banner__course">{course_name}</p>
     </div>
   </div>"""

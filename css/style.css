@@ -653,12 +653,28 @@ body {
 }
 
 .unit-banner__course {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.65);
   font-weight: 600;
   margin-top: 0.5rem;
-  font-size: 0.9rem;
-  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.unit-banner__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  margin: 0;
+  text-align: center;
+  max-width: 800px;
+}
+
+@media (min-width: 769px) {
+  .unit-banner__title {
+    font-size: 1.9rem;
+  }
 }
 
 
