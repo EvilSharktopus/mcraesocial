@@ -90,6 +90,17 @@ body {
   opacity: 0.8;
 }
 
+.site-nav__brand-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.site-nav__brand-icon:hover {
+  opacity: 1;
+}
+
 .site-nav__logo-link:hover .site-nav__logo-img {
   opacity: 1;
 }
