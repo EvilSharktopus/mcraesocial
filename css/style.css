@@ -778,8 +778,9 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top;
+  object-fit: contain;
+  object-position: center;
+  background: var(--bg-alt);
 }
 
 /* Fallback placeholder shown when no image file exists yet */
