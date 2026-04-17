@@ -137,7 +137,7 @@ UNITS = [
         "url": f"{W}/national-interest.html",
         "out": f"{BASE_OUT}/social-20/national-interest",
         "course": "Social 20",
-        "title": "National Interest vs. International Interest",
+        "title": "National Interest",
         "img": "/assets/images/social-20/national-interest.jpg",
     },
     {
