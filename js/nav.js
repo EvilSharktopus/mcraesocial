@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter grid items
     document.querySelectorAll('.unit-grid__item, .assignment-block, .content-block').forEach(item => {
       const stream = item.getAttribute('data-stream');
-      if (!stream || stream === streamId || stream === 'shared') {
+      if (!stream || stream === streamId) {
         item.classList.remove('grid-item--hidden');
       } else {
         item.classList.add('grid-item--hidden');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter utility links
     document.querySelectorAll('.utility-links a').forEach(link => {
       const stream = link.getAttribute('data-stream');
-      if (!stream || stream === streamId || stream === 'shared') {
+      if (!stream || stream === streamId) {
         link.classList.remove('utility-link--hidden');
       } else {
         link.classList.add('utility-link--hidden');
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(el.classList.contains('unit-grid__item') || el.closest('.utility-links')) return;
       
       const stream = el.getAttribute('data-stream');
-      if (!stream || stream === streamId || stream === 'shared') {
+      if (!stream || stream === streamId) {
         el.style.display = ''; // Restore default
       } else {
         el.style.display = 'none';
@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Check localStorage for saved stream
-  const savedStream = localStorage.getItem('preferredStream') || 'shared';
-  
+  // Check localStorage for saved stream preference, default to '1'
+  const savedStream = localStorage.getItem('preferredStream') || '1';
+
   // Set initial active state based on saved value
   let foundSavedBtn = false;
   streamBtns.forEach(btn => {
@@ -76,11 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Fallback to shared if saved stream button doesn't exist on this page
+  // Fallback to '1' if saved preference button doesn't exist on this page
   if (!foundSavedBtn) {
-    const sharedBtn = Array.from(streamBtns).find(b => b.getAttribute('data-target-stream') === 'shared');
-    if (sharedBtn) sharedBtn.classList.add('active');
-    filterItems('shared');
+    const firstBtn = streamBtns[0];
+    if (firstBtn) firstBtn.classList.add('active');
+    filterItems(firstBtn ? firstBtn.getAttribute('data-target-stream') : '1');
   } else {
     filterItems(savedStream);
   }
