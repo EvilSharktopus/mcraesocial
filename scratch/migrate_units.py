@@ -124,7 +124,9 @@ def render_pdf_card(src, stream=None):
     stream_attr = f' data-stream="{stream}"' if stream else ''
     view_url = src.replace('/preview', '/view')
     file_id = extract_drive_id(src)
-    thumb_src = f'https://drive.google.com/thumbnail?id={file_id}&sz=w800' if file_id else ''
+    # lh3.googleusercontent.com/d/ is Google's public CDN for Drive files —
+    # more browser-friendly than /thumbnail?id= (avoids CORS/cookie issues)
+    thumb_src = f'https://lh3.googleusercontent.com/d/{file_id}=w800' if file_id else ''
 
     return f"""    <a href="{view_url}" target="_blank" class="pdf-thumb"{stream_attr}>
       <div class="pdf-thumb__img-wrap">
