@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import requests
 from bs4 import BeautifulSoup, NavigableString
@@ -285,19 +285,65 @@ def migrate_unit(url, output_dir, course_name, custom_title=None, image_path=Non
 
     sections = content_root.find_all('div', class_='wsite-section-wrap')
 
-    # Push "Required Reading" sections to the bottom
-    def section_sort_key(sec):
-        h2 = sec.find('h2', class_='wsite-content-title') or sec.find('h2')
-        label = h2.get_text(strip=True).upper() if h2 else ''
-        return 1 if 'REQUIRED READING' in label else 0
+    # ── Categorise every Weebly section into one of the four canonical buckets ──
+    CANONICAL = ['ASSIGNMENTS', 'NOTES', 'HANDOUTS', 'REQUIRED READING']
+    SECTION_COLORS = {
+        'ASSIGNMENTS':      'rgba(123,143,181,0.06)',
+        'NOTES':            'rgba(100,160,140,0.06)',
+        'HANDOUTS':         'rgba(181,143,123,0.06)',
+        'REQUIRED READING': 'rgba(143,123,181,0.06)',
+    }
+    PLACEHOLDER_HTML = {
+        'ASSIGNMENTS': '    <p class="unit-para" style="color:var(--text-dim);">Assignments will be posted here.</p>',
+        'NOTES':       '    <p class="unit-para" style="color:var(--text-dim);">Notes will be posted here.</p>',
+        'HANDOUTS':    '    <p class="unit-para" style="color:var(--text-dim);">Handouts will be posted here.</p>',
+        'REQUIRED READING': '    <p class="unit-para" style="color:var(--text-dim);">Required reading will be posted here.</p>',
+    }
 
-    sections = sorted(sections, key=section_sort_key)
+    def best_bucket(sec):
+        h2 = sec.find('h2')
+        lbl = h2.get_text(strip=True).upper() if h2 else ''
+        for c in CANONICAL:
+            if c in lbl:
+                return c
+        # Sections with iframes/PDFs → Notes
+        if sec.find('iframe'):
+            return 'NOTES'
+        # Sections with assignment-style links → Assignments
+        if sec.find('a', href=True):
+            return 'ASSIGNMENTS'
+        return None
+
+    buckets = {c: [] for c in CANONICAL}
+    for sec in sections:
+        b = best_bucket(sec)
+        if b:
+            buckets[b].append(sec)
 
     body_parts = []
-    for i, sec in enumerate(sections):
-        body_parts.append(process_section(sec, i))
+    for bucket_idx, canon in enumerate(CANONICAL):
+        color = SECTION_COLORS[canon]
+        body_parts.append(f'  <section class="unit-section" style="background: {color};">')
+        body_parts.append(f'    <h2 class="unit-section__title">{canon}</h2>')
+
+        secs = buckets[canon]
+        if not secs:
+            body_parts.append(PLACEHOLDER_HTML[canon])
+        else:
+            for i, sec in enumerate(secs):
+                # Render section contents (skip the outer section wrapper, just inner)
+                rendered = process_section(sec, bucket_idx)
+                # Strip the <section> wrapper process_section adds — we have our own
+                rendered = re.sub(r'^\s*<section[^>]*>\s*', '', rendered)
+                rendered = re.sub(r'\s*</section>\s*$', '', rendered)
+                # Strip any duplicate section title (any leading whitespace)
+                rendered = re.sub(r'[ \t]*<h2 class="unit-section__title">[^<]*</h2>\r?\n?', '', rendered)
+                body_parts.append(rendered)
+
+        body_parts.append('  </section>')
 
     body_html = '\n'.join(body_parts)
+
 
     image_html = ""
     if image_path:
