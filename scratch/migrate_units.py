@@ -199,7 +199,7 @@ def process_section(section_el, section_idx):
 
         if has_streams:
             lines.append('    <div class="stream-toggle">')
-            lines.append('      <button class="stream-btn active" data-target-stream="shared">All Streams</button>')
+            lines.append('      <button class="stream-btn active" data-target-stream="shared">Both Streams</button>')
             lines.append('      <button class="stream-btn" data-target-stream="1">-1 Only</button>')
             lines.append('      <button class="stream-btn" data-target-stream="2">-2 Only</button>')
             lines.append('    </div>')
@@ -354,4 +354,5 @@ if __name__ == "__main__":
         None,
         "/assets/images/social-10/shape-identity.jpg"
     )
+
 
