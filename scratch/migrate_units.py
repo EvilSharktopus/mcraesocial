@@ -274,9 +274,9 @@ def migrate_unit(url, output_dir, course_name, custom_title=None, image_path=Non
     soup = BeautifulSoup(res.text, 'html.parser')
 
     title_el = soup.find('h2', class_='wsite-content-title')
-    title = custom_title if custom_title else (title_el.get_text(strip=True) if title_el else "Unit")
-    # Strip invisible characters from Weebly titles
-    title = title.replace('\u200b', '').strip()
+    raw_title = title_el.get_text(separator=' ', strip=True) if title_el else 'Unit'
+    # Collapse any double-spaces created by inline elements and strip zero-width chars
+    title = custom_title if custom_title else re.sub(r'\s+', ' ', raw_title).replace('\u200b', '').strip()
 
     content_root = soup.find('div', class_='wsite-elements wsite-not-footer')
     if not content_root:
