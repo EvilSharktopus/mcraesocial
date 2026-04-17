@@ -1,4 +1,4 @@
-"""
+﻿"""
 Inject course-level dropdown nav into every HTML file in the site.
 Replaces the flat Social 9/10/20/30 links with hover dropdowns listing all units.
 """
@@ -94,3 +94,4 @@ for root, dirs, files in os.walk(BASE):
             skipped += 1
 
 print(f"\nDone. {updated} files updated, {skipped} unchanged/skipped.")
+

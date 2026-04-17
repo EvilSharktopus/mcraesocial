@@ -79,6 +79,17 @@ body {
   transition: opacity 0.15s ease;
 }
 
+.site-nav__logo {
+  height: 32px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.site-nav__brand:hover .site-nav__logo {
+  opacity: 0.8;
+}
+
 .site-nav__logo-link:hover .site-nav__logo-img {
   opacity: 1;
 }

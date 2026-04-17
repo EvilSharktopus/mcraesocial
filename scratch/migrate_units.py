@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import requests
 from bs4 import BeautifulSoup, NavigableString
@@ -8,7 +8,7 @@ BASE_URL = "https://mcraesocial.weebly.com"
 
 NAV_HTML = """  <nav class="site-nav">
     <div class="site-nav__inner">
-      <a href="/" class="site-nav__brand">MCRAE'S SOCIAL STUDIES</a>
+      <a href="/" class="site-nav__brand"><img src="/assets/images/logo.png" alt="McRae Social Studies" class="site-nav__logo"></a>
       <button class="site-nav__hamburger" aria-label="Toggle navigation" aria-expanded="false">&#x2630;</button>
       <ul class="site-nav__links">
         <li><a href="/" class="site-nav__link">Home</a></li>
@@ -354,3 +354,4 @@ if __name__ == "__main__":
         None,
         "/assets/images/social-10/shape-identity.jpg"
     )
+
