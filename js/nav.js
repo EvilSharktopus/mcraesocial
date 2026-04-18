@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter grid items
     document.querySelectorAll('.unit-grid__item, .assignment-block, .content-block').forEach(item => {
       const stream = item.getAttribute('data-stream');
-      if (!stream || stream === streamId) {
+      if (!stream || stream === streamId || stream === 'shared') {
         item.classList.remove('grid-item--hidden');
       } else {
         item.classList.add('grid-item--hidden');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filter utility links
     document.querySelectorAll('.utility-links a').forEach(link => {
       const stream = link.getAttribute('data-stream');
-      if (!stream || stream === streamId) {
+      if (!stream || stream === streamId || stream === 'shared') {
         link.classList.remove('utility-link--hidden');
       } else {
         link.classList.add('utility-link--hidden');
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(el.classList.contains('unit-grid__item') || el.closest('.utility-links')) return;
       
       const stream = el.getAttribute('data-stream');
-      if (!stream || stream === streamId) {
+      if (!stream || stream === streamId || stream === 'shared') {
         el.style.display = ''; // Restore default
       } else {
         el.style.display = 'none';
