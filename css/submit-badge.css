@@ -1,0 +1,62 @@
+
+/* ── Submit Widget Badges ─────────────────────────────────────────────────── */
+#submit-widget { margin-bottom: 4px; }
+
+.submit-badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Active — assignment is open */
+.submit-badge--open {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(91,141,238,0.15), rgba(91,141,238,0.08));
+  border: 1px solid rgba(91,141,238,0.45);
+  border-radius: 10px;
+  color: #5b8dee;
+  font-weight: 600;
+  font-size: 0.93rem;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.submit-badge--open:hover {
+  background: linear-gradient(135deg, rgba(91,141,238,0.25), rgba(91,141,238,0.14));
+  box-shadow: 0 4px 18px rgba(91,141,238,0.22);
+  transform: translateY(-1px);
+}
+.submit-badge--open .submit-badge__arrow {
+  margin-left: auto;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+.submit-badge--open:hover .submit-badge__arrow { transform: translateX(4px); opacity: 1; }
+
+/* Closed — assignment registered but not yet open */
+.submit-badge--closed {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(120,120,135,0.07);
+  border: 1px solid rgba(120,120,135,0.2);
+  border-radius: 10px;
+  color: var(--text-dim, #888);
+  font-size: 0.9rem;
+  cursor: default;
+  user-select: none;
+}
+.submit-badge--closed .submit-badge__label { font-style: italic; }
+.submit-badge--closed .submit-badge__tag {
+  margin-left: auto;
+  font-size: 0.75rem;
+  background: rgba(120,120,135,0.12);
+  border-radius: 20px;
+  padding: 2px 9px;
+  color: var(--text-dim, #999);
+}
