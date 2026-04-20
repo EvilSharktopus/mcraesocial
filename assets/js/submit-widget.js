@@ -2,7 +2,7 @@
  * submit-widget.js
  * Injected into every mcraesocial.com unit page.
  * Queries Firestore (public read) for assignments linked to this unit,
- * and renders badges into <div id="submit-widget">.
+ * and renders assignment-block entries into <div id="submit-widget">.
  */
 (function () {
   const FIREBASE_API_KEY = 'AIzaSyCIiW1edciPp0kC72oQHYhhTmfTPoSdajA';
@@ -11,12 +11,11 @@
 
   // Derive unit slug from URL: /social-9/ycja/ → social-9/ycja
   const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
-  const unit  = parts.slice(0, 2).join('/'); // e.g. "social-9/ycja"
+  const unit  = parts.slice(0, 2).join('/');
 
   const target = document.getElementById('submit-widget');
   if (!target || !unit) return;
 
-  // Structured query — filter assignments where unit === current unit
   const query = {
     structuredQuery: {
       from: [{ collectionId: 'assignments' }],
@@ -41,36 +40,45 @@
         .map(d => {
           const f  = d.document.fields || {};
           const id = d.document.name.split('/').pop();
+
+          // Treat missing isOpen as true (matches app logic: isOpen !== false)
+          const isOpen = !f.isOpen || f.isOpen.booleanValue === true;
+
           return {
             id,
-            name:   f.name?.stringValue   || 'Assignment',
-            isOpen: f.isOpen?.booleanValue ?? false,
+            name:   f.name?.stringValue || 'Assignment',
+            isOpen,
           };
         })
-        // Sort: open first
+        // Open first
         .sort((a, b) => (b.isOpen ? 1 : 0) - (a.isOpen ? 1 : 0));
 
       if (!assignments.length) return;
 
-      const html = assignments.map(a => {
+      // Render as assignment-block items to match existing page style
+      target.innerHTML = assignments.map(a => {
         if (a.isOpen) {
-          return `<a href="${SUBMIT_BASE}/${a.id}" class="submit-badge submit-badge--open" target="_blank">
-            <span class="submit-badge__icon">✏️</span>
-            <span class="submit-badge__label">Write: ${a.name}</span>
-            <span class="submit-badge__arrow">→</span>
-          </a>`;
+          return `
+            <div class="assignment-block">
+              <div class="assignment-block__label">${a.name}</div>
+              <div class="assignment-block__actions">
+                <a href="${SUBMIT_BASE}/${a.id}" target="_blank" class="utility-btn utility-btn--submit">
+                  ✏️ Write Assignment
+                </a>
+              </div>
+            </div>`;
         } else {
-          return `<span class="submit-badge submit-badge--closed">
-            <span class="submit-badge__icon">🔒</span>
-            <span class="submit-badge__label">${a.name}</span>
-            <span class="submit-badge__tag">Coming soon</span>
-          </span>`;
+          return `
+            <div class="assignment-block assignment-block--locked">
+              <div class="assignment-block__label">${a.name}</div>
+              <div class="assignment-block__actions">
+                <span class="utility-btn utility-btn--locked">🔒 Coming soon</span>
+              </div>
+            </div>`;
         }
       }).join('');
-
-      target.innerHTML = `<div class="submit-badge-list">${html}</div>`;
     })
     .catch(() => {
-      // Silently fail — no badge shown if fetch fails
+      // Silently fail
     });
 })();
