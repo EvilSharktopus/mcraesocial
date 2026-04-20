@@ -1,15 +1,13 @@
 /**
  * submit-widget.js
  * Injected into every mcraesocial.com unit page.
- * Queries Firestore (public read) for assignments linked to this unit,
- * and renders assignment-block entries into <div id="submit-widget">.
+ * Each linked assignment shows: Name | See Assignment (doc) | Write/Coming soon
  */
 (function () {
   const FIREBASE_API_KEY = 'AIzaSyCIiW1edciPp0kC72oQHYhhTmfTPoSdajA';
   const PROJECT_ID       = 'mcrae-assignments';
   const SUBMIT_BASE      = 'https://submit.mcraesocial.com/submit';
 
-  // Derive unit slug from URL: /social-9/ycja/ → social-9/ycja
   const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
   const unit  = parts.slice(0, 2).join('/');
 
@@ -40,45 +38,37 @@
         .map(d => {
           const f  = d.document.fields || {};
           const id = d.document.name.split('/').pop();
-
-          // Treat missing isOpen as true (matches app logic: isOpen !== false)
+          // Treat missing isOpen as true (consistent with app: isOpen !== false means open)
           const isOpen = !f.isOpen || f.isOpen.booleanValue === true;
-
           return {
             id,
-            name:   f.name?.stringValue || 'Assignment',
+            name:   f.name?.stringValue   || 'Assignment',
+            docUrl: f.docUrl?.stringValue  || '',
             isOpen,
           };
         })
-        // Open first
         .sort((a, b) => (b.isOpen ? 1 : 0) - (a.isOpen ? 1 : 0));
 
       if (!assignments.length) return;
 
-      // Render as assignment-block items to match existing page style
       target.innerHTML = assignments.map(a => {
-        if (a.isOpen) {
-          return `
-            <div class="assignment-block">
-              <div class="assignment-block__label">${a.name}</div>
-              <div class="assignment-block__actions">
-                <a href="${SUBMIT_BASE}/${a.id}" target="_blank" class="utility-btn utility-btn--submit">
-                  ✏️ Write Assignment
-                </a>
-              </div>
-            </div>`;
-        } else {
-          return `
-            <div class="assignment-block assignment-block--locked">
-              <div class="assignment-block__label">${a.name}</div>
-              <div class="assignment-block__actions">
-                <span class="utility-btn utility-btn--locked">🔒 Coming soon</span>
-              </div>
-            </div>`;
-        }
+        const seeBtn = a.docUrl
+          ? `<a href="${a.docUrl}" target="_blank" class="utility-btn">See Assignment</a>`
+          : '';
+
+        const writeBtn = a.isOpen
+          ? `<a href="${SUBMIT_BASE}/${a.id}" target="_blank" class="utility-btn utility-btn--submit">✏️ Write Assignment</a>`
+          : `<span class="utility-btn utility-btn--locked">Coming Soon</span>`;
+
+        return `
+          <div class="assignment-block">
+            <div class="assignment-block__label">${a.name}</div>
+            <div class="assignment-block__actions">
+              ${seeBtn}
+              ${writeBtn}
+            </div>
+          </div>`;
       }).join('');
     })
-    .catch(() => {
-      // Silently fail
-    });
+    .catch(() => {});
 })();
