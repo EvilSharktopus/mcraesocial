@@ -486,6 +486,64 @@
     line-height: 1.5;
   }
 
+  /* FEEDBACK SECTION */
+  .feedback-section {
+    max-width: 800px;
+    margin: 40px auto 60px;
+    background: #1a2e1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    color: var(--white);
+    text-align: center;
+    border: 2px solid rgba(174,234,0,0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .feedback-section h3 {
+    font-family: 'Fredoka One', cursive;
+    color: var(--lime-bright);
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  .feedback-section p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 24px;
+  }
+  .feedback-form {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--lime);
+  }
+  .form-group select, .form-group textarea, .form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+  }
+  .form-group select option {
+    color: black;
+  }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--orange), var(--yellow));
+    color: #1a2e1a;
+    margin-top: 8px;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(255,109,0,0.4); }
+
   /* PRINT */
   @media print {
     body { background: white !important; }
@@ -542,6 +600,35 @@
       <div class="share-toast" id="shareToast">✅ Link copied to clipboard!</div>
     </div>
   </div>
+</div>
+
+<div class="feedback-section">
+  <h3>Missing a skill?</h3>
+  <p>Let Coach McRae know what kind of drills you want to see next!</p>
+  <form action="https://formspree.io/f/placeholder_form_id" method="POST" class="feedback-form">
+    <div class="form-group">
+        <label for="skill-request">I need more drills for:</label>
+        <select id="skill-request" name="Requested Skill" required>
+            <option value="" disabled selected>Select a skill category</option>
+            <option value="Warm-Up Games">🏃 Warm-Up Games</option>
+            <option value="Ball Control">🦶 Ball Control</option>
+            <option value="Shooting & Kicking">🎯 Shooting & Kicking</option>
+            <option value="Passing & Teamwork">↔️ Passing & Teamwork</option>
+            <option value="Cool-Down">🌟 Cool-Down</option>
+            <option value="Other">Other (tell me below)</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="details">Any specific requests? (Optional)</label>
+        <textarea id="details" name="Details" rows="3" placeholder="e.g. Need indoor drills for rainy days..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="email">Your Email (if you want a reply!)</label>
+        <input type="email" id="email" name="_replyto" placeholder="coach@example.com">
+    </div>
+    <input type="hidden" name="_subject" value="New Drill Request for Little Kickers!">
+    <button type="submit" class="btn btn-submit">Send Request!</button>
+  </form>
 </div>
 
 <script>
