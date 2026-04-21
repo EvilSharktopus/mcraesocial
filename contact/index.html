@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -45,8 +45,11 @@
           </select>
         </div>
         
-        <div class="form-group">
-          <label for="message">Message</label>
+        <div class="form-group" style="position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="message" style="margin-bottom: 0;">Message</label>
+            <button type="button" id="mic-btn" title="Dictate message" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0; filter: grayscale(1);">🎤</button>
+          </div>
           <textarea id="message" name="message" class="form-control" placeholder="How can I help you?" required></textarea>
         </div>
         
@@ -60,6 +63,50 @@
   </div>
   
   <script src="/js/nav.js"></script>
+  <script>
+    const micBtn = document.getElementById('mic-btn');
+    const messageBox = document.getElementById('message');
+    
+    if (micBtn && messageBox) {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        let isListening = false;
+        const recognition = new SR();
+        recognition.lang = 'en-CA';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
+          }
+          if (finalTranscript) {
+            messageBox.value += (messageBox.value.length && !messageBox.value.endsWith(' ') ? ' ' : '') + finalTranscript;
+          }
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.style.filter = 'grayscale(1)';
+          micBtn.textContent = '🎤';
+        };
+
+        micBtn.addEventListener('click', () => {
+          if (isListening) {
+            recognition.stop();
+          } else {
+            recognition.start();
+            isListening = true;
+            micBtn.style.filter = 'none';
+            micBtn.textContent = '🔴';
+          }
+        });
+      } else {
+        micBtn.style.display = 'none'; // hide if not supported
+      }
+    }
+  </script>
 </body>
 </html>
 
