@@ -4,8 +4,8 @@
  * Each linked assignment shows: Name | See Assignment (doc) | Write/Coming soon
  */
 (function () {
-  const FIREBASE_API_KEY = 'AIzaSyCIiW1edciPp0kC72oQHYhhTmfTPoSdajA';
-  const PROJECT_ID       = 'mcrae-assignments';
+  const FIREBASE_API_KEY = 'AIzaSyB4Yc51IzKEcBzDPqy3B8fA9QSrnhIAzr4';
+  const PROJECT_ID       = 'mcrae-assignments-ca';
   const SUBMIT_BASE      = 'https://submit.mcraesocial.com/submit';
 
   const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
