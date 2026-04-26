@@ -102,9 +102,45 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Fix blank screen when navigating back (bfcache restore)
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) {
-    window.location.reload();
-  }
+// =============================================
+// Hover-prefetch: inject <link rel="prefetch"> when the user hovers a unit grid link
+// This pre-loads the next page HTML so navigation feels instant.
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.unit-grid__item').forEach(link => {
+    link.addEventListener('mouseenter', () => {
+      const href = link.getAttribute('href');
+      if (!href || document.querySelector(`link[rel="prefetch"][href="${href}"]`)) return;
+      const el = document.createElement('link');
+      el.rel = 'prefetch';
+      el.href = href;
+      document.head.appendChild(el);
+    }, { once: true });
+  });
 });
+
+// =============================================
+// View Transitions API — smooth cross-page fade
+// Intercepts same-origin link clicks and wraps navigation in a transition.
+// Falls back gracefully (instant nav) in browsers that don't support it.
+// =============================================
+if (document.startViewTransition) {
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    // Only intercept same-origin, non-anchor, non-external, non-mailto links
+    if (
+      !href ||
+      href.startsWith('#') ||
+      href.startsWith('http') ||
+      href.startsWith('mailto') ||
+      href.startsWith('//') ||
+      link.target === '_blank'
+    ) return;
+    e.preventDefault();
+    document.startViewTransition(() => {
+      window.location.href = href;
+    });
+  });
+}

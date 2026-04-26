@@ -76,7 +76,10 @@
         </li>
         </ul>
       <a href="https://nationalism.mcraesocial.com/" class="site-nav__logo-link" target="_blank" aria-label="Nationalism Game">
-        <img src="/assets/images/logo.png" alt="Nationalism Game" class="site-nav__logo-img">
+        <picture>
+          <source srcset="/assets/images/logo.webp" type="image/webp">
+          <img src="/assets/images/logo.png" alt="Nationalism Game" class="site-nav__logo-img" width="2752" height="795" loading="eager">
+        </picture>
       </a>
     </div>
   </nav>
@@ -87,19 +90,31 @@
     <div class="home-hero__content">
       <div class="home-grid-2x2">
         <a href="/social-9/" class="unit-grid__item">
-          <img class="unit-grid__img" src="/assets/images/home/social-9.jpg" alt="Social 9">
+          <picture>
+            <source srcset="/assets/images/home/social-9.webp" type="image/webp">
+            <img class="unit-grid__img" src="/assets/images/home/social-9.jpg" alt="Social 9" width="2816" height="1536" loading="eager">
+          </picture>
           <span class="unit-grid__label">Social 9</span>
         </a>
         <a href="/social-10/" class="unit-grid__item">
-          <img class="unit-grid__img" src="/assets/images/home/social-10.jpg" alt="Social 10">
+          <picture>
+            <source srcset="/assets/images/home/social-10.webp" type="image/webp">
+            <img class="unit-grid__img" src="/assets/images/home/social-10.jpg" alt="Social 10" width="2816" height="1536" loading="eager">
+          </picture>
           <span class="unit-grid__label">Social 10</span>
         </a>
         <a href="/social-20/" class="unit-grid__item">
-          <img class="unit-grid__img" src="/assets/images/home/social-20.jpg" alt="Social 20">
+          <picture>
+            <source srcset="/assets/images/home/social-20.webp" type="image/webp">
+            <img class="unit-grid__img" src="/assets/images/home/social-20.jpg" alt="Social 20" width="2816" height="1536" loading="eager">
+          </picture>
           <span class="unit-grid__label">Social 20</span>
         </a>
         <a href="/social-30/" class="unit-grid__item">
-          <img class="unit-grid__img" src="/assets/images/home/social-30.jpg" alt="Social 30">
+          <picture>
+            <source srcset="/assets/images/home/social-30.webp" type="image/webp">
+            <img class="unit-grid__img" src="/assets/images/home/social-30.jpg" alt="Social 30" width="1024" height="1024" loading="eager">
+          </picture>
           <span class="unit-grid__label">Social 30</span>
         </a>
       </div>
@@ -111,10 +126,23 @@
     <!-- Utility Links -->
     <div class="home-grid-3">
       <a href="https://submit.mcraesocial.com/" target="_blank" class="utility-btn utility-btn--logo">
-        <img src="/assets/images/mcrae-marks-logo.png" alt="McRae Marks" class="utility-logo-img" style="max-height:54px; width:auto;">
+        <picture>
+          <source srcset="/assets/images/mcrae-marks-logo.webp" type="image/webp">
+          <img src="/assets/images/mcrae-marks-logo.png" alt="McRae Marks" class="utility-logo-img" style="max-height:54px; width:auto;" width="1718" height="295" loading="lazy">
+        </picture>
       </a>
-      <a href="https://nationalism.mcraesocial.com/" target="_blank" class="utility-btn utility-btn--logo"><img src="/assets/images/logo.png" alt="Nationalism Game" class="utility-logo-img"></a>
-      <a href="/workbooks/" class="utility-btn utility-btn--logo"><img src="/assets/images/workbooks-logo.jpg" alt="McRae's Workbooks" class="utility-logo-img" style="max-height:54px; width:auto;"></a>
+      <a href="https://nationalism.mcraesocial.com/" target="_blank" class="utility-btn utility-btn--logo">
+        <picture>
+          <source srcset="/assets/images/logo.webp" type="image/webp">
+          <img src="/assets/images/logo.png" alt="Nationalism Game" class="utility-logo-img" width="2752" height="795" loading="lazy">
+        </picture>
+      </a>
+      <a href="/workbooks/" class="utility-btn utility-btn--logo">
+        <picture>
+          <source srcset="/assets/images/workbooks-logo.webp" type="image/webp">
+          <img src="/assets/images/workbooks-logo.jpg" alt="McRae's Workbooks" class="utility-logo-img" style="max-height:54px; width:auto;" width="2065" height="753" loading="lazy">
+        </picture>
+      </a>
     </div>
 
     <!-- Welcome & Calendar Split -->
@@ -138,7 +166,10 @@
     </div>
 
     <div class="logo-center" style="padding-top: 2rem; margin-bottom: 3rem;">
-      <img src="/assets/images/home/mcrae-logo.jpg" alt="McRae Social Logo">
+      <picture>
+        <source srcset="/assets/images/home/mcrae-logo.webp" type="image/webp">
+        <img src="/assets/images/home/mcrae-logo.jpg" alt="McRae Social Logo" width="91" height="91" loading="lazy">
+      </picture>
     </div>
 
   </div>
@@ -148,31 +179,6 @@
   </footer>
 
   <script src="/js/nav.js"></script>
-  <script>
-    // Zoom page transition for home course tiles
-    (function () {
-      var overlay = document.createElement('div');
-      overlay.className = 'zoom-overlay';
-      document.body.appendChild(overlay);
-
-      document.querySelectorAll('.home-hero .unit-grid__item').forEach(function (item) {
-        item.addEventListener('click', function (e) {
-          e.preventDefault();
-          var href = this.getAttribute('href');
-          var self = this;
-          self.classList.add('is-zooming');
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              overlay.classList.add('active');
-            });
-          });
-          setTimeout(function () {
-            window.location.href = href;
-          }, 380);
-        });
-      });
-    })();
-  </script>
 </body>
 </html>
 
