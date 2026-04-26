@@ -81,7 +81,7 @@
 
         const writeBtn = a.isOpen
           ? `<a href="${SUBMIT_BASE}/${a.id}" target="_blank" class="utility-btn utility-btn--submit">✏️ Write Assignment</a>`
-          : `<span class="utility-btn utility-btn--locked">Coming Soon</span>`;
+          : '';
 
         return `
           <div class="assignment-block">
