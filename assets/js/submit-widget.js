@@ -38,8 +38,31 @@
         .map(d => {
           const f  = d.document.fields || {};
           const id = d.document.name.split('/').pop();
-          // Treat missing isOpen as true (consistent with app: isOpen !== false means open)
-          const isOpen = !f.isOpen || f.isOpen.booleanValue === true;
+
+          // Parse a Firestore value (timestampValue or stringValue) to ms
+          const toMs = (fv) => {
+            if (!fv) return null;
+            // Firestore REST returns timestamps as ISO strings in timestampValue
+            if (fv.timestampValue) return new Date(fv.timestampValue).getTime();
+            if (fv.stringValue)    return new Date(fv.stringValue).getTime();
+            return null;
+          };
+          const now     = Date.now();
+          const openMs  = toMs(f.openAt);
+          const closeMs = toMs(f.closeAt);
+          const isTimed = !!(f.openAt || f.closeAt);
+
+          let isOpen;
+          if (isTimed) {
+            // Schedule takes precedence — same logic as AssignmentList.jsx
+            const notYetOpen = openMs  && now < openMs;
+            const alreadyClosed = closeMs && now > closeMs;
+            isOpen = !notYetOpen && !alreadyClosed;
+          } else {
+            // No schedule: respect the manual isOpen toggle
+            isOpen = !f.isOpen || f.isOpen.booleanValue === true;
+          }
+
           return {
             id,
             name:   f.name?.stringValue   || 'Assignment',
