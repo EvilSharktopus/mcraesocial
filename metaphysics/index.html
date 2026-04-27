@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Makes You You? — Philosophy 30</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1814;
+    --ink-mid: #4a4640;
+    --ink-light: #8a8478;
+    --paper: #faf8f4;
+    --paper-mid: #f0ece3;
+    --paper-dark: #e4ddd0;
+    --red: #c8401a;
+    --red-light: #fdf4f0;
+    --purple: #534ab7;
+    --purple-light: #eeedfe;
+    --teal: #0f6e56;
+    --teal-light: #e3f0ed;
+    --gold: #8a6e10;
+    --gold-light: #faf5e4;
+    --blue: #185fa5;
+    --blue-light: #e6f1fb;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+
+  /* ── PROGRESS ── */
+  .progress-track {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--paper-dark);
+    z-index: 200;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--red);
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  /* ── NAV ── */
+  .topnav {
+    position: sticky;
+    top: 3px;
+    background: var(--ink);
+    z-index: 100;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+  }
+  .topnav-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: #c8b88a;
+    letter-spacing: 0.02em;
+  }
+  .topnav-parts {
+    display: flex;
+    gap: 4px;
+  }
+  .part-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .part-dot.active { border-color: var(--red); color: var(--red); }
+  .part-dot.done { background: #333; border-color: #555; color: #aaa; }
+
+  /* ── LAYOUT ── */
+  .page { display: none; animation: fadeUp 0.4s ease; }
+  .page.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .container {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 60px 32px 120px;
+  }
+
+  /* ── SPLASH ── */
+  .splash {
+    min-height: calc(100vh - 55px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 32px;
+    max-width: 740px;
+    margin: 0 auto;
+  }
+  .splash-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 28px;
+  }
+  .splash h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 10vw, 88px);
+    font-weight: 700;
+    line-height: 1.0;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .splash h1 .accent { color: var(--red); font-style: italic; }
+  .splash-sub {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(18px, 3vw, 24px);
+    font-style: italic;
+    color: var(--ink-light);
+    margin: 20px 0 48px;
+    line-height: 1.5;
+  }
+  .name-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .name-field {
+    flex: 1;
+    min-width: 200px;
+  }
+  .name-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 8px;
+  }
+  .name-field input {
+    width: 100%;
+    border: none;
+    border-bottom: 2px solid var(--paper-dark);
+    background: transparent;
+    padding: 8px 0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 18px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-field input:focus { border-color: var(--ink); }
+
+  .how-it-works {
+    background: var(--paper-mid);
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.7;
+  }
+
+  .parts-overview {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+  @media (max-width: 600px) {
+    .parts-overview { grid-template-columns: repeat(3, 1fr); }
+  }
+  .part-card {
+    border: 1px solid var(--paper-dark);
+    border-radius: 4px;
+    padding: 14px 12px;
+    background: white;
+  }
+  .part-card-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .part-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .part-card-mode {
+    font-size: 11px;
+    color: var(--ink-light);
+    font-style: italic;
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .mode-badge {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    color: white;
+    white-space: nowrap;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  /* ── CONTENT ── */
+  .part-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 24px;
+  }
+
+  .body-text {
+    font-size: 16px;
+    color: var(--ink-mid);
+    line-height: 1.75;
+    margin-bottom: 16px;
+  }
+
+  .setup-block {
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin: 24px 0 32px;
+  }
+  .setup-block .setup-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .setup-block p {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink-mid);
+  }
+  .setup-block p + p { margin-top: 10px; }
+  .setup-block p em { font-style: italic; }
+
+  .highlight-block {
+    border-left: 4px solid;
+    padding: 20px 24px;
+    margin: 24px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .highlight-block p {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  /* ── SUBSECTION ── */
+  .subsection {
+    margin: 40px 0 12px;
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* ── QUESTIONS ── */
+  .question-block {
+    margin-bottom: 32px;
+  }
+  .question-row {
+    display: flex;
+    gap: 0;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .q-num {
+    width: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: white;
+  }
+  .q-text {
+    flex: 1;
+    padding: 14px 18px;
+    background: #f5f3ef;
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--ink);
+    line-height: 1.5;
+    border: 1px solid #e8e4dc;
+    border-left: none;
+  }
+  textarea {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid var(--paper-dark);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    padding: 10px 4px;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    line-height: 1.7;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--ink-mid); }
+  textarea::placeholder { color: #c8c4bc; font-style: italic; }
+
+  /* ── THEORY CARDS ── */
+  .theory-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 24px 0 32px;
+  }
+  @media (max-width: 580px) {
+    .theory-grid { grid-template-columns: 1fr; }
+  }
+  .theory-card {
+    border: 1px solid #e0ddd5;
+    border-radius: 4px;
+    padding: 18px 16px;
+  }
+  .theory-card-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .theory-card p {
+    font-size: 14px;
+    color: var(--ink-mid);
+    line-height: 1.6;
+  }
+
+  /* ── RECORDER NOTE ── */
+  .recorder-note {
+    background: #f5f3ef;
+    border-left: 3px solid #c8c4bc;
+    padding: 14px 18px;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--ink-mid);
+    font-style: italic;
+  }
+  .recorder-name-field {
+    margin-top: 10px;
+  }
+  .recorder-name-field label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    display: block;
+    margin-bottom: 6px;
+    font-style: normal;
+  }
+  .recorder-name-field input {
+    border: none;
+    border-bottom: 1.5px solid var(--paper-dark);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    padding: 6px 0;
+    outline: none;
+    width: 280px;
+    max-width: 100%;
+  }
+
+  /* ── WRINKLE ── */
+  .wrinkle-block {
+    border-radius: 4px;
+    padding: 24px 28px;
+    margin: 32px 0;
+  }
+  .wrinkle-block .wrinkle-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-style: italic;
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .wrinkle-block p {
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.75;
+    margin-bottom: 10px;
+  }
+  .wrinkle-block p:last-child { margin-bottom: 0; }
+  .wrinkle-block p em { font-style: italic; }
+
+  /* ── CHOICE ROW ── */
+  .choice-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0 24px;
+  }
+  @media (max-width: 520px) { .choice-row { grid-template-columns: 1fr; } }
+  .choice-opt {
+    border: 1.5px solid var(--paper-dark);
+    border-radius: 4px;
+    padding: 14px 12px;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-style: italic;
+    color: var(--ink-mid);
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .choice-opt:hover { border-color: var(--ink-mid); color: var(--ink); }
+  .choice-opt.selected { border-color: var(--gold); color: var(--gold); background: var(--gold-light); }
+
+  /* ── COMING UP ── */
+  .coming-up {
+    border-left: 4px solid var(--gold);
+    background: var(--gold-light);
+    padding: 22px 24px;
+    border-radius: 0 4px 4px 0;
+    margin: 32px 0;
+  }
+  .coming-up-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .coming-up p {
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.75;
+    margin-bottom: 10px;
+  }
+  .coming-up p:last-child { margin-bottom: 0; font-style: italic; }
+
+  /* ── THIN RULE ── */
+  .thin-rule {
+    border: none;
+    border-top: 1px solid #e4ddd0;
+    margin: 40px 0;
+  }
+
+  /* ── NAV BUTTONS ── */
+  .nav-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 60px;
+    padding-top: 40px;
+    border-top: 1px solid var(--paper-dark);
+    align-items: center;
+  }
+  .btn-next {
+    background: var(--ink);
+    color: white;
+    border: none;
+    padding: 14px 36px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-next:hover { background: #2e2a24; }
+  .btn-next:active { transform: scale(0.98); }
+  .btn-back {
+    background: transparent;
+    color: var(--ink-light);
+    border: 1px solid var(--paper-dark);
+    padding: 13px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+  .btn-back:hover { color: var(--ink); border-color: var(--ink-mid); }
+  .btn-submit {
+    background: var(--teal);
+    color: white;
+    border: none;
+    padding: 16px 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-submit:hover { background: #0a5240; }
+  .btn-submit:active { transform: scale(0.98); }
+  .btn-submit:disabled { background: #999; cursor: not-allowed; }
+
+  /* ── SUCCESS ── */
+  .success-screen {
+    min-height: calc(100vh - 55px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 32px;
+  }
+  .success-screen h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .success-screen p {
+    font-size: 17px;
+    color: var(--ink-mid);
+    max-width: 440px;
+    line-height: 1.7;
+  }
+  .checkmark {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--teal-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 32px;
+  }
+  .checkmark svg { width: 32px; height: 32px; }
+
+  /* ── START BTN ── */
+  .btn-start {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 18px 52px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-start:hover { background: #a83414; }
+  .btn-start:active { transform: scale(0.98); }
+
+  .divider { width: 48px; height: 3px; background: var(--red); margin: 32px 0; }
+
+  @media (max-width: 600px) {
+    .container { padding: 40px 20px 100px; }
+    .topnav { padding: 0 20px; }
+    .splash { padding: 60px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<nav class="topnav">
+  <span class="topnav-title">What makes you you?</span>
+  <div class="topnav-parts" id="partDots"></div>
+</nav>
+
+<form id="mainForm" action="https://formspree.io/f/xnjlyzyo" method="POST">
+
+<!-- hidden fields assembled at submit -->
+<input type="hidden" name="_subject" value="Philosophy 30 — What Makes You You? Submission">
+<input type="hidden" name="student_name" id="hid_name">
+<input type="hidden" name="period" id="hid_period">
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- SPLASH -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-0">
+  <div class="splash">
+    <p class="splash-eyebrow">Philosophy 30 — Introduction to Metaphysics</p>
+    <h1>What <span class="accent">makes</span> you you?</h1>
+    <p class="splash-sub">Personal identity, memory, time, and the self.</p>
+
+    <div class="name-row">
+      <div class="name-field">
+        <label>Your name</label>
+        <input type="text" id="studentName" placeholder="First and last name" autocomplete="off">
+      </div>
+      <div class="name-field" style="max-width:180px;">
+        <label>Period / Block</label>
+        <input type="text" id="studentPeriod" placeholder="e.g. Block 2">
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      This package has five parts. Some you do alone, some in groups — it's marked at the top of each section. Work at a thoughtful pace. There are no right answers. The goal is to figure out what you actually think — and to notice when the films you've already seen had an answer buried inside them.
+    </div>
+
+    <div class="parts-overview">
+      <div class="part-card"><div class="part-card-label" style="color:var(--purple)">Part 1</div><div class="part-card-title">You</div><div class="part-card-mode">Solo</div></div>
+      <div class="part-card"><div class="part-card-label" style="color:var(--red)">Part 2</div><div class="part-card-title">The Prestige</div><div class="part-card-mode">Solo + Group</div></div>
+      <div class="part-card"><div class="part-card-label" style="color:var(--teal)">Part 3</div><div class="part-card-title">Eternal Sunshine</div><div class="part-card-mode">Solo + Group</div></div>
+      <div class="part-card"><div class="part-card-label" style="color:var(--blue)">Part 4</div><div class="part-card-title">Arrival</div><div class="part-card-mode">Solo + Group</div></div>
+      <div class="part-card"><div class="part-card-label" style="color:var(--gold)">Part 5</div><div class="part-card-title">Synthesis</div><div class="part-card-mode">Solo</div></div>
+    </div>
+
+    <button type="button" class="btn-start" onclick="startForm()">Begin →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- PART 1 — YOU -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-1">
+  <div class="container">
+    <div class="section-header">
+      <span class="mode-badge" style="background:var(--purple)">Solo</span>
+      <span class="section-title">Part 1 — You</span>
+    </div>
+
+    <h2 class="part-headline">Before any theory.<br>Just you.</h2>
+    <p class="body-text">We're going to spend this unit stress-testing ideas about personal identity — what makes a person who they are, what survives change, what gets lost. Before we get into any of that, we start with the most direct version of the question:</p>
+
+    <div class="highlight-block" style="border-color:var(--purple); background:var(--purple-light);">
+      <p style="color:var(--purple);">What makes you you?</p>
+    </div>
+
+    <p class="body-text">Answer the questions below from gut instinct only. No theory yet. No right answers. Just your honest first reaction.</p>
+
+    <hr class="thin-rule">
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--purple)">1</div>
+        <div class="q-text">List 3–5 things that make you who you are. Not facts about your life — the core of you. What would disappear if you subtracted it?</div>
+      </div>
+      <textarea name="p1_q1" placeholder="e.g. the way I see the world, something I went through, something I believe..." rows="5"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--purple)">2</div>
+        <div class="q-text">If you woke up tomorrow with no memories at all — a completely blank slate — would that person still be you? Why or why not?</div>
+      </div>
+      <textarea name="p1_q2" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--purple)">3</div>
+        <div class="q-text">If your body were somehow replaced but all your memories stayed perfectly intact — same thoughts, same feelings, same personality — would that still be you?</div>
+      </div>
+      <textarea name="p1_q3" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--purple)">4</div>
+        <div class="q-text">What is the one thing about you that, if removed, would make you a completely different person?</div>
+      </div>
+      <textarea name="p1_q4" rows="3"></textarea>
+    </div>
+
+    <div class="setup-block" style="background:var(--purple-light); border-left: 4px solid var(--purple); border-radius: 0 4px 4px 0;">
+      <p style="font-family:'Playfair Display',serif; font-size:18px; font-style:italic; font-weight:600; color:var(--purple); margin-bottom:8px;">Hold onto your answers.</p>
+      <p>You'll come back to them at the end. By then you might agree with yourself — or you might not. Either is the point.</p>
+    </div>
+
+    <div class="nav-buttons">
+      <button type="button" class="btn-back" onclick="goTo(0)">← Back</button>
+      <button type="button" class="btn-next" onclick="goTo(2)">Part 2: The Prestige →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- PART 2 — THE PRESTIGE -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-2">
+  <div class="container">
+    <div class="section-header">
+      <span class="mode-badge" style="background:var(--red)">Solo → Group</span>
+      <span class="section-title">Part 2 — The Prestige</span>
+    </div>
+
+    <h2 class="part-headline">The copy problem.</h2>
+
+    <div class="setup-block" style="background:var(--red-light); border-left:4px solid var(--red); border-radius:0 4px 4px 0;">
+      <div class="setup-label" style="color:var(--red)">The setup</div>
+      <p>Angier's machine doesn't transport him. It copies him — perfectly. Every night a new Angier walks out of the machine across the stage while the original falls through a trapdoor into a tank of water and drowns. Both are completely real. Both have the same memories, the same feelings, the same everything. Angier knew this. He did it hundreds of times.</p>
+    </div>
+
+    <h3 class="subsection">2.1 Solo</h3>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--red)">1</div>
+        <div class="q-text">Which Angier is the real one — the one who walks out, or the one who drowns? Or is there no right answer?</div>
+      </div>
+      <textarea name="p2_q1" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--red)">2</div>
+        <div class="q-text">The one who drowns chose to get in the machine. He knew what would happen. Is his death a murder, a suicide, or something else entirely?</div>
+      </div>
+      <textarea name="p2_q2" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--red)">3</div>
+        <div class="q-text">Now run yourself through the machine. A perfect copy of you steps out the other side — same memories, same personality, same everything. Is that still you? What's different, if anything?</div>
+      </div>
+      <textarea name="p2_q3" rows="4"></textarea>
+    </div>
+
+    <hr class="thin-rule">
+    <h3 class="subsection">2.2 Three theories — quick read</h3>
+    <p class="body-text">Here are three ways philosophers have answered the identity question. Read them now — don't overthink, just absorb.</p>
+
+    <div class="theory-grid">
+      <div class="theory-card" style="border-top:3px solid var(--teal)">
+        <div class="theory-card-title" style="color:var(--teal)">Body theory</div>
+        <p>You are your physical body. Same body = same person. If the body is different, it's a different person — regardless of memories.</p>
+      </div>
+      <div class="theory-card" style="border-top:3px solid var(--purple)">
+        <div class="theory-card-title" style="color:var(--purple)">Memory theory</div>
+        <p>You are your memories and psychological continuity. Whoever remembers being you, is you. The body is just the container.</p>
+      </div>
+      <div class="theory-card" style="border-top:3px solid var(--gold)">
+        <div class="theory-card-title" style="color:var(--gold)">Soul theory</div>
+        <p>You are something non-physical — a soul or essence — that can't be copied, scanned, or destroyed. The machine can't touch it.</p>
+      </div>
+    </div>
+
+    <hr class="thin-rule">
+    <h3 class="subsection">2.3 Group discussion</h3>
+
+    <div class="recorder-note">
+      One person in the group records the answers below. Everyone else: write that person's name on your sheet instead.
+      <div class="recorder-name-field">
+        <label>Recorder's name</label>
+        <input type="text" name="p2_recorder" placeholder="Name of person recording">
+      </div>
+    </div>
+
+    <p class="body-text">Each theory makes a claim about what identity actually is. Your job here isn't to agree with a theory — it's to build the strongest real-world case for each one, even the ones you don't believe. What evidence from everyday life would a body theorist point to? What would a memory theorist say? What would someone who genuinely believes in souls argue?</p>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--red)">4</div>
+        <div class="q-text">Go through each theory one at a time. For each one: set aside whether you believe it, and make the strongest real-world argument you can for it. What do people do, say, or feel that supports it? What examples from life — not from the film — back it up?</div>
+      </div>
+      <textarea name="p2_q4" placeholder="Body theory — real world evidence:&#10;&#10;Memory theory — real world evidence:&#10;&#10;Soul theory — real world evidence:" rows="10"></textarea>
+    </div>
+
+    <div class="nav-buttons">
+      <button type="button" class="btn-back" onclick="goTo(1)">← Part 1</button>
+      <button type="button" class="btn-next" onclick="goTo(3)">Part 3: Eternal Sunshine →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- PART 3 — ETERNAL SUNSHINE -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-3">
+  <div class="container">
+    <div class="section-header">
+      <span class="mode-badge" style="background:var(--teal)">Solo → Group</span>
+      <span class="section-title">Part 3 — Eternal Sunshine of the Spotless Mind</span>
+    </div>
+
+    <h2 class="part-headline">The erasure problem.</h2>
+
+    <div class="setup-block" style="background:var(--teal-light); border-left:4px solid var(--teal); border-radius:0 4px 4px 0;">
+      <div class="setup-label" style="color:var(--teal)">The setup</div>
+      <p>Joel and Clementine erase each other — completely — from their memories. The procedure is real, clinical, and permanent. After it's done, they meet again as strangers. They fall for each other again. They don't remember why they broke up. They don't remember what it cost them.</p>
+      <p><em>Crucially: Joel changes his mind midway through. He tries to hold on. He can't.</em></p>
+    </div>
+
+    <h3 class="subsection">3.1 Solo</h3>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">1</div>
+        <div class="q-text">If Joel remembers nothing about Clementine, is he still the same Joel who loved her? Or did erasing her erase part of him?</div>
+      </div>
+      <textarea name="p3_q1" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">2</div>
+        <div class="q-text">Joel tries to cling to the memories even as they're being deleted. He clearly thinks losing them means losing something important. Is he right? What exactly would he be losing?</div>
+      </div>
+      <textarea name="p3_q2" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">3</div>
+        <div class="q-text">The Prestige asked about copying. This film asks about erasing. Which one feels like a bigger threat to your identity — and why?</div>
+      </div>
+      <textarea name="p3_q3" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">4</div>
+        <div class="q-text">Think about an experience that genuinely shaped who you are — something that changed how you see yourself or the world. If that memory were erased, do you think you'd still make the same kinds of choices? Would people who know you still recognize you?</div>
+      </div>
+      <textarea name="p3_q4" rows="5"></textarea>
+    </div>
+
+    <hr class="thin-rule">
+    <h3 class="subsection">3.2 A wrinkle — read this</h3>
+
+    <div class="wrinkle-block" style="background:var(--teal-light); border-left:4px solid var(--teal); border-radius:0 4px 4px 0;">
+      <div class="wrinkle-title" style="color:var(--teal)">Memory theory has a problem.</div>
+      <p>If you are your memories, then erasing them destroys you. But Joel clearly survives the procedure — he wakes up the next morning, he goes to work, he feels things. There's still a Joel. So either memory theory is wrong, or something about identity goes deeper than memory.</p>
+      <p><em>And: Joel and Clementine fall for each other again. If their identities are built from memory, and those memories are gone — why do they end up in the same place? Is there something underneath memory that persists?</em></p>
+    </div>
+
+    <h3 class="subsection">3.3 Group discussion</h3>
+
+    <div class="recorder-note">
+      One person in the group records the answers below. Everyone else: write that person's name on your sheet instead.
+      <div class="recorder-name-field">
+        <label>Recorder's name</label>
+        <input type="text" name="p3_recorder" placeholder="Name of person recording">
+      </div>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">5</div>
+        <div class="q-text">Joel chose to erase Clementine. Then he tried to stop it. Which choice was more him — the one who started the procedure, or the one who tried to hold on? Can both be him?</div>
+      </div>
+      <textarea name="p3_q5" rows="4" placeholder="Group notes..."></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--teal)">6</div>
+        <div class="q-text">If everything you remembered was wiped clean, what do you think someone who knows you well would still recognize about you? What would be left that isn't just memory?</div>
+      </div>
+      <textarea name="p3_q6" rows="4"></textarea>
+    </div>
+
+    <div class="nav-buttons">
+      <button type="button" class="btn-back" onclick="goTo(2)">← Part 2</button>
+      <button type="button" class="btn-next" onclick="goTo(4)">Part 4: Arrival →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- PART 4 — ARRIVAL -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-4">
+  <div class="container">
+    <div class="section-header">
+      <span class="mode-badge" style="background:var(--blue)">Solo → Group</span>
+      <span class="section-title">Part 4 — Arrival</span>
+    </div>
+
+    <h2 class="part-headline">The time problem.</h2>
+
+    <div class="setup-block" style="background:var(--blue-light); border-left:4px solid var(--blue); border-radius:0 4px 4px 0;">
+      <div class="setup-label" style="color:var(--blue)">The setup</div>
+      <p>Louise learns the alien language and gains something the aliens have: the ability to perceive time non-linearly. She sees her future — including her daughter, who will die young. She sees herself making choices she hasn't made yet.</p>
+      <p><em>Knowing all of this, she chooses to have her daughter anyway.</em></p>
+    </div>
+
+    <h3 class="subsection">4.1 Solo</h3>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">1</div>
+        <div class="q-text">If Louise already knows everything that will happen — her daughter, the grief, all of it — does she have free will? Or is she just going through motions she's already seen?</div>
+      </div>
+      <textarea name="p4_q1" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">2</div>
+        <div class="q-text">The Prestige and Eternal Sunshine both assume time moves forward — there's a "before" and "after" to identity. Arrival breaks that. If past, present, and future all exist simultaneously, what happens to the idea of a self that persists over time?</div>
+      </div>
+      <textarea name="p4_q2" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">3</div>
+        <div class="q-text">Louise chooses to have her daughter knowing the pain it will cause. Does the choice mean more or less because she knew the outcome in advance?</div>
+      </div>
+      <textarea name="p4_q3" rows="4"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">4</div>
+        <div class="q-text">Think about a choice you've made that you can't undo — something that set your life on a particular path. If you had known exactly how it would turn out, do you think you would have made the same choice? Does knowing the outcome change whether it was really a choice at all?</div>
+      </div>
+      <textarea name="p4_q4" rows="5"></textarea>
+    </div>
+
+    <hr class="thin-rule">
+    <h3 class="subsection">4.2 The block universe — read this</h3>
+
+    <div class="wrinkle-block" style="background:var(--blue-light); border-left:4px solid var(--blue); border-radius:0 4px 4px 0;">
+      <div class="wrinkle-title" style="color:var(--blue)">A note on time</div>
+      <p>Some physicists and philosophers believe in what's called the block universe: the idea that past, present, and future all equally exist — time doesn't "flow," we just experience it that way. On this view, there's no meaningful difference between "who you were" and "who you will be." They all exist, simultaneously, in one four-dimensional structure.</p>
+      <p><em>If that's true: is there even a "you" that persists? Or just a series of snapshots, all equally real, spread across time?</em></p>
+    </div>
+
+    <h3 class="subsection">4.3 Group discussion</h3>
+
+    <div class="recorder-note">
+      One person in the group records the answers below. Everyone else: write that person's name on your sheet instead.
+      <div class="recorder-name-field">
+        <label>Recorder's name</label>
+        <input type="text" name="p4_recorder" placeholder="Name of person recording">
+      </div>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">5</div>
+        <div class="q-text">If the block universe is right, does the concept of personal identity even make sense? Or does identity require time to flow in one direction?</div>
+      </div>
+      <textarea name="p4_q5" rows="4" placeholder="Group notes..."></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--blue)">6</div>
+        <div class="q-text">The Prestige copies you across space. Eternal Sunshine erases you across time. Arrival collapses time entirely. Which one poses the biggest threat to the idea that there's a stable "you" at all?</div>
+      </div>
+      <textarea name="p4_q6" rows="4"></textarea>
+    </div>
+
+    <div class="nav-buttons">
+      <button type="button" class="btn-back" onclick="goTo(3)">← Part 3</button>
+      <button type="button" class="btn-next" onclick="goTo(5)">Part 5: Synthesis →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- PART 5 — SYNTHESIS -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-5">
+  <div class="container">
+    <div class="section-header">
+      <span class="mode-badge" style="background:var(--gold)">Solo</span>
+      <span class="section-title">Part 5 — Where you've landed</span>
+    </div>
+
+    <h2 class="part-headline">Not conclusions.<br>Just your current thinking.</h2>
+    <p class="body-text">This isn't a summary — conclusions come later in the unit. This is a snapshot of where your thinking is right now, before we go further. Answer honestly. Changing your mind later is a sign it's working.</p>
+
+    <h3 class="subsection">5.1 You, revisited</h3>
+    <p class="body-text">Go back to your answers from Part 1. Read them again — your gut reactions before any theory, before any film analysis.</p>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--gold)">1</div>
+        <div class="q-text">Would you answer those questions the same way now? Select one — then explain.</div>
+      </div>
+      <div class="choice-row">
+        <div class="choice-opt" onclick="selectChoice(this,'p5_choice')">Yes — I'd say the same things</div>
+        <div class="choice-opt" onclick="selectChoice(this,'p5_choice')">Mostly — but one thing shifted</div>
+        <div class="choice-opt" onclick="selectChoice(this,'p5_choice')">No — I think differently now</div>
+      </div>
+      <input type="hidden" name="p5_choice" id="p5_choice">
+      <textarea name="p5_q1" placeholder="What changed — or what held?" rows="4"></textarea>
+    </div>
+
+    <h3 class="subsection">5.2 Your working theory</h3>
+    <p class="body-text">You don't have to commit to this. But based on everything — the films, the questions, your own gut — where does your thinking land right now?</p>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--gold)">2</div>
+        <div class="q-text">Of the three theories (body, memory, soul), which one do you find most convincing — and what's the biggest problem with it?</div>
+      </div>
+      <textarea name="p5_q2" rows="5"></textarea>
+    </div>
+
+    <div class="question-block">
+      <div class="question-row">
+        <div class="q-num" style="background:var(--gold)">3</div>
+        <div class="q-text">All three films suggest that identity is more fragile than we think. Do you agree? Or do you think there's something in a person that can't be copied, erased, or dissolved by time?</div>
+      </div>
+      <textarea name="p5_q3" rows="5"></textarea>
+    </div>
+
+    <div class="coming-up">
+      <div class="coming-up-title">Coming up in this unit</div>
+      <p>We've deliberately left one theory mostly untouched — soul theory. You've seen it mentioned, but we haven't examined it. That's next. If body theory and memory theory both have serious problems, soul theory exists partly to solve them. Whether it does is what we'll work through together.</p>
+      <p>For now: what would it take for you to believe there's something in you that no machine, no procedure, and no amount of time could touch?</p>
+    </div>
+
+    <div class="question-block">
+      <textarea name="p5_q4" placeholder="Your answer — or your question..." rows="4"></textarea>
+    </div>
+
+    <div class="nav-buttons">
+      <button type="button" class="btn-back" onclick="goTo(4)">← Part 4</button>
+      <button type="button" class="btn-submit" id="submitBtn" onclick="submitForm()">Submit →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!-- SUCCESS -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-6">
+  <div class="success-screen">
+    <div class="checkmark">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 16L13 23L26 9" stroke="#0f6e56" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Submitted.</h2>
+    <p>Your responses have been sent. Well done for sitting with hard questions — that's what philosophy actually is.</p>
+  </div>
+</div>
+
+</form>
+
+<script>
+  const TOTAL_PARTS = 5;
+  let currentPage = 0;
+
+  const partColors = ['', 'var(--purple)','var(--red)','var(--teal)','var(--blue)','var(--gold)'];
+
+  function buildDots() {
+    const nav = document.getElementById('partDots');
+    nav.innerHTML = '';
+    for (let i = 1; i <= TOTAL_PARTS; i++) {
+      const d = document.createElement('div');
+      d.className = 'part-dot';
+      d.textContent = i;
+      d.onclick = () => { if (i < currentPage || currentPage === 0) goTo(i); };
+      nav.appendChild(d);
+    }
+  }
+
+  function updateDots() {
+    const dots = document.querySelectorAll('.part-dot');
+    dots.forEach((d, i) => {
+      d.classList.remove('active','done');
+      const partNum = i + 1;
+      if (partNum === currentPage) d.classList.add('active');
+      else if (partNum < currentPage) d.classList.add('done');
+    });
+  }
+
+  function updateProgress() {
+    const pct = currentPage === 0 ? 0 : (currentPage / (TOTAL_PARTS + 1)) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+  }
+
+  function goTo(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + n).classList.add('active');
+    currentPage = n;
+    updateDots();
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startForm() {
+    const name = document.getElementById('studentName').value.trim();
+    if (!name) {
+      alert('Please enter your name before starting.');
+      document.getElementById('studentName').focus();
+      return;
+    }
+    document.getElementById('hid_name').value = name;
+    document.getElementById('hid_period').value = document.getElementById('studentPeriod').value.trim();
+    goTo(1);
+  }
+
+  function selectChoice(el, fieldId) {
+    el.closest('.choice-row').querySelectorAll('.choice-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById(fieldId).value = el.textContent;
+  }
+
+  async function submitForm() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    const form = document.getElementById('mainForm');
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch('https://formspree.io/f/xnjlyzyo', {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        goTo(6);
+        document.getElementById('progressFill').style.width = '100%';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Submit →';
+        alert('Something went wrong. Please try again.');
+      }
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Submit →';
+      alert('Could not connect. Please check your internet and try again.');
+    }
+  }
+
+  buildDots();
+  updateProgress();
+</script>
+</body>
+</html>
