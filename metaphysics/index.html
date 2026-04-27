@@ -605,6 +605,58 @@
 
   .divider { width: 48px; height: 3px; background: var(--red); margin: 32px 0; }
 
+  /* ── THEORY EVIDENCE BOXES ── */
+  .theory-evidence-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0 8px;
+  }
+  .theory-evidence-card {
+    border: 1px solid #e0ddd5;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .theory-evidence-header {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .theory-evidence-header .teh-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .theory-evidence-header .teh-title {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+  }
+  .theory-evidence-body {
+    padding: 0 16px 4px;
+  }
+  .theory-evidence-body .sub-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin: 12px 0 4px;
+  }
+  .theory-evidence-body textarea {
+    min-height: 72px;
+    font-size: 14px;
+  }
+
+  /* ── SAVE INDICATOR ── */
+  .save-indicator {
+    font-size: 11px;
+    color: #888;
+    opacity: 0;
+    transition: opacity 0.4s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .save-indicator.visible { opacity: 1; }
+
   @media (max-width: 600px) {
     .container { padding: 40px 20px 100px; }
     .topnav { padding: 0 20px; }
@@ -618,7 +670,10 @@
 
 <nav class="topnav">
   <span class="topnav-title">What makes you you?</span>
-  <div class="topnav-parts" id="partDots"></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span class="save-indicator" id="saveIndicator">✓ Saved</span>
+    <div class="topnav-parts" id="partDots"></div>
+  </div>
 </nav>
 
 <form id="mainForm" action="https://formspree.io/f/xnjlyzyo" method="POST">
@@ -806,7 +861,48 @@
         <div class="q-num" style="background:var(--red)">4</div>
         <div class="q-text">Go through each theory one at a time. For each one: set aside whether you believe it, and make the strongest real-world argument you can for it. What do people do, say, or feel that supports it? What examples from life — not from the film — back it up?</div>
       </div>
-      <textarea name="p2_q4" placeholder="Body theory — real world evidence:&#10;&#10;Memory theory — real world evidence:&#10;&#10;Soul theory — real world evidence:" rows="10"></textarea>
+      <div class="theory-evidence-grid">
+
+        <div class="theory-evidence-card">
+          <div class="theory-evidence-header" style="background:color-mix(in srgb, var(--teal) 8%, white);">
+            <div class="teh-dot" style="background:var(--teal)"></div>
+            <span class="teh-title" style="color:var(--teal)">Body Theory</span>
+          </div>
+          <div class="theory-evidence-body">
+            <div class="sub-label">Real-world evidence for it</div>
+            <textarea name="p2_q4_body_evidence" placeholder="What do people do, say, or feel that backs this up?"></textarea>
+            <div class="sub-label">Biggest flaw in this theory</div>
+            <textarea name="p2_q4_body_flaw" placeholder="Where does it break down?"></textarea>
+          </div>
+        </div>
+
+        <div class="theory-evidence-card">
+          <div class="theory-evidence-header" style="background:color-mix(in srgb, var(--purple) 8%, white);">
+            <div class="teh-dot" style="background:var(--purple)"></div>
+            <span class="teh-title" style="color:var(--purple)">Memory Theory</span>
+          </div>
+          <div class="theory-evidence-body">
+            <div class="sub-label">Real-world evidence for it</div>
+            <textarea name="p2_q4_memory_evidence" placeholder="What do people do, say, or feel that backs this up?"></textarea>
+            <div class="sub-label">Biggest flaw in this theory</div>
+            <textarea name="p2_q4_memory_flaw" placeholder="Where does it break down?"></textarea>
+          </div>
+        </div>
+
+        <div class="theory-evidence-card">
+          <div class="theory-evidence-header" style="background:color-mix(in srgb, var(--gold) 8%, white);">
+            <div class="teh-dot" style="background:var(--gold)"></div>
+            <span class="teh-title" style="color:var(--gold)">Soul Theory</span>
+          </div>
+          <div class="theory-evidence-body">
+            <div class="sub-label">Real-world evidence for it</div>
+            <textarea name="p2_q4_soul_evidence" placeholder="What do people do, say, or feel that backs this up?"></textarea>
+            <div class="sub-label">Biggest flaw in this theory</div>
+            <textarea name="p2_q4_soul_flaw" placeholder="Where does it break down?"></textarea>
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <div class="nav-buttons">
@@ -1178,6 +1274,51 @@
 
   buildDots();
   updateProgress();
+
+  // ── AUTO-SAVE via localStorage ──
+  const SAVE_KEY = 'metaphysics_form_v1';
+
+  function saveToStorage() {
+    const data = {};
+    document.querySelectorAll('textarea, input[type=text]').forEach(el => {
+      if (el.name || el.id) data[el.name || el.id] = el.value;
+    });
+    // save current page
+    data['__page'] = currentPage;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    // flash indicator
+    const ind = document.getElementById('saveIndicator');
+    ind.classList.add('visible');
+    clearTimeout(ind._t);
+    ind._t = setTimeout(() => ind.classList.remove('visible'), 2000);
+  }
+
+  function loadFromStorage() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      document.querySelectorAll('textarea, input[type=text]').forEach(el => {
+        const key = el.name || el.id;
+        if (key && data[key] !== undefined) el.value = data[key];
+      });
+      // restore name hidden field
+      if (data['studentName']) document.getElementById('hid_name').value = data['studentName'];
+    } catch(e) {}
+  }
+
+  // save on any input
+  document.getElementById('mainForm').addEventListener('input', saveToStorage);
+
+  // load on start
+  loadFromStorage();
+
+  // clear storage after successful submit (called inside submitForm after goTo(6))
+  const _origSubmit = submitForm;
+  submitForm = async function() {
+    await _origSubmit();
+    if (currentPage === 6) localStorage.removeItem(SAVE_KEY);
+  };
 </script>
 </body>
 </html>
