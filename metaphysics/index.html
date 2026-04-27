@@ -626,7 +626,7 @@
 <!-- hidden fields assembled at submit -->
 <input type="hidden" name="_subject" value="Philosophy 30 — What Makes You You? Submission">
 <input type="hidden" name="student_name" id="hid_name">
-<input type="hidden" name="period" id="hid_period">
+
 
 <!-- ══════════════════════════════════════════════════════════════════ -->
 <!-- SPLASH -->
@@ -642,10 +642,7 @@
         <label>Your name</label>
         <input type="text" id="studentName" placeholder="First and last name" autocomplete="off">
       </div>
-      <div class="name-field" style="max-width:180px;">
-        <label>Period / Block</label>
-        <input type="text" id="studentPeriod" placeholder="e.g. Block 2">
-      </div>
+
     </div>
 
     <div class="how-it-works">
@@ -1140,7 +1137,7 @@
       return;
     }
     document.getElementById('hid_name').value = name;
-    document.getElementById('hid_period').value = document.getElementById('studentPeriod').value.trim();
+    
     goTo(1);
   }
 
