@@ -146,16 +146,23 @@ body {
 .site-nav__links {
   list-style: none;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 1.5rem;
   margin: 0;
   padding: 0;
 }
 
+/* Each li fills full nav height; content is centred inside */
+.site-nav__links > li {
+  display: flex;
+  align-items: center;
+}
+
 /* Nav Dropdown CSS */
 .site-nav__dropdown {
   position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
 }
 .site-nav__dropdown-menu {
   display: none;
