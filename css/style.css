@@ -108,6 +108,28 @@ body {
   opacity: 1;
 }
 
+/* Inline logo images used inside nav link items (Workbooks, McRae Marks) */
+.site-nav__link--logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+}
+
+.site-nav__inline-logo {
+  height: 22px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.site-nav__link--logo:hover .site-nav__inline-logo,
+.site-nav__dropdown:hover .site-nav__inline-logo {
+  opacity: 1;
+}
+
 .utility-btn--logo {
   padding: 0.6rem 1rem !important;
   border-color: transparent !important;
