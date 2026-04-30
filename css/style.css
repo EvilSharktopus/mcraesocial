@@ -130,6 +130,24 @@ body {
   opacity: 1;
 }
 
+/* Crop container — hides the left 'MCRAE' portion of the Marks logo */
+.site-nav__logo-crop {
+  display: block;
+  overflow: hidden;
+  height: 30px;
+  width: 72px; /* shows roughly the M + MARKS right half */
+}
+
+.site-nav__inline-logo--crop {
+  height: 30px;
+  width: auto;
+  max-width: none; /* allow image to be wider than container */
+  position: relative;
+  left: -38%; /* shift left to hide MCRAE */
+  opacity: 0.9;
+  transition: opacity 0.15s ease;
+}
+
 .utility-btn--logo {
   padding: 0.6rem 1rem !important;
   border-color: transparent !important;
