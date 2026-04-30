@@ -59,6 +59,8 @@ body {
 }
 
 .site-nav__brand {
+  display: inline-flex;
+  align-items: center;
   color: var(--text);
   text-decoration: none;
   font-weight: 700;
@@ -88,6 +90,8 @@ body {
   width: auto;
   display: block;
   object-fit: contain;
+  opacity: 0.9;
+  transition: opacity 0.15s ease;
 }
 
 .site-nav__brand:hover .site-nav__logo {
