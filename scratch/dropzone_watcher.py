@@ -359,13 +359,23 @@ def inject_into_html(html_path: Path, new_tile: str, slug: str, is_iframe: bool)
         return False
 
     if '<div class="kn-grid">' in content:
-        # Insert tile before the closing </div> of kn-grid
-        content = content.replace('    </div>\n  </section>', f'{new_tile}\n    </div>\n  </section>', 1)
+        # Insert tile just before the kn-grid closing </div>
+        m = _re.search(r'<div class="kn-grid">(.*?)(\n[ \t]*</div>[ \t]*\n[ \t]*</section>)',
+                        content, flags=_re.DOTALL)
+        if m:
+            content = content[:m.start(2)] + "\n" + new_tile + "    " + content[m.start(2):]
+        else:
+            idx = content.index(anchor)
+            content = content[:idx] + new_tile + "\n  " + content[idx:]
     else:
-        # Create a whole new notes section
+        # Insert new section before the </div> closing .page-content
+        page_end = _re.search(r"([ \t]*</div>)([ \t]*\n(?:[\s]*)<footer)", content)
+        if page_end:
+            idx = page_end.start(1)
+        else:
+            idx = content.index(anchor)
         wrapped = NOTES_SECTION_WRAP.format(tiles=new_tile)
-        idx = content.index(anchor)
-        content = content[:idx] + wrapped + "\n\n  " + content[idx:]
+        content = content[:idx] + "\n" + wrapped + "\n  " + content[idx:]
 
     # Inject JS if not already present
     if "window.slideNext" not in content and "slide-viewer__track" in new_tile:
@@ -782,13 +792,23 @@ def inject_into_html(html_path: Path, new_tile: str, slug: str, is_iframe: bool)
         return False
 
     if '<div class="kn-grid">' in content:
-        # Insert tile before the closing </div> of kn-grid
-        content = content.replace('    </div>\n  </section>', f'{new_tile}\n    </div>\n  </section>', 1)
+        # Insert tile just before the kn-grid closing </div>
+        m = _re.search(r'<div class="kn-grid">(.*?)(\n[ \t]*</div>[ \t]*\n[ \t]*</section>)',
+                        content, flags=_re.DOTALL)
+        if m:
+            content = content[:m.start(2)] + "\n" + new_tile + "    " + content[m.start(2):]
+        else:
+            idx = content.index(anchor)
+            content = content[:idx] + new_tile + "\n  " + content[idx:]
     else:
-        # Create a whole new notes section
+        # Insert new section before the </div> closing .page-content
+        page_end = _re.search(r"([ \t]*</div>)([ \t]*\n(?:[\s]*)<footer)", content)
+        if page_end:
+            idx = page_end.start(1)
+        else:
+            idx = content.index(anchor)
         wrapped = NOTES_SECTION_WRAP.format(tiles=new_tile)
-        idx = content.index(anchor)
-        content = content[:idx] + wrapped + "\n\n  " + content[idx:]
+        content = content[:idx] + "\n" + wrapped + "\n  " + content[idx:]
 
     # Inject JS if not already present
     if "window.slideNext" not in content and "slide-viewer__track" in new_tile:
