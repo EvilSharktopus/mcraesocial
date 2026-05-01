@@ -178,7 +178,11 @@
   </section>
   </div>
 
-    <footer class="site-footer">
+    
+  <script>
+  window.knFullscreen = function(btn) { var tile = btn.closest('.kn-tile'); var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer'); if (target && target.requestFullscreen) target.requestFullscreen(); else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen(); };
+  </script>
+  <footer class="site-footer">
     <a href="/" aria-label="Home" style="display:inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
       <picture>
         <source srcset="/assets/images/home/mcrae-logo.webp" type="image/webp">

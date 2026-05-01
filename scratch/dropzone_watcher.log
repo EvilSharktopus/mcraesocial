@@ -980,3 +980,8 @@
 [2026-05-01 14:10:11]   Pushing to origin...
 [2026-05-01 14:10:21]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'push']' returned non-zero exit status 1.
 [2026-05-01 14:10:25]   ----------------------------------------------------------------------------- Published to Vercel via git push.
+[2026-05-01 14:21:42] Watching: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone
+[2026-05-01 14:21:42] Debounce window: 30s ---------------------------------------------------------------------------------- dispatches 30s after last file activity.
+[2026-05-01 14:21:42] Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.
+[2026-05-01 14:21:42] Scanning dropzone for existing unprocessed files...
+[2026-05-01 14:21:42] Startup scan complete - dispatched 0 item(s) in background threads.
