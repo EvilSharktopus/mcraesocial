@@ -1281,3 +1281,81 @@ body {
 @media (max-width: 600px) {
   .kn-hint { display: none; }
 }
+
+/* ── Keynote 2-column notes grid ── */
+.kn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 700px) {
+  .kn-grid { grid-template-columns: 1fr; }
+}
+
+.kn-tile {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-alt, #1a1e28);
+}
+
+.kn-tile__header {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kn-tile__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kn-tile__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.kn-scrubber {
+  flex: 1;
+  min-width: 60px;
+  height: 4px;
+  accent-color: var(--accent, #7b8fb5);
+  cursor: pointer;
+}
+
+.kn-slide-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.kn-tile .kn-input {
+  width: 44px;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+.kn-tile .kn-btn {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.kn-tile .slide-viewer-iframe iframe {
+  height: 260px !important;
+  border-radius: 0;
+}
+
+@media (max-width: 700px) {
+  .kn-tile .slide-viewer-iframe iframe {
+    height: 220px !important;
+  }
+}
