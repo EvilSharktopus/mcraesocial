@@ -203,13 +203,28 @@ def process_pptx(src: Path, course: str, unit: str, original_name: str = None):
         log(f"  Install LibreOffice and re-drop the file to process it.")
         return
 
-    log(f"  Converting {src.name} with LibreOffice...")
+    log(f"  Converting {src.name} with LibreOffice → PDF...")
+    pdf_dir = dest / "_pdf"
+    pdf_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run([
-        LIBREOFFICE_PATH, "--headless", "--convert-to", "png",
-        "--outdir", str(dest), str(src)
+        LIBREOFFICE_PATH, "--headless", "--convert-to", "pdf",
+        "--outdir", str(pdf_dir), str(src)
     ], check=True)
 
-    slides = sorted(dest.glob("*.png"))
+    pdf_files = list(pdf_dir.glob("*.pdf"))
+    if not pdf_files:
+        log(f"  No PDF produced from {src.name}")
+        return
+
+    log(f"  Converting PDF to slide images...")
+    POPPLER_PATH = str(Path(__file__).parent / "poppler" / "poppler-24.08.0" / "Library" / "bin")
+    from pdf2image import convert_from_path
+    pages = convert_from_path(str(pdf_files[0]), dpi=150, poppler_path=POPPLER_PATH)
+    for i, page in enumerate(pages):
+        page.save(str(dest / f"slide_{i+1:03d}.png"), "PNG")
+    shutil.rmtree(pdf_dir)  # clean up intermediate PDF
+
+    slides = sorted(dest.glob("slide_*.png"))
     if not slides:
         log(f"  No slides produced from {src.name}")
         return
