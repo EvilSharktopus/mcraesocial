@@ -859,14 +859,24 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
     dest  = slides_dest_dir(course, unit, slug)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    # Wait until ALL files in the Keynote export are fully downloaded from OneDrive
-    if not wait_for_folder_download(src_dir):
-        log(f"  Aborting '{title}' ---------------------------------------------------------------------------------- folder never fully synced.")
-        return
-
+    # Copy the Keynote export directly - Windows forces OneDrive to download
+    # each file on-demand as shutil.copytree reads it. No pre-check needed.
+    log(f"  Copying Keynote export '{title}' (OneDrive will download on-demand)...")
     if dest.exists():
         shutil.rmtree(dest)
-    shutil.copytree(src_dir, dest)
+    try:
+        shutil.copytree(src_dir, dest)
+    except Exception as e:
+        log(f"  Copy failed for '{title}': {e}")
+        log(f"  Will retry once after 60s...")
+        time.sleep(60)
+        try:
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(src_dir, dest)
+        except Exception as e2:
+            log(f"  Retry also failed for '{title}': {e2}. Skipping.")
+            return
     log(f"  Copied Keynote HTML to {dest}")
 
     # Find the entry HTML file
