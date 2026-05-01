@@ -967,3 +967,12 @@
 [2026-05-01 14:09:17]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-20\ultranationalism\index.html
 [2026-05-01 14:09:17]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-20\ultranationalism\_processed\End of Europe WW2
 [2026-05-01 14:09:17]   Running git add -A ...
+[2026-05-01 14:09:22]   Committing: feat: auto-publish 'End of Europe WW2' to social-20/ultranationalism
+[2026-05-01 14:09:23]   Pushing to origin...
+[2026-05-01 14:10:04]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\intro-to-ideologies\intro-to-ideologies
+[2026-05-01 14:10:04]   Disabled animations in index.html
+[2026-05-01 14:10:04]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\intro-to-ideologies\index.html
+[2026-05-01 14:10:07]   ----------------------------------------------------------------------------- Published to Vercel via git push.
+[2026-05-01 14:10:07]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'push']' returned non-zero exit status 1.
+[2026-05-01 14:10:10]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\intro-to-ideologies\_processed\Intro to Ideologies
+[2026-05-01 14:10:10]   Running git add -A ...
