@@ -1359,3 +1359,41 @@ body {
     height: 220px !important;
   }
 }
+
+/* ── PPTX slide viewer inside kn-tile ── */
+.kn-tile .slide-viewer {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.kn-tile .slide-viewer__track {
+  display: flex;
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+.kn-tile .slide-viewer__slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 260px;
+  object-fit: contain;
+  background: #111;
+  display: block;
+}
+@media (max-width: 700px) {
+  .kn-tile .slide-viewer__slide {
+    height: 220px;
+  }
+}
+.slide-btn {
+  background: var(--accent, #7b8fb5);
+  border: none;
+  color: #fff;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.slide-btn:hover { background: var(--accent-hover, #a0b3d1); }
+.slide-counter { font-size: 0.72rem; color: var(--text-dim); }
