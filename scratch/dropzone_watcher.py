@@ -1,4 +1,4 @@
-﻿"""
+"""
 dropzone_watcher.py
 Watches the McRae Dropzone OneDrive folder and automatically processes
 new note files (PowerPoint slides, Keynote HTML exports) into the
@@ -46,6 +46,23 @@ def log(msg: str):
     print(f"[{ts}] {msg}", flush=True)
 
 
+def trigger_onedrive_downloads(files: list):
+    """
+    Force OneDrive to start downloading online-only files by opening each one.
+    Reading even 1 byte is enough to trigger the on-demand download.
+    """
+    triggered = 0
+    for f in files:
+        try:
+            with open(f, "rb") as fh:
+                fh.read(1)
+            triggered += 1
+        except Exception:
+            pass
+    if triggered:
+        log(f"  Triggered download of {triggered} online-only file(s) — OneDrive is now pulling them...")
+
+
 def wait_for_download(path: Path, timeout: int = 120) -> bool:
     """
     Wait until OneDrive finishes downloading an online-only file.
@@ -75,10 +92,7 @@ def wait_for_download(path: Path, timeout: int = 120) -> bool:
 def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
     """
     Wait until every file inside a folder is fully downloaded from OneDrive.
-    Checks for:
-      - No files with the OneDrive 'O' (online-only) attribute
-      - No zero-byte files
-      - Stable total folder size (no files still being written)
+    Actively triggers downloads for any online-only placeholders found.
     Returns True when ready, False if timeout exceeded.
     """
     deadline = time.time() + timeout
@@ -88,10 +102,12 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             all_files = list(folder.rglob("*"))
             all_files = [f for f in all_files if f.is_file()]
 
-            # Check for any zero-byte files (placeholders not yet downloaded)
+            # Check for any zero-byte files (OneDrive online-only placeholders)
             zero_byte = [f for f in all_files if f.stat().st_size == 0]
             if zero_byte:
-                log(f"  Still waiting â€” {len(zero_byte)} zero-byte file(s) remaining...")
+                log(f"  Still waiting — {len(zero_byte)} file(s) not yet downloaded...")
+                # Actively trigger OneDrive to download them
+                trigger_onedrive_downloads(zero_byte)
                 time.sleep(10)
                 continue
 
@@ -102,7 +118,13 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             )
             if " O " in result.stdout:
                 online_count = result.stdout.count(" O ")
-                log(f"  Still waiting â€” {online_count} online-only file(s) not yet synced...")
+                log(f"  Still waiting — {online_count} online-only file(s) not yet synced...")
+                # Trigger downloads for any remaining online-only files
+                online_files = [
+                    Path(line[4:].strip()) for line in result.stdout.splitlines()
+                    if " O " in line
+                ]
+                trigger_onedrive_downloads(online_files)
                 time.sleep(10)
                 continue
 
@@ -114,7 +136,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             if size1 == size2 and len(all_files) == len(all_files2):
                 log(f"  Folder fully synced: {len(all_files)} files, {size1 // 1024}KB total.")
                 return True
-            log(f"  Size still changing ({size1} â†’ {size2}), waiting...")
+            log(f"  Size still changing ({size1} → {size2}), waiting...")
             time.sleep(5)
         except Exception as e:
             log(f"  Error checking folder sync: {e}")
