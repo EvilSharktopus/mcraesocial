@@ -169,7 +169,55 @@
   </section>
   </div>
 
-    <footer class="site-footer">
+      <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="end-of-ww1">
+    <h2 class="unit-section__title">NOTES Ã¢â‚¬â€ End of WW1</h2>
+    <div class="slide-viewer" id="viewer-end-of-ww1">
+      <div class="slide-viewer__track" id="track-end-of-ww1">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_001.png" alt="Slide 1" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_002.png" alt="Slide 2" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_003.png" alt="Slide 3" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_004.png" alt="Slide 4" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_005.png" alt="Slide 5" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_006.png" alt="Slide 6" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_007.png" alt="Slide 7" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_008.png" alt="Slide 8" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_009.png" alt="Slide 9" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_010.png" alt="Slide 10" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_011.png" alt="Slide 11" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-20/national-interest/end-of-ww1/slide_012.png" alt="Slide 12" loading="lazy">
+      </div>
+      <div class="slide-viewer__controls">
+        <button class="slide-btn" onclick="slidePrev('end-of-ww1')">&#8592;</button>
+        <span class="slide-counter" id="counter-end-of-ww1">1 / 12</span>
+        <button class="slide-btn" onclick="slideNext('end-of-ww1')">&#8594;</button>
+      </div>
+    </div>
+  </section>
+<script>
+(function(){
+  var viewers = {};
+  document.querySelectorAll('.slide-viewer').forEach(function(v){
+    var id = v.id.replace('viewer-','');
+    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
+  });
+  window.slidePrev = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
+    updateViewer(id, v);
+  };
+  window.slideNext = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx + 1) % v.slides.length;
+    updateViewer(id, v);
+  };
+  function updateViewer(id, v){
+    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
+    document.getElementById('counter-'+id).textContent = (v.idx+1) + ' / ' + v.slides.length;
+  }
+})();
+</script>
+
+  <footer class="site-footer">
     <a href="/" aria-label="Home" style="display:inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
       <picture>
         <source srcset="/assets/images/home/mcrae-logo.webp" type="image/webp">
