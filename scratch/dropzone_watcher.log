@@ -903,3 +903,11 @@
 [2026-05-01 13:54:55]   Aborting 'Internationalism' ---------------------------------------------------------------------------------- folder never fully synced.
 [2026-05-01 13:54:55]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-20\internationalism\_processed\Internationalism
 [2026-05-01 13:54:55]   Running git add -A ...
+[2026-05-01 13:54:55]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-01 13:54:55]   Committing: feat: auto-publish 'Divided Canada' to social-20/challenges-to-canada
+[2026-05-01 13:54:55]   Pushing to origin...
+[2026-05-01 13:55:01]   ----------------------------------------------------------------------------- Published to Vercel via git push.
+[2026-05-01 13:55:01]   Timeout waiting for 'End of Europe WW2' to fully sync. Skipping.
+[2026-05-01 13:55:01]   Aborting 'End of Europe WW2' ---------------------------------------------------------------------------------- folder never fully synced.
+[2026-05-01 13:55:01]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-20\ultranationalism\_processed\End of Europe WW2
+[2026-05-01 13:55:01]   Running git add -A ...
