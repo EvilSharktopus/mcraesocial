@@ -1,13 +1,13 @@
-"""
+﻿"""
 dropzone_watcher.py
 Watches the McRae Dropzone OneDrive folder and automatically processes
 new note files (PowerPoint slides, Keynote HTML exports) into the
 mcraesocial website, injecting the correct HTML.
 
 Supported file types:
-  - .pptx         → LibreOffice converts to slide images → embedded slideshow
-  - folder/       → Keynote HTML export → hosted as iframe embed
-  - .txt          → iCloud share link → iframe embed
+  - .pptx         â†’ LibreOffice converts to slide images â†’ embedded slideshow
+  - folder/       â†’ Keynote HTML export â†’ hosted as iframe embed
+  - .txt          â†’ iCloud share link â†’ iframe embed
 
 Run this script at startup. It runs silently in the background.
 """
@@ -23,13 +23,13 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 DROPZONE_DIR  = Path(r"C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone")
 SITE_DIR      = Path(r"C:\Users\Owner\Desktop\mcraesocial")
 ASSETS_SLIDES = SITE_DIR / "assets" / "slides"
 
-# Path to LibreOffice soffice.exe — update if installed to a different location
+# Path to LibreOffice soffice.exe â€” update if installed to a different location
 LIBREOFFICE_PATH = r"C:\Program Files\LibreOffice\program\soffice.exe"
 
 # Valid course directories inside the Dropzone (handles both cases from Mac)
@@ -39,7 +39,7 @@ COURSE_NORMALIZE = {
     "social 20": "social-20", "social 30": "social-30",
 }
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def log(msg: str):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -91,7 +91,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             # Check for any zero-byte files (placeholders not yet downloaded)
             zero_byte = [f for f in all_files if f.stat().st_size == 0]
             if zero_byte:
-                log(f"  Still waiting — {len(zero_byte)} zero-byte file(s) remaining...")
+                log(f"  Still waiting â€” {len(zero_byte)} zero-byte file(s) remaining...")
                 time.sleep(10)
                 continue
 
@@ -102,7 +102,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             )
             if " O " in result.stdout:
                 online_count = result.stdout.count(" O ")
-                log(f"  Still waiting — {online_count} online-only file(s) not yet synced...")
+                log(f"  Still waiting â€” {online_count} online-only file(s) not yet synced...")
                 time.sleep(10)
                 continue
 
@@ -114,7 +114,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             if size1 == size2 and len(all_files) == len(all_files2):
                 log(f"  Folder fully synced: {len(all_files)} files, {size1 // 1024}KB total.")
                 return True
-            log(f"  Size still changing ({size1} → {size2}), waiting...")
+            log(f"  Size still changing ({size1} â†’ {size2}), waiting...")
             time.sleep(5)
         except Exception as e:
             log(f"  Error checking folder sync: {e}")
@@ -135,7 +135,7 @@ def parse_unit_path(abs_path: Path):
     Given an absolute path inside the Dropzone, return (course, unit) or None.
     Handles both 'social-10' and 'Social 10' folder names from Mac.
     Example: .../McRae Dropzone/social-10/historical/notes.pptx
-             → ("social-10", "historical")
+             â†’ ("social-10", "historical")
     """
     try:
         rel = abs_path.relative_to(DROPZONE_DIR)
@@ -161,11 +161,11 @@ def slides_dest_dir(course: str, unit: str, slug: str) -> Path:
     return ASSETS_SLIDES / course / unit / slug
 
 
-# ── HTML injection ────────────────────────────────────────────────────────────
+# â”€â”€ HTML injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SLIDESHOW_BLOCK = """\
   <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="{slug}">
-    <h2 class="unit-section__title">NOTES — {title}</h2>
+    <h2 class="unit-section__title">NOTES â€” {title}</h2>
     <div class="slide-viewer" id="viewer-{slug}">
       <div class="slide-viewer__track" id="track-{slug}">
 {slide_imgs}
@@ -186,7 +186,7 @@ IFRAME_BLOCK = """\
         <label class="kn-label">Go to slide</label>
         <input class="kn-input" type="number" min="1" value="1" id="kn-input-{slug}">
         <button class="kn-btn" onclick="knGoTo('{slug}')">Go</button>
-        <span class="kn-hint">Use ← → keys inside the viewer to advance slides</span>
+        <span class="kn-hint">Use â† â†’ keys inside the viewer to advance slides</span>
       </div>
       <div class="slide-viewer-iframe">
         <iframe src="{src}" id="kn-frame-{slug}" allowfullscreen loading="lazy"></iframe>
@@ -197,46 +197,56 @@ IFRAME_BLOCK = """\
 KN_NAV_JS = """\
 <script>
 (function() {
-  // Keynote iframe slide navigation via arrow key simulation
-  window.knGoTo = function(slug) {
+  function knStep(frame, forward) {
+    try {
+      var doc = frame.contentDocument || frame.contentWindow.document;
+      if (forward) {
+        var stage = doc.getElementById('stage') || doc.getElementById('stageArea') || doc.body;
+        stage.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, view: frame.contentWindow}));
+      } else {
+        var opts = {key: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true, cancelable: true};
+        doc.dispatchEvent(new KeyboardEvent('keydown', opts));
+        doc.dispatchEvent(new KeyboardEvent('keyup', opts));
+      }
+    } catch(e) {}
+  }
+  function knNavigateTo(slug, target) {
     var frame = document.getElementById('kn-frame-' + slug);
-    var input = document.getElementById('kn-input-' + slug);
-    if (!frame || !input) return;
-    var target = parseInt(input.value, 10);
-    if (isNaN(target) || target < 1) return;
-    // Focus the iframe then send arrow keys to navigate
-    // We track current slide via a data attr (starts at 1)
-    var wrap = document.getElementById('kn-' + slug);
-    var current = parseInt(wrap.dataset.slide || '1', 10);
+    if (!frame) return;
+    var tile = frame.closest('[data-slug]');
+    var current = tile ? parseInt(tile.dataset.slide || '1', 10) : 1;
     var delta = target - current;
     if (delta === 0) return;
-    var key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
+    var forward = delta > 0;
     var steps = Math.abs(delta);
-    frame.focus();
     var i = 0;
     var interval = setInterval(function() {
-      if (i >= steps) { clearInterval(interval); wrap.dataset.slide = target; return; }
-      try {
-        frame.contentWindow.dispatchEvent(new KeyboardEvent('keydown', {key: key, bubbles: true}));
-      } catch(e) { clearInterval(interval); }
+      if (i >= steps) {
+        clearInterval(interval);
+        if (tile) tile.dataset.slide = target;
+        var cur = document.getElementById('kn-cur-' + slug);
+        if (cur) cur.textContent = target;
+        var scrubber = tile ? tile.querySelector('.kn-scrubber') : null;
+        if (scrubber) scrubber.value = target;
+        return;
+      }
+      knStep(frame, forward);
       i++;
-    }, 120);
+    }, 350);
+  }
+  window.knGoTo = function(slug) {
+    var input = document.getElementById('kn-input-' + slug);
+    if (!input) return;
+    var target = parseInt(input.value, 10);
+    if (isNaN(target) || target < 1) return;
+    knNavigateTo(slug, target);
   };
-  // Also update tracked slide when user clicks inside the iframe
-  document.querySelectorAll('[id^="kn-frame-"]').forEach(function(frame) {
-    frame.addEventListener('load', function() {
-      try {
-        frame.contentWindow.addEventListener('keydown', function(e) {
-          var slug = frame.id.replace('kn-frame-', '');
-          var wrap = document.getElementById('kn-' + slug);
-          if (!wrap) return;
-          var cur = parseInt(wrap.dataset.slide || '1', 10);
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') wrap.dataset.slide = cur + 1;
-          if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   wrap.dataset.slide = Math.max(1, cur - 1);
-        });
-      } catch(e) {}
-    });
-  });
+  window.knScrub = function(rangeEl, slug) {
+    var target = parseInt(rangeEl.value, 10);
+    var input = document.getElementById('kn-input-' + slug);
+    if (input) input.value = target;
+    knNavigateTo(slug, target);
+  };
 })();
 </script>"""
 
@@ -277,7 +287,7 @@ def inject_into_html(html_path: Path, new_section: str, slug: str) -> bool:
 
     # If slug already present, strip the old section out and re-inject fresh
     if f'data-slug="{slug}"' in content:
-        log(f"  Slug '{slug}' exists — replacing with updated version.")
+        log(f"  Slug '{slug}' exists â€” replacing with updated version.")
         # Remove the old section: from its opening <section to the matching </section>
         import re as _re
         pattern = rf'<section[^>]*data-slug="{_re.escape(slug)}"[^>]*>.*?</section>'
@@ -314,12 +324,12 @@ def git_commit_and_push(message: str):
         subprocess.run(["git", "-C", str(SITE_DIR), "commit", "-m", message], check=True)
         log("  Pushing to origin...")
         subprocess.run(["git", "-C", str(SITE_DIR), "push"], check=True)
-        log("  ✅ Published to Vercel via git push.")
+        log("  âœ… Published to Vercel via git push.")
     except subprocess.CalledProcessError as e:
-        log(f"  ⚠️  git error: {e}")
+        log(f"  âš ï¸  git error: {e}")
 
 
-# ── Processors ────────────────────────────────────────────────────────────────
+# â”€â”€ Processors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def process_pptx(src: Path, course: str, unit: str, original_name: str = None):
     title = original_name or Path(src).stem
@@ -332,7 +342,7 @@ def process_pptx(src: Path, course: str, unit: str, original_name: str = None):
         log(f"  Install LibreOffice and re-drop the file to process it.")
         return
 
-    log(f"  Converting {src.name} with LibreOffice → PDF...")
+    log(f"  Converting {src.name} with LibreOffice â†’ PDF...")
     pdf_dir = dest / "_pdf"
     pdf_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run([
@@ -381,7 +391,7 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
 
     # Wait until ALL files in the Keynote export are fully downloaded from OneDrive
     if not wait_for_folder_download(src_dir):
-        log(f"  Aborting '{title}' — folder never fully synced.")
+        log(f"  Aborting '{title}' â€” folder never fully synced.")
         return
 
     if dest.exists():
@@ -468,18 +478,18 @@ def dispatch(path: Path):
             archive(path, course, unit)
             injected = True
     else:
-        log(f"  Unsupported file type: {suffix} — ignoring.")
+        log(f"  Unsupported file type: {suffix} â€” ignoring.")
 
     if injected:
         title = path.stem if path.is_file() else path.name
         git_commit_and_push(f"feat: auto-publish '{title}' to {course}/{unit}")
 
 
-# ── Watcher ───────────────────────────────────────────────────────────────────
+# â”€â”€ Watcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import threading
 
-# Debounce table: unit_key → (timer, candidate_path)
+# Debounce table: unit_key â†’ (timer, candidate_path)
 _pending = {}
 _pending_lock = threading.Lock()
 DEBOUNCE_SECONDS = 30  # wait this long after last activity before dispatching
@@ -492,7 +502,7 @@ def _debounce_dispatch(unit_key: str, candidate: Path):
             return
         del _pending[unit_key]
 
-    # candidate is the path that triggered us — walk up to find a dispatchable item
+    # candidate is the path that triggered us â€” walk up to find a dispatchable item
     # For Keynote exports, the top-level folder inside the unit is what we want
     info = parse_unit_path(candidate)
     if not info:
@@ -538,7 +548,7 @@ class DropzoneHandler(FileSystemEventHandler):
             t = threading.Timer(DEBOUNCE_SECONDS, _debounce_dispatch, args=[unit_key, path])
             _pending[unit_key] = (t, path)
             t.start()
-            log(f"  Activity in {unit_key} — waiting {DEBOUNCE_SECONDS}s for sync to settle...")
+            log(f"  Activity in {unit_key} â€” waiting {DEBOUNCE_SECONDS}s for sync to settle...")
 
     def on_created(self, event):
         self._schedule(Path(event.src_path))
@@ -550,7 +560,7 @@ class DropzoneHandler(FileSystemEventHandler):
 if __name__ == "__main__":
     ASSETS_SLIDES.mkdir(parents=True, exist_ok=True)
     log(f"Watching: {DROPZONE_DIR}")
-    log(f"Debounce window: {DEBOUNCE_SECONDS}s — dispatches {DEBOUNCE_SECONDS}s after last file activity.")
+    log(f"Debounce window: {DEBOUNCE_SECONDS}s â€” dispatches {DEBOUNCE_SECONDS}s after last file activity.")
     log("Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.")
 
     observer = Observer()
