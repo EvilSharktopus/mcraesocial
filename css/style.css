@@ -1174,3 +1174,24 @@ body {
   border: none;
   display: block;
 }
+
+/* ── Keynote HTML Export Embed ── */
+
+.keynote-embed {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: #000;
+  margin-top: 1rem;
+}
+
+.keynote-embed__frame {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
