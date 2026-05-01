@@ -52,15 +52,22 @@
           const closeMs = toMs(f.closeAt);
           const isTimed = !!(f.openAt || f.closeAt);
 
+          const isArchived = f.archived && f.archived.booleanValue === true;
+
           let isOpen;
-          if (isTimed) {
+          if (isArchived) {
+            isOpen = false;
+          } else if (isTimed) {
             // Schedule takes precedence — same logic as AssignmentList.jsx
             const notYetOpen = openMs  && now < openMs;
             const alreadyClosed = closeMs && now > closeMs;
             isOpen = !notYetOpen && !alreadyClosed;
           } else {
-            // No schedule: respect the manual isOpen toggle
-            isOpen = !f.isOpen || f.isOpen.booleanValue === true;
+            // No schedule: respect the manual isOpen toggle AND daily 3:30 PM cutoff
+            const d = new Date();
+            const isPastCutoff = d.getHours() > 15 || (d.getHours() === 15 && d.getMinutes() >= 30);
+            const manuallyOpen = !f.isOpen || f.isOpen.booleanValue === true;
+            isOpen = manuallyOpen && !isPastCutoff;
           }
 
           return {
