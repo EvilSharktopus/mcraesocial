@@ -911,3 +911,9 @@
 [2026-05-01 13:55:01]   Aborting 'End of Europe WW2' ---------------------------------------------------------------------------------- folder never fully synced.
 [2026-05-01 13:55:01]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-20\ultranationalism\_processed\End of Europe WW2
 [2026-05-01 13:55:01]   Running git add -A ...
+[2026-05-01 13:55:01]   Committing: feat: auto-publish 'End of Europe WW2' to social-20/ultranationalism
+[2026-05-01 13:55:02]   Pushing to origin...
+[2026-05-01 13:55:03]   Timeout waiting for 'Intro to Ideologies' to fully sync. Skipping.
+[2026-05-01 13:55:03]   Aborting 'Intro to Ideologies' ---------------------------------------------------------------------------------- folder never fully synced.
+[2026-05-01 13:55:03]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\intro-to-ideologies\_processed\Intro to Ideologies
+[2026-05-01 13:55:03]   Running git add -A ...
