@@ -112,16 +112,18 @@
       </div>
     </div>
   </section>
-  <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);">
+  <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="nationalism-and-identity">
     <h2 class="unit-section__title">NOTES &mdash; Nationalism and Identity</h2>
-    <div class="keynote-embed">
-      <iframe
-        src="/assets/slides/social-20/factors-of-nationalism/nationalism-and-identity/index.html"
-        class="keynote-embed__frame"
-        allowfullscreen
-        loading="lazy"
-        title="Nationalism and Identity Slideshow"
-      ></iframe>
+    <div class="kn-wrap" id="kn-nationalism-and-identity">
+      <div class="kn-controls">
+        <label class="kn-label">Go to slide</label>
+        <input class="kn-input" type="number" min="1" value="1" id="kn-input-nationalism-and-identity">
+        <button class="kn-btn" onclick="knGoTo('nationalism-and-identity')">Go</button>
+        <span class="kn-hint">Use &#x2190; &#x2192; keys inside the viewer to advance slides</span>
+      </div>
+      <div class="slide-viewer-iframe">
+        <iframe src="/assets/slides/social-20/factors-of-nationalism/nationalism-and-identity/index.html" id="kn-frame-nationalism-and-identity" allowfullscreen loading="lazy"></iframe>
+      </div>
     </div>
   </section>
   <section class="unit-section" style="background: rgba(100,160,140,0.06);">
@@ -230,18 +232,72 @@
 
       <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="a-history-lesson">
     <h2 class="unit-section__title">NOTES — A History Lesson</h2>
-    <div class="slide-viewer-iframe">
-      <iframe src="/assets/slides/social-20/factors-of-nationalism/a-history-lesson/index.html" allowfullscreen loading="lazy"></iframe>
-    </div>
+      <div class="kn-wrap" id="kn-a-history-lesson">
+        <div class="kn-controls">
+          <label class="kn-label">Go to slide</label>
+          <input class="kn-input" type="number" min="1" value="1" id="kn-input-a-history-lesson">
+          <button class="kn-btn" onclick="knGoTo('a-history-lesson')">Go</button>
+          <span class="kn-hint">Use ← → keys inside the viewer to advance slides</span>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-20/factors-of-nationalism/a-history-lesson/index.html" id="kn-frame-a-history-lesson" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
   </section>
 
     <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="french-revolution">
     <h2 class="unit-section__title">NOTES — French Revolution</h2>
-    <div class="slide-viewer-iframe">
-      <iframe src="/assets/slides/social-20/factors-of-nationalism/french-revolution/index.html" allowfullscreen loading="lazy"></iframe>
-    </div>
+      <div class="kn-wrap" id="kn-french-revolution">
+        <div class="kn-controls">
+          <label class="kn-label">Go to slide</label>
+          <input class="kn-input" type="number" min="1" value="1" id="kn-input-french-revolution">
+          <button class="kn-btn" onclick="knGoTo('french-revolution')">Go</button>
+          <span class="kn-hint">Use ← → keys inside the viewer to advance slides</span>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-20/factors-of-nationalism/french-revolution/index.html" id="kn-frame-french-revolution" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>
   </section>
 
+  <script>
+(function() {
+  window.knGoTo = function(slug) {
+    var frame = document.getElementById('kn-frame-' + slug);
+    var input = document.getElementById('kn-input-' + slug);
+    if (!frame || !input) return;
+    var target = parseInt(input.value, 10);
+    if (isNaN(target) || target < 1) return;
+    var wrap = document.getElementById('kn-' + slug);
+    var current = parseInt(wrap.dataset.slide || '1', 10);
+    var delta = target - current;
+    if (delta === 0) return;
+    var key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
+    var steps = Math.abs(delta);
+    frame.focus();
+    var i = 0;
+    var interval = setInterval(function() {
+      if (i >= steps) { clearInterval(interval); wrap.dataset.slide = target; return; }
+      try { frame.contentWindow.dispatchEvent(new KeyboardEvent('keydown', {key: key, bubbles: true})); } catch(e) { clearInterval(interval); }
+      i++;
+    }, 120);
+  };
+  document.querySelectorAll('[id^="kn-frame-"]').forEach(function(frame) {
+    frame.addEventListener('load', function() {
+      try {
+        frame.contentWindow.addEventListener('keydown', function(e) {
+          var slug = frame.id.replace('kn-frame-', '');
+          var wrap = document.getElementById('kn-' + slug);
+          if (!wrap) return;
+          var cur = parseInt(wrap.dataset.slide || '1', 10);
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') wrap.dataset.slide = cur + 1;
+          if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   wrap.dataset.slide = Math.max(1, cur - 1);
+        });
+      } catch(e) {}
+    });
+  });
+})();
+</script>
   <footer class="site-footer">
     <a href="/" aria-label="Home" style="display:inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
       <picture>

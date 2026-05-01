@@ -1204,3 +1204,61 @@ body {
     height: 300px;
   }
 }
+
+/* ── Keynote slide-jump controls ── */
+.kn-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-alt, #1a1e28);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  flex-wrap: wrap;
+}
+.kn-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.kn-input {
+  width: 60px;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  border-radius: 4px;
+  text-align: center;
+}
+.kn-btn {
+  padding: 0.3rem 0.85rem;
+  background: var(--accent, #7b8fb5);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.kn-btn:hover {
+  background: var(--accent-hover, #a0b3d1);
+}
+.kn-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.kn-wrap .slide-viewer-iframe iframe,
+.kn-wrap .slide-viewer-iframe {
+  border-radius: 0 0 8px 8px;
+}
+@media (max-width: 600px) {
+  .kn-hint { display: none; }
+}

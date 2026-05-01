@@ -180,11 +180,65 @@ SLIDESHOW_BLOCK = """\
 
 IFRAME_BLOCK = """\
   <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="{slug}">
-    <h2 class="unit-section__title">NOTES — {title}</h2>
-    <div class="slide-viewer-iframe">
-      <iframe src="{src}" allowfullscreen loading="lazy"></iframe>
+    <h2 class="unit-section__title">NOTES &mdash; {title}</h2>
+    <div class="kn-wrap" id="kn-{slug}">
+      <div class="kn-controls">
+        <label class="kn-label">Go to slide</label>
+        <input class="kn-input" type="number" min="1" value="1" id="kn-input-{slug}">
+        <button class="kn-btn" onclick="knGoTo('{slug}')">Go</button>
+        <span class="kn-hint">Use ← → keys inside the viewer to advance slides</span>
+      </div>
+      <div class="slide-viewer-iframe">
+        <iframe src="{src}" id="kn-frame-{slug}" allowfullscreen loading="lazy"></iframe>
+      </div>
     </div>
   </section>"""
+
+KN_NAV_JS = """\
+<script>
+(function() {
+  // Keynote iframe slide navigation via arrow key simulation
+  window.knGoTo = function(slug) {
+    var frame = document.getElementById('kn-frame-' + slug);
+    var input = document.getElementById('kn-input-' + slug);
+    if (!frame || !input) return;
+    var target = parseInt(input.value, 10);
+    if (isNaN(target) || target < 1) return;
+    // Focus the iframe then send arrow keys to navigate
+    // We track current slide via a data attr (starts at 1)
+    var wrap = document.getElementById('kn-' + slug);
+    var current = parseInt(wrap.dataset.slide || '1', 10);
+    var delta = target - current;
+    if (delta === 0) return;
+    var key = delta > 0 ? 'ArrowRight' : 'ArrowLeft';
+    var steps = Math.abs(delta);
+    frame.focus();
+    var i = 0;
+    var interval = setInterval(function() {
+      if (i >= steps) { clearInterval(interval); wrap.dataset.slide = target; return; }
+      try {
+        frame.contentWindow.dispatchEvent(new KeyboardEvent('keydown', {key: key, bubbles: true}));
+      } catch(e) { clearInterval(interval); }
+      i++;
+    }, 120);
+  };
+  // Also update tracked slide when user clicks inside the iframe
+  document.querySelectorAll('[id^="kn-frame-"]').forEach(function(frame) {
+    frame.addEventListener('load', function() {
+      try {
+        frame.contentWindow.addEventListener('keydown', function(e) {
+          var slug = frame.id.replace('kn-frame-', '');
+          var wrap = document.getElementById('kn-' + slug);
+          if (!wrap) return;
+          var cur = parseInt(wrap.dataset.slide || '1', 10);
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') wrap.dataset.slide = cur + 1;
+          if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   wrap.dataset.slide = Math.max(1, cur - 1);
+        });
+      } catch(e) {}
+    });
+  });
+})();
+</script>"""
 
 SLIDESHOW_JS = """\
 <script>
@@ -238,9 +292,12 @@ def inject_into_html(html_path: Path, new_section: str, slug: str) -> bool:
         return False
 
     idx = content.index(anchor)
-    # Add slideshow JS if not already there
+    # Add slideshow JS if not already there (PPTX viewer)
     if "window.slidePrev" not in content and "slide-viewer__track" in new_section:
         new_section = new_section + "\n" + SLIDESHOW_JS
+    # Add Keynote nav JS if not already there (iframe viewer)
+    if "window.knGoTo" not in content and "kn-frame-" in new_section:
+        new_section = new_section + "\n" + KN_NAV_JS
 
     content = content[:idx] + new_section + "\n\n  " + content[idx:]
     html_path.write_text(content, encoding="utf-8")
