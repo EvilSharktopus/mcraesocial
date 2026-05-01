@@ -5,9 +5,9 @@ new note files (PowerPoint slides, Keynote HTML exports) into the
 mcraesocial website, injecting the correct HTML.
 
 Supported file types:
-  - .pptx         â†’ LibreOffice converts to slide images â†’ embedded slideshow
-  - folder/       â†’ Keynote HTML export â†’ hosted as iframe embed
-  - .txt          â†’ iCloud share link â†’ iframe embed
+  - .pptx         Ã¢â€ â€™ LibreOffice converts to slide images Ã¢â€ â€™ embedded slideshow
+  - folder/       Ã¢â€ â€™ Keynote HTML export Ã¢â€ â€™ hosted as iframe embed
+  - .txt          Ã¢â€ â€™ iCloud share link Ã¢â€ â€™ iframe embed
 
 Run this script at startup. It runs silently in the background.
 """
@@ -23,13 +23,13 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-# â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬ Config Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 DROPZONE_DIR  = Path(r"C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone")
 SITE_DIR      = Path(r"C:\Users\Owner\Desktop\mcraesocial")
 ASSETS_SLIDES = SITE_DIR / "assets" / "slides"
 
-# Path to LibreOffice soffice.exe â€” update if installed to a different location
+# Path to LibreOffice soffice.exe Ã¢â‚¬â€ update if installed to a different location
 LIBREOFFICE_PATH = r"C:\Program Files\LibreOffice\program\soffice.exe"
 
 # Valid course directories inside the Dropzone (handles both cases from Mac)
@@ -39,11 +39,19 @@ COURSE_NORMALIZE = {
     "social 20": "social-20", "social 30": "social-30",
 }
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+LOG_FILE = Path(__file__).with_suffix(".log")
 
 def log(msg: str):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
+    line = f"[{ts}] {msg}"
+    print(line, flush=True)
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as _lf:
+            _lf.write(line + "\n")
+    except Exception:
+        pass
 
 
 def trigger_onedrive_downloads(files: list):
@@ -60,23 +68,29 @@ def trigger_onedrive_downloads(files: list):
         except Exception:
             pass
     if triggered:
-        log(f"  Triggered download of {triggered} online-only file(s) — OneDrive is now pulling them...")
+        log(f"  Triggered download of {triggered} online-only file(s) â€” OneDrive is now pulling them...")
 
 
-def wait_for_download(path: Path, timeout: int = 120) -> bool:
+def wait_for_download(path: Path, timeout: int = 300) -> bool:
     """
     Wait until OneDrive finishes downloading an online-only file.
+    Actively triggers the download by reading the file.
     Returns True if file is ready, False if timeout exceeded.
     """
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
+            # Try reading the file - this triggers OneDrive to download it
+            try:
+                with open(path, "rb") as fh:
+                    fh.read(1)
+            except Exception:
+                pass
             result = subprocess.run(
                 ["attrib", str(path)], capture_output=True, text=True
             )
             # 'O' flag means online-only (not downloaded)
             if " O " not in result.stdout and result.returncode == 0:
-                # Also verify file size is non-zero and stable
                 size1 = path.stat().st_size
                 time.sleep(2)
                 size2 = path.stat().st_size
@@ -105,7 +119,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             # Check for any zero-byte files (OneDrive online-only placeholders)
             zero_byte = [f for f in all_files if f.stat().st_size == 0]
             if zero_byte:
-                log(f"  Still waiting — {len(zero_byte)} file(s) not yet downloaded...")
+                log(f"  Still waiting â€” {len(zero_byte)} file(s) not yet downloaded...")
                 # Actively trigger OneDrive to download them
                 trigger_onedrive_downloads(zero_byte)
                 time.sleep(10)
@@ -118,7 +132,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             )
             if " O " in result.stdout:
                 online_count = result.stdout.count(" O ")
-                log(f"  Still waiting — {online_count} online-only file(s) not yet synced...")
+                log(f"  Still waiting â€” {online_count} online-only file(s) not yet synced...")
                 # Trigger downloads for any remaining online-only files
                 online_files = [
                     Path(line[4:].strip()) for line in result.stdout.splitlines()
@@ -136,7 +150,7 @@ def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
             if size1 == size2 and len(all_files) == len(all_files2):
                 log(f"  Folder fully synced: {len(all_files)} files, {size1 // 1024}KB total.")
                 return True
-            log(f"  Size still changing ({size1} → {size2}), waiting...")
+            log(f"  Size still changing ({size1} â†’ {size2}), waiting...")
             time.sleep(5)
         except Exception as e:
             log(f"  Error checking folder sync: {e}")
@@ -157,7 +171,7 @@ def parse_unit_path(abs_path: Path):
     Given an absolute path inside the Dropzone, return (course, unit) or None.
     Handles both 'social-10' and 'Social 10' folder names from Mac.
     Example: .../McRae Dropzone/social-10/historical/notes.pptx
-             â†’ ("social-10", "historical")
+             Ã¢â€ â€™ ("social-10", "historical")
     """
     try:
         rel = abs_path.relative_to(DROPZONE_DIR)
@@ -183,11 +197,11 @@ def slides_dest_dir(course: str, unit: str, slug: str) -> Path:
     return ASSETS_SLIDES / course / unit / slug
 
 
-# â”€â”€ HTML injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬ HTML injection Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 SLIDESHOW_BLOCK = """\
   <section class="unit-section notes-slideshow" style="background: rgba(100,160,140,0.06);" data-slug="{slug}">
-    <h2 class="unit-section__title">NOTES â€” {title}</h2>
+    <h2 class="unit-section__title">NOTES Ã¢â‚¬â€ {title}</h2>
     <div class="slide-viewer" id="viewer-{slug}">
       <div class="slide-viewer__track" id="track-{slug}">
 {slide_imgs}
@@ -208,7 +222,7 @@ IFRAME_BLOCK = """\
         <label class="kn-label">Go to slide</label>
         <input class="kn-input" type="number" min="1" value="1" id="kn-input-{slug}">
         <button class="kn-btn" onclick="knGoTo('{slug}')">Go</button>
-        <span class="kn-hint">Use â† â†’ keys inside the viewer to advance slides</span>
+        <span class="kn-hint">Use Ã¢â€ Â Ã¢â€ â€™ keys inside the viewer to advance slides</span>
       </div>
       <div class="slide-viewer-iframe">
         <iframe src="{src}" id="kn-frame-{slug}" allowfullscreen loading="lazy"></iframe>
@@ -309,7 +323,7 @@ def inject_into_html(html_path: Path, new_section: str, slug: str) -> bool:
 
     # If slug already present, strip the old section out and re-inject fresh
     if f'data-slug="{slug}"' in content:
-        log(f"  Slug '{slug}' exists â€” replacing with updated version.")
+        log(f"  Slug '{slug}' exists Ã¢â‚¬â€ replacing with updated version.")
         # Remove the old section: from its opening <section to the matching </section>
         import re as _re
         pattern = rf'<section[^>]*data-slug="{_re.escape(slug)}"[^>]*>.*?</section>'
@@ -346,12 +360,12 @@ def git_commit_and_push(message: str):
         subprocess.run(["git", "-C", str(SITE_DIR), "commit", "-m", message], check=True)
         log("  Pushing to origin...")
         subprocess.run(["git", "-C", str(SITE_DIR), "push"], check=True)
-        log("  âœ… Published to Vercel via git push.")
+        log("  Ã¢Å“â€¦ Published to Vercel via git push.")
     except subprocess.CalledProcessError as e:
-        log(f"  âš ï¸  git error: {e}")
+        log(f"  Ã¢Å¡Â Ã¯Â¸Â  git error: {e}")
 
 
-# â”€â”€ Processors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬ Processors Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 def process_pptx(src: Path, course: str, unit: str, original_name: str = None):
     title = original_name or Path(src).stem
@@ -364,7 +378,7 @@ def process_pptx(src: Path, course: str, unit: str, original_name: str = None):
         log(f"  Install LibreOffice and re-drop the file to process it.")
         return
 
-    log(f"  Converting {src.name} with LibreOffice â†’ PDF...")
+    log(f"  Converting {src.name} with LibreOffice Ã¢â€ â€™ PDF...")
     pdf_dir = dest / "_pdf"
     pdf_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run([
@@ -413,7 +427,7 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
 
     # Wait until ALL files in the Keynote export are fully downloaded from OneDrive
     if not wait_for_folder_download(src_dir):
-        log(f"  Aborting '{title}' â€” folder never fully synced.")
+        log(f"  Aborting '{title}' Ã¢â‚¬â€ folder never fully synced.")
         return
 
     if dest.exists():
@@ -500,18 +514,18 @@ def dispatch(path: Path):
             archive(path, course, unit)
             injected = True
     else:
-        log(f"  Unsupported file type: {suffix} â€” ignoring.")
+        log(f"  Unsupported file type: {suffix} Ã¢â‚¬â€ ignoring.")
 
     if injected:
         title = path.stem if path.is_file() else path.name
         git_commit_and_push(f"feat: auto-publish '{title}' to {course}/{unit}")
 
 
-# â”€â”€ Watcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Ã¢â€â‚¬Ã¢â€â‚¬ Watcher Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 import threading
 
-# Debounce table: unit_key â†’ (timer, candidate_path)
+# Debounce table: unit_key Ã¢â€ â€™ (timer, candidate_path)
 _pending = {}
 _pending_lock = threading.Lock()
 DEBOUNCE_SECONDS = 30  # wait this long after last activity before dispatching
@@ -524,7 +538,7 @@ def _debounce_dispatch(unit_key: str, candidate: Path):
             return
         del _pending[unit_key]
 
-    # candidate is the path that triggered us â€” walk up to find a dispatchable item
+    # candidate is the path that triggered us Ã¢â‚¬â€ walk up to find a dispatchable item
     # For Keynote exports, the top-level folder inside the unit is what we want
     info = parse_unit_path(candidate)
     if not info:
@@ -570,7 +584,7 @@ class DropzoneHandler(FileSystemEventHandler):
             t = threading.Timer(DEBOUNCE_SECONDS, _debounce_dispatch, args=[unit_key, path])
             _pending[unit_key] = (t, path)
             t.start()
-            log(f"  Activity in {unit_key} â€” waiting {DEBOUNCE_SECONDS}s for sync to settle...")
+            log(f"  Activity in {unit_key} Ã¢â‚¬â€ waiting {DEBOUNCE_SECONDS}s for sync to settle...")
 
     def on_created(self, event):
         self._schedule(Path(event.src_path))
@@ -579,11 +593,51 @@ class DropzoneHandler(FileSystemEventHandler):
         self._schedule(Path(event.dest_path))
 
 
+
+def startup_scan():
+    """
+    Scan the entire dropzone on startup for any files that arrived while the
+    watcher was offline. Dispatches them immediately.
+    """
+    log("Scanning dropzone for existing unprocessed files...")
+    found = 0
+    for course_dir in DROPZONE_DIR.iterdir():
+        if not course_dir.is_dir():
+            continue
+        course = course_dir.name.lower().replace(" ", "-")
+        for unit_dir in course_dir.iterdir():
+            if not unit_dir.is_dir() or unit_dir.name == "_processed":
+                continue
+
+            # PPTX files
+            for f in unit_dir.glob("*.pptx"):
+                log(f"[startup] Found PPTX: {f.name} in {course}/{unit_dir.name}")
+                threading.Thread(target=dispatch, args=[f], daemon=True).start()
+                found += 1
+
+            # Keynote HTML export folders
+            for d in unit_dir.iterdir():
+                if d.is_dir() and d.name != "_processed" and any(d.rglob("*.html")):
+                    log(f"[startup] Found Keynote folder: {d.name} in {course}/{unit_dir.name}")
+                    threading.Thread(target=dispatch, args=[d], daemon=True).start()
+                    found += 1
+
+            # iCloud .txt links
+            for f in unit_dir.glob("*.txt"):
+                log(f"[startup] Found iCloud link: {f.name} in {course}/{unit_dir.name}")
+                threading.Thread(target=dispatch, args=[f], daemon=True).start()
+                found += 1
+
+    log(f"Startup scan complete - dispatched {found} item(s) in background threads.")
+
 if __name__ == "__main__":
     ASSETS_SLIDES.mkdir(parents=True, exist_ok=True)
     log(f"Watching: {DROPZONE_DIR}")
-    log(f"Debounce window: {DEBOUNCE_SECONDS}s â€” dispatches {DEBOUNCE_SECONDS}s after last file activity.")
+    log(f"Debounce window: {DEBOUNCE_SECONDS}s Ã¢â‚¬â€ dispatches {DEBOUNCE_SECONDS}s after last file activity.")
     log("Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.")
+
+    # Process anything that arrived while watcher was offline
+    startup_scan()
 
     observer = Observer()
     observer.schedule(DropzoneHandler(), str(DROPZONE_DIR), recursive=True)
