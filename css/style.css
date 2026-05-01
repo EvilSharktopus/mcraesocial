@@ -1397,3 +1397,27 @@ body {
 }
 .slide-btn:hover { background: var(--accent-hover, #a0b3d1); }
 .slide-counter { font-size: 0.72rem; color: var(--text-dim); }
+
+/* Fullscreen button inside kn-tile header */
+.kn-fs-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: auto;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.kn-fs-btn:hover { color: var(--text); border-color: var(--accent, #7b8fb5); }
+.kn-tile:fullscreen .slide-viewer-iframe,
+.kn-tile:fullscreen .slide-viewer-iframe iframe {
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+}
+.kn-tile:fullscreen .slide-viewer { height: 100vh !important; }
+.kn-tile:fullscreen .slide-viewer__slide { height: 100vh !important; object-fit: contain; }

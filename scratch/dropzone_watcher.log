@@ -976,3 +976,7 @@
 [2026-05-01 14:10:07]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'push']' returned non-zero exit status 1.
 [2026-05-01 14:10:10]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\intro-to-ideologies\_processed\Intro to Ideologies
 [2026-05-01 14:10:10]   Running git add -A ...
+[2026-05-01 14:10:10]   Committing: feat: auto-publish 'Intro to Ideologies' to social-30/intro-to-ideologies
+[2026-05-01 14:10:11]   Pushing to origin...
+[2026-05-01 14:10:21]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'push']' returned non-zero exit status 1.
+[2026-05-01 14:10:25]   ----------------------------------------------------------------------------- Published to Vercel via git push.

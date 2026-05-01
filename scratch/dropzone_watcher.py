@@ -220,6 +220,7 @@ PPTX_TILE = """\
             <button class="slide-btn" onclick="slidePrev('{slug}')">&#8592;</button>
             <span class="slide-counter" id="counter-{slug}">1 / {count}</span>
             <button class="slide-btn" onclick="slideNext('{slug}')">&#8594;</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
           </div>
         </div>
         <div class="slide-viewer" id="viewer-{slug}">
@@ -238,6 +239,7 @@ IFRAME_TILE = """\
             <span class="kn-slide-label"><span id="kn-cur-{slug}">1</span> / {total}</span>
             <input class="kn-input" type="number" min="1" max="{total}" value="1" id="kn-input-{slug}">
             <button class="kn-btn" onclick="knGoTo('{slug}')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
           </div>
         </div>
         <div class="slide-viewer-iframe">
@@ -297,6 +299,12 @@ KN_NAV_JS = """\
     var input = document.getElementById('kn-input-' + slug);
     if (input) input.value = target;
     knNavigateTo(slug, target);
+  };
+  window.knFullscreen = function(btn) {
+    var tile = btn.closest('.kn-tile');
+    var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer');
+    if (target && target.requestFullscreen) target.requestFullscreen();
+    else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen();
   };
 })();
 </script>"""
@@ -635,6 +643,7 @@ PPTX_TILE = """\
             <button class="slide-btn" onclick="slidePrev('{slug}')">&#8592;</button>
             <span class="slide-counter" id="counter-{slug}">1 / {count}</span>
             <button class="slide-btn" onclick="slideNext('{slug}')">&#8594;</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
           </div>
         </div>
         <div class="slide-viewer" id="viewer-{slug}">
@@ -653,6 +662,7 @@ IFRAME_TILE = """\
             <span class="kn-slide-label"><span id="kn-cur-{slug}">1</span> / {total}</span>
             <input class="kn-input" type="number" min="1" max="{total}" value="1" id="kn-input-{slug}">
             <button class="kn-btn" onclick="knGoTo('{slug}')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
           </div>
         </div>
         <div class="slide-viewer-iframe">
@@ -712,6 +722,12 @@ KN_NAV_JS = """\
     var input = document.getElementById('kn-input-' + slug);
     if (input) input.value = target;
     knNavigateTo(slug, target);
+  };
+  window.knFullscreen = function(btn) {
+    var tile = btn.closest('.kn-tile');
+    var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer');
+    if (target && target.requestFullscreen) target.requestFullscreen();
+    else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen();
   };
 })();
 </script>"""
