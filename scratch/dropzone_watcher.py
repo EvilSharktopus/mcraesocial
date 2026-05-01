@@ -161,18 +161,23 @@ SLIDESHOW_JS = """\
 </script>"""
 
 def inject_into_html(html_path: Path, new_section: str, slug: str) -> bool:
-    """Inject the new section into the unit page before </div> that closes page-content.
-    Returns True if injection happened, False if skipped."""
+    """Inject the new section into the unit page before the footer.
+    If a section with the same slug already exists, replace it.
+    Returns True if injection/replacement happened, False on error."""
     if not html_path.exists():
         log(f"  HTML not found: {html_path}")
         return False
 
     content = html_path.read_text(encoding="utf-8")
 
-    # Don't double-inject
+    # If slug already present, strip the old section out and re-inject fresh
     if f'data-slug="{slug}"' in content:
-        log(f"  Already injected slug '{slug}', skipping.")
-        return False
+        log(f"  Slug '{slug}' exists — replacing with updated version.")
+        # Remove the old section: from its opening <section to the matching </section>
+        import re as _re
+        pattern = rf'<section[^>]*data-slug="{_re.escape(slug)}"[^>]*>.*?</section>'
+        content = _re.sub(pattern, "", content, flags=_re.DOTALL).strip()
+        content += "\n"  # ensure clean trailing newline
 
     # Insert before the closing </div> of .page-content
     # We look for the footer as the reliable anchor
@@ -276,6 +281,14 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
     if not entry:
         log("  No HTML entry found in Keynote export.")
         return
+
+    # Inject no-animation CSS override into the Keynote player
+    no_anim = '<style>*,*::before,*::after{animation-duration:0.001ms!important;animation-delay:0ms!important;transition-duration:0.001ms!important;}</style>'
+    html = entry.read_text(encoding="utf-8")
+    if "animation-duration:0.001ms" not in html:
+        html = html.replace("</head>", f"{no_anim}</head>")
+        entry.write_text(html, encoding="utf-8")
+        log(f"  Disabled animations in {entry.name}")
 
     web_src = "/assets/slides/" + "/".join([course, unit, slug, entry.name])
     section = IFRAME_BLOCK.format(slug=slug, title=title, src=web_src)

@@ -1,4 +1,4 @@
-/* === McRae Social — Shared Stylesheet === */
+﻿/* === McRae Social â€” Shared Stylesheet === */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -37,7 +37,7 @@ body {
 }
 
 
-/* ── Navigation ── */
+/* â”€â”€ Navigation â”€â”€ */
 
 .site-nav {
   position: sticky;
@@ -278,7 +278,7 @@ body {
 }
 
 
-/* ── Page Banner ── */
+/* â”€â”€ Page Banner â”€â”€ */
 
 .page-banner {
   position: relative;
@@ -323,7 +323,7 @@ body {
 }
 
 
-/* ── Main Content Area ── */
+/* â”€â”€ Main Content Area â”€â”€ */
 
 .page-content {
   max-width: 1100px;
@@ -332,7 +332,7 @@ body {
 }
 
 
-/* ── Back Link ── */
+/* â”€â”€ Back Link â”€â”€ */
 
 .back-link {
   display: inline-flex;
@@ -353,7 +353,7 @@ body {
 }
 
 
-/* ── Utility Links ── */
+/* â”€â”€ Utility Links â”€â”€ */
 
 .utility-links {
   display: flex;
@@ -394,7 +394,7 @@ body {
 }
 
 
-/* ── Image Grid (Unit Thumbnails) ── */
+/* â”€â”€ Image Grid (Unit Thumbnails) â”€â”€ */
 
 .unit-grid {
   display: grid;
@@ -452,7 +452,7 @@ body {
   }
 }
 
-/* ── 2-col unit grid variant (Social 10) ── */
+/* â”€â”€ 2-col unit grid variant (Social 10) â”€â”€ */
 
 .unit-grid--2col {
   display: grid;
@@ -491,7 +491,7 @@ body {
 }
 
 
-/* ── Home Page Layouts ── */
+/* â”€â”€ Home Page Layouts â”€â”€ */
 
 .home-hero {
   position: relative;
@@ -588,7 +588,7 @@ body {
 }
 
 
-/* ── Stream Toggles ── */
+/* â”€â”€ Stream Toggles â”€â”€ */
 
 .stream-toggle {
   display: flex;
@@ -627,7 +627,7 @@ body {
 }
 
 
-/* ── Section Headings ── */
+/* â”€â”€ Section Headings â”€â”€ */
 
 .section-heading {
   font-size: 0.8rem;
@@ -639,7 +639,7 @@ body {
 }
 
 
-/* ── Utility Button ── */
+/* â”€â”€ Utility Button â”€â”€ */
 
 .utility-btn {
   display: inline-flex;
@@ -676,7 +676,7 @@ body {
 }
 
 
-/* ── Unit Banner ── */
+/* â”€â”€ Unit Banner â”€â”€ */
 
 .unit-banner {
   position: relative;
@@ -738,7 +738,7 @@ body {
 }
 
 
-/* ── Unit Sections ── */
+/* â”€â”€ Unit Sections â”€â”€ */
 
 .unit-section {
   border-bottom: 1px solid var(--border);
@@ -765,7 +765,7 @@ body {
 }
 
 
-/* ── Stream Groups ── */
+/* â”€â”€ Stream Groups â”€â”€ */
 
 .stream-group {
   margin-bottom: 1.5rem;
@@ -806,7 +806,7 @@ body {
 }
 
 
-/* ── Assignment Block ── */
+/* â”€â”€ Assignment Block â”€â”€ */
 
 .assignment-block {
   display: flex;
@@ -837,7 +837,7 @@ body {
 }
 
 
-/* ── PDF Thumbnail Tile ── */
+/* â”€â”€ PDF Thumbnail Tile â”€â”€ */
 
 .pdf-thumb {
   display: block;
@@ -903,7 +903,7 @@ body {
 }
 
 
-/* ── Utility Link Items (Handouts / Required Reading) ── */
+/* â”€â”€ Utility Link Items (Handouts / Required Reading) â”€â”€ */
 
 .utility-link-item {
   display: block;
@@ -925,7 +925,7 @@ body {
 }
 
 
-/* ── Page Titles (non-banner pages) ── */
+/* â”€â”€ Page Titles (non-banner pages) â”€â”€ */
 
 .page-title {
   font-size: 1.5rem;
@@ -942,7 +942,7 @@ body {
 }
 
 
-/* ── Back Link ── */
+/* â”€â”€ Back Link â”€â”€ */
 
 .back-link {
   margin-top: 2rem;
@@ -962,7 +962,7 @@ body {
   color: var(--accent-hover);
 }
 
-/* ── Unit Page: Assignment Links ── */
+/* â”€â”€ Unit Page: Assignment Links â”€â”€ */
 
 .link-list {
   list-style: none;
@@ -990,7 +990,7 @@ body {
 }
 
 .link-list a::after {
-  content: '→';
+  content: 'â†’';
   margin-left: auto;
   padding-left: 1rem;
   color: var(--text-dim);
@@ -998,7 +998,7 @@ body {
 }
 
 
-/* ── Unit Page: Notes Thumbnails ── */
+/* â”€â”€ Unit Page: Notes Thumbnails â”€â”€ */
 
 .notes-grid {
   display: grid;
@@ -1042,7 +1042,7 @@ body {
 }
 
 
-/* ── Unit Page: Embedded Content (iframes) ── */
+/* â”€â”€ Unit Page: Embedded Content (iframes) â”€â”€ */
 
 .embed-wrap {
   margin-bottom: 2rem;
@@ -1063,7 +1063,7 @@ body {
 }
 
 
-/* ── Footer ── */
+/* â”€â”€ Footer â”€â”€ */
 
 .site-footer {
   border-top: 1px solid var(--border);
@@ -1074,7 +1074,7 @@ body {
 }
 
 
-/* ── Page Zoom Transition ── */
+/* â”€â”€ Page Zoom Transition â”€â”€ */
 
 .zoom-overlay {
   position: fixed;
@@ -1100,9 +1100,9 @@ body {
   filter: brightness(1.15);
 }
   
-/* 🔖 Submit Widget Badges 🔖 */ 
+/* ðŸ”– Submit Widget Badges ðŸ”– */ 
 
-/* ── Slide Viewer (Dropzone notes) ── */
+/* â”€â”€ Slide Viewer (Dropzone notes) â”€â”€ */
 
 .slide-viewer {
   position: relative;
@@ -1158,40 +1158,49 @@ body {
   text-align: center;
 }
 
-/* ── Keynote / iCloud iframe embed ── */
+/* â”€â”€ Keynote / iCloud iframe embed â”€â”€ */
 
 .slide-viewer-iframe {
   width: 100%;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border);
-  aspect-ratio: 16 / 9;
+  max-height: 480px;
 }
 
 .slide-viewer-iframe iframe {
   width: 100%;
-  height: 100%;
+  height: 480px;
   border: none;
   display: block;
 }
 
-/* ── Keynote HTML Export Embed ── */
+@media (max-width: 640px) {
+  .slide-viewer-iframe iframe {
+    height: 300px;
+  }
+}
 
+/* .keynote-embed is an alias for .slide-viewer-iframe â€” use that class going forward */
 .keynote-embed {
-  position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 */
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border, rgba(255,255,255,0.08));
   background: #000;
   margin-top: 1rem;
+  max-height: 480px;
 }
 
 .keynote-embed__frame {
-  position: absolute;
-  top: 0; left: 0;
   width: 100%;
-  height: 100%;
+  height: 480px;
   border: none;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .keynote-embed__frame {
+    height: 300px;
+  }
 }
