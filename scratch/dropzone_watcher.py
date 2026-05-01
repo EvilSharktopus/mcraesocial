@@ -72,6 +72,57 @@ def wait_for_download(path: Path, timeout: int = 120) -> bool:
     return False
 
 
+def wait_for_folder_download(folder: Path, timeout: int = 300) -> bool:
+    """
+    Wait until every file inside a folder is fully downloaded from OneDrive.
+    Checks for:
+      - No files with the OneDrive 'O' (online-only) attribute
+      - No zero-byte files
+      - Stable total folder size (no files still being written)
+    Returns True when ready, False if timeout exceeded.
+    """
+    deadline = time.time() + timeout
+    log(f"  Verifying all files in '{folder.name}' are fully synced...")
+    while time.time() < deadline:
+        try:
+            all_files = list(folder.rglob("*"))
+            all_files = [f for f in all_files if f.is_file()]
+
+            # Check for any zero-byte files (placeholders not yet downloaded)
+            zero_byte = [f for f in all_files if f.stat().st_size == 0]
+            if zero_byte:
+                log(f"  Still waiting — {len(zero_byte)} zero-byte file(s) remaining...")
+                time.sleep(10)
+                continue
+
+            # Check for OneDrive 'O' attribute on any file using attrib /s
+            result = subprocess.run(
+                ["attrib", "/s", str(folder / "*")],
+                capture_output=True, text=True, shell=True
+            )
+            if " O " in result.stdout:
+                online_count = result.stdout.count(" O ")
+                log(f"  Still waiting — {online_count} online-only file(s) not yet synced...")
+                time.sleep(10)
+                continue
+
+            # Verify total size is stable (nothing still being written)
+            size1 = sum(f.stat().st_size for f in all_files)
+            time.sleep(5)
+            all_files2 = [f for f in folder.rglob("*") if f.is_file()]
+            size2 = sum(f.stat().st_size for f in all_files2)
+            if size1 == size2 and len(all_files) == len(all_files2):
+                log(f"  Folder fully synced: {len(all_files)} files, {size1 // 1024}KB total.")
+                return True
+            log(f"  Size still changing ({size1} → {size2}), waiting...")
+            time.sleep(5)
+        except Exception as e:
+            log(f"  Error checking folder sync: {e}")
+            time.sleep(10)
+    log(f"  Timeout waiting for '{folder.name}' to fully sync. Skipping.")
+    return False
+
+
 def slugify(name: str) -> str:
     """Turn a filename into a clean HTML-safe id."""
     name = Path(name).stem
@@ -271,6 +322,11 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
     dest  = slides_dest_dir(course, unit, slug)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
+    # Wait until ALL files in the Keynote export are fully downloaded from OneDrive
+    if not wait_for_folder_download(src_dir):
+        log(f"  Aborting '{title}' — folder never fully synced.")
+        return
+
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(src_dir, dest)
@@ -369,7 +425,7 @@ import threading
 # Debounce table: unit_key → (timer, candidate_path)
 _pending = {}
 _pending_lock = threading.Lock()
-DEBOUNCE_SECONDS = 20  # wait this long after last activity before dispatching
+DEBOUNCE_SECONDS = 30  # wait this long after last activity before dispatching
 
 
 def _debounce_dispatch(unit_key: str, candidate: Path):
