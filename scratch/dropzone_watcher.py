@@ -160,25 +160,26 @@ SLIDESHOW_JS = """\
 })();
 </script>"""
 
-def inject_into_html(html_path: Path, new_section: str, slug: str):
-    """Inject the new section into the unit page before </div> that closes page-content."""
+def inject_into_html(html_path: Path, new_section: str, slug: str) -> bool:
+    """Inject the new section into the unit page before </div> that closes page-content.
+    Returns True if injection happened, False if skipped."""
     if not html_path.exists():
         log(f"  HTML not found: {html_path}")
-        return
+        return False
 
     content = html_path.read_text(encoding="utf-8")
 
     # Don't double-inject
     if f'data-slug="{slug}"' in content:
         log(f"  Already injected slug '{slug}', skipping.")
-        return
+        return False
 
     # Insert before the closing </div> of .page-content
     # We look for the footer as the reliable anchor
     anchor = "<footer"
     if anchor not in content:
         log(f"  Could not find insertion anchor in {html_path}")
-        return
+        return False
 
     idx = content.index(anchor)
     # Add slideshow JS if not already there
@@ -188,6 +189,21 @@ def inject_into_html(html_path: Path, new_section: str, slug: str):
     content = content[:idx] + new_section + "\n\n  " + content[idx:]
     html_path.write_text(content, encoding="utf-8")
     log(f"  Injected into {html_path}")
+    return True
+
+
+def git_commit_and_push(message: str):
+    """Stage all changes, commit, and push to origin."""
+    try:
+        log("  Running git add -A ...")
+        subprocess.run(["git", "-C", str(SITE_DIR), "add", "-A"], check=True)
+        log(f"  Committing: {message}")
+        subprocess.run(["git", "-C", str(SITE_DIR), "commit", "-m", message], check=True)
+        log("  Pushing to origin...")
+        subprocess.run(["git", "-C", str(SITE_DIR), "push"], check=True)
+        log("  ✅ Published to Vercel via git push.")
+    except subprocess.CalledProcessError as e:
+        log(f"  ⚠️  git error: {e}")
 
 
 # ── Processors ────────────────────────────────────────────────────────────────
@@ -279,7 +295,9 @@ def archive(src: Path, course: str, unit: str):
     dest_dir.mkdir(exist_ok=True)
     dest = dest_dir / src.name
     if dest.exists():
-        dest = dest_dir / (src.stem + f"_{int(time.time())}" + src.suffix)
+        ts = int(time.time())
+        suffix = src.suffix if src.is_file() else ""
+        dest = dest_dir / (src.stem + f"_{ts}" + suffix)
     shutil.move(str(src), str(dest))
     log(f"  Archived to {dest}")
 
@@ -301,6 +319,7 @@ def dispatch(path: Path):
         log(f"  Timed out waiting for {path.name} to download. Skipping.")
         return
 
+    injected = False
     suffix = path.suffix.lower()
     if suffix == ".pptx":
         # Copy to a no-spaces temp path to avoid LibreOffice argument issues
@@ -311,38 +330,101 @@ def dispatch(path: Path):
         process_pptx(tmp_file, course, unit, original_name=path.stem)
         tmp_file.unlink(missing_ok=True)
         archive(path, course, unit)
+        injected = True
     elif suffix == ".txt":
         process_icloud_link(path, course, unit)
         archive(path, course, unit)
+        injected = True
     elif path.is_dir():
         # Check if it's a Keynote HTML export (contains an .html file)
         if any(path.rglob("*.html")):
             process_keynote_html(path, course, unit)
             archive(path, course, unit)
+            injected = True
     else:
         log(f"  Unsupported file type: {suffix} — ignoring.")
+
+    if injected:
+        title = path.stem if path.is_file() else path.name
+        git_commit_and_push(f"feat: auto-publish '{title}' to {course}/{unit}")
 
 
 # ── Watcher ───────────────────────────────────────────────────────────────────
 
+import threading
+
+# Debounce table: unit_key → (timer, candidate_path)
+_pending = {}
+_pending_lock = threading.Lock()
+DEBOUNCE_SECONDS = 20  # wait this long after last activity before dispatching
+
+
+def _debounce_dispatch(unit_key: str, candidate: Path):
+    """Called after DEBOUNCE_SECONDS of quiet. Find the best thing to dispatch."""
+    with _pending_lock:
+        if unit_key not in _pending:
+            return
+        del _pending[unit_key]
+
+    # candidate is the path that triggered us — walk up to find a dispatchable item
+    # For Keynote exports, the top-level folder inside the unit is what we want
+    info = parse_unit_path(candidate)
+    if not info:
+        return
+    course, unit = info
+
+    unit_dir = DROPZONE_DIR / course / unit
+
+    # 1. Look for a Keynote HTML folder (a dir containing .html files, not _processed)
+    for d in unit_dir.iterdir():
+        if d.is_dir() and d.name != "_processed" and any(d.rglob("*.html")):
+            log(f"[debounced] Dispatching Keynote folder: {d}")
+            dispatch(d)
+            return
+
+    # 2. Look for a .pptx
+    for f in unit_dir.glob("*.pptx"):
+        log(f"[debounced] Dispatching PPTX: {f}")
+        dispatch(f)
+        return
+
+    # 3. Look for a .txt iCloud link
+    for f in unit_dir.glob("*.txt"):
+        log(f"[debounced] Dispatching iCloud link: {f}")
+        dispatch(f)
+        return
+
+
 class DropzoneHandler(FileSystemEventHandler):
+    def _schedule(self, path: Path):
+        info = parse_unit_path(path)
+        if not info:
+            return
+        course, unit = info
+        if "_processed" in path.parts:
+            return
+
+        unit_key = f"{course}/{unit}"
+        with _pending_lock:
+            # Cancel any existing timer for this unit
+            if unit_key in _pending:
+                _pending[unit_key][0].cancel()
+            t = threading.Timer(DEBOUNCE_SECONDS, _debounce_dispatch, args=[unit_key, path])
+            _pending[unit_key] = (t, path)
+            t.start()
+            log(f"  Activity in {unit_key} — waiting {DEBOUNCE_SECONDS}s for sync to settle...")
+
     def on_created(self, event):
-        path = Path(event.src_path)
-        # Small delay so OneDrive finishes syncing the file fully
-        time.sleep(3)
-        if path.exists():
-            dispatch(path)
+        self._schedule(Path(event.src_path))
 
     def on_moved(self, event):
-        path = Path(event.dest_path)
-        time.sleep(2)
-        if path.exists():
-            dispatch(path)
+        self._schedule(Path(event.dest_path))
 
 
 if __name__ == "__main__":
     ASSETS_SLIDES.mkdir(parents=True, exist_ok=True)
     log(f"Watching: {DROPZONE_DIR}")
+    log(f"Debounce window: {DEBOUNCE_SECONDS}s — dispatches {DEBOUNCE_SECONDS}s after last file activity.")
     log("Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.")
 
     observer = Observer()
