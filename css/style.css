@@ -1259,6 +1259,25 @@ body {
 .kn-wrap .slide-viewer-iframe {
   border-radius: 0 0 8px 8px;
 }
+
+.kn-wrap {
+  max-width: 100%;
+}
+
+/* Force iframe to a sensible presentation height */
+.kn-wrap .slide-viewer-iframe iframe,
+.slide-viewer-iframe iframe,
+.keynote-embed__frame {
+  height: 420px !important;
+}
+
+@media (max-width: 640px) {
+  .kn-wrap .slide-viewer-iframe iframe,
+  .slide-viewer-iframe iframe,
+  .keynote-embed__frame {
+    height: 260px !important;
+  }
+}
 @media (max-width: 600px) {
   .kn-hint { display: none; }
 }
