@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 dropzone_watcher.py
 Watches the McRae Dropzone OneDrive folder and automatically processes
@@ -17,6 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
