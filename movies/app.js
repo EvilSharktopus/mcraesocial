@@ -322,6 +322,7 @@ const App = (() => {
   // ── Picks screen ───────────────────────────────────────────────────────
   function showPicksScreen() {
     document.getElementById('currentPlayerName').textContent = state.participant?.name || '';
+    if (state.adminMode) document.getElementById('adminPosterBtn')?.classList.remove('hidden');
     renderRankingSlots();
     renderMoviePool();
     showScreen('screenPicks');
@@ -527,11 +528,85 @@ const App = (() => {
   function getPosterUrl(movie) {
     if (state.posterCache[movie.id]) return state.posterCache[movie.id];
     if (movie.posterPath) {
-      const url = `https://image.tmdb.org/t/p/w342${movie.posterPath}`;
+      // Full URL (Firebase Storage upload) vs TMDB path
+      const url = movie.posterPath.startsWith('http')
+        ? movie.posterPath
+        : `https://image.tmdb.org/t/p/w342${movie.posterPath}`;
       state.posterCache[movie.id] = url;
       return url;
     }
     return null;
+  }
+
+  // ── Poster manager ─────────────────────────────────────────────────────
+  function showPosterManager() {
+    const grid = document.getElementById('pmGrid');
+    if (!grid) return;
+
+    grid.innerHTML = state.movies.map(m => {
+      const posterUrl = getPosterUrl(m);
+      return `
+        <div class="pm-card" id="pm-${m.id}">
+          ${posterUrl
+            ? `<img class="pm-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy">`
+            : `<div class="pm-poster-placeholder"><div class="pm-icon">🎬</div><span>No poster</span></div>`}
+          <div class="pm-title">${esc(m.title)}</div>
+          <label class="pm-upload-label">
+            ${posterUrl ? '↑ Replace' : '+ Upload'}
+            <input type="file" accept="image/*" class="hidden" onchange="App.handlePosterUpload('${m.id}', this.files[0])">
+          </label>
+          <div class="pm-spinner"><span class="spinner"></span></div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('posterManager')?.classList.remove('hidden');
+  }
+
+  function hidePosterManager() {
+    document.getElementById('posterManager')?.classList.add('hidden');
+  }
+
+  async function handlePosterUpload(movieId, file) {
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast('Image must be under 8MB.', 'error'); return; }
+
+    const card = document.getElementById(`pm-${movieId}`);
+    card?.classList.add('uploading');
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const ref = storage.ref(`posters/${movieId}.${ext}`);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+
+      await db.collection('movies').doc(movieId).update({ posterPath: url });
+
+      const movie = state.movies.find(m => m.id === movieId);
+      if (movie) { movie.posterPath = url; state.posterCache[movieId] = url; }
+
+      // Update the card in the manager
+      if (card) {
+        card.innerHTML = `
+          <img class="pm-poster" src="${esc(url)}" alt="" loading="lazy">
+          <div class="pm-title">${esc(movie?.title || '')}</div>
+          <label class="pm-upload-label">
+            ↑ Replace
+            <input type="file" accept="image/*" class="hidden" onchange="App.handlePosterUpload('${movieId}', this.files[0])">
+          </label>
+          <div class="pm-spinner"><span class="spinner"></span></div>
+        `;
+      }
+
+      toast(`Poster saved for ${movie?.title || 'movie'}!`, 'success');
+      // Refresh pool/ranking if visible
+      renderMoviePool(document.getElementById('poolSearch')?.value || '');
+      renderRankingSlots();
+    } catch (err) {
+      toast('Upload failed: ' + err.message, 'error');
+    } finally {
+      card?.classList.remove('uploading');
+    }
   }
 
   async function fetchAndCachePoster(movie) {
@@ -863,6 +938,7 @@ const App = (() => {
     handleAvatarFile, submitAvatar, skipAvatar,
     addToPicks, removeFromPicks, toggleDarkHorse, filterPool, submitPicks,
     showParticipantDetail, showBoEditor, hideBoEditor, saveBoxOffice, tmdbSync,
+    showPosterManager, hidePosterManager, handlePosterUpload,
   };
 
 })();

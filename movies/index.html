@@ -147,8 +147,13 @@
         · <button class="btn-ghost" onclick="App.goToLanding()">← Switch player</button>
       </div>
     </div>
-    <div class="pick-count">
-      <span id="pickCountNum">0</span>/10 selected
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <div id="adminPosterBtn" class="hidden">
+        <button class="btn-secondary" style="font-size:0.78rem;padding:0.35rem 0.7rem;" onclick="App.showPosterManager()">🖼 Posters</button>
+      </div>
+      <div class="pick-count">
+        <span id="pickCountNum">0</span>/10 selected
+      </div>
     </div>
   </div>
 
@@ -203,6 +208,9 @@
       Sync from TMDB
     </button>
     <div id="adminStatus" style="font-size:0.78rem;color:var(--text-dim);"></div>
+    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showPosterManager()">
+      🖼 Upload Posters
+    </button>
   </div>
 
   <!-- Box office editor (hidden by default) -->
@@ -264,6 +272,23 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ── Poster manager modal ── -->
+<div id="posterManager" class="modal hidden">
+  <div class="modal-backdrop" onclick="App.hidePosterManager()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.06em;color:var(--gold);">
+        🖼 Upload Movie Posters
+      </div>
+      <button class="btn-ghost" onclick="App.hidePosterManager()">✕ Close</button>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:1.25rem;">
+      Click any movie to upload a poster image. JPG, PNG, or WebP — portrait orientation works best.
+    </p>
+    <div class="pm-grid" id="pmGrid"></div>
   </div>
 </div>
 
