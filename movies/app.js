@@ -1,19 +1,21 @@
-/* Summer Movie Wager 2026 */
+/* Summer Movie Wager 2026 — Firebase edition */
 
 const App = (() => {
 
   // ── State ──────────────────────────────────────────────────────────────
   let db = null;
+  let storage = null;
   let state = {
-    phase: 'pre',           // 'pre' | 'post'
-    participant: null,      // { id, name, avatar_url, picks_submitted }
+    phase: 'pre',
+    participant: null,      // { id, name, avatarUrl, picksSubmitted }
     avatarFile: null,
-    picks: [],              // [{ movieId, rank, isDarkHorse }] sorted by rank
-    movies: [],             // all eligible movies from db
+    picks: [],              // [{ movieId, rank, isDarkHorse }]
+    movies: [],             // all eligible movies
     participants: [],       // all participants
     selectedParticipantId: null,
     adminMode: false,
     posterCache: {},        // movieId -> url
+    _picksByParticipant: {},
   };
 
   // ── Scoring constants ──────────────────────────────────────────────────
@@ -25,6 +27,47 @@ const App = (() => {
   const PTS_DARK_HORSE    = 1;
   const BOOKEND_RANKS     = new Set([1, 10]);
 
+  // ── Seed data (used on first run if Firestore movies collection is empty) ──
+  const SEED_MOVIES = [
+    { title: 'Billie Eilish: Hit Me Hard and Soft (Live in 3D)', releaseDate: '2026-05-08' },
+    { title: 'Mortal Kombat II',                                  releaseDate: '2026-05-08' },
+    { title: 'The Sheep Detectives',                              releaseDate: '2026-05-08' },
+    { title: 'In the Grey',                                       releaseDate: '2026-05-15' },
+    { title: 'I Love Boosters',                                   releaseDate: '2026-05-22' },
+    { title: 'Star Wars: The Mandalorian & Grogu',                releaseDate: '2026-05-22' },
+    { title: 'Backrooms',                                         releaseDate: '2026-05-29' },
+    { title: 'Pressure',                                          releaseDate: '2026-05-29' },
+    { title: 'The Breadwinner',                                   releaseDate: '2026-05-29' },
+    { title: 'Tuner',                                             releaseDate: '2026-05-29' },
+    { title: 'Masters of the Universe',                           releaseDate: '2026-06-05' },
+    { title: 'Power Ballad',                                      releaseDate: '2026-06-05' },
+    { title: 'Scary Movie',                                       releaseDate: '2026-06-05' },
+    { title: 'Disclosure Day',                                    releaseDate: '2026-06-12' },
+    { title: 'The Death of Robin Hood',                           releaseDate: '2026-06-19' },
+    { title: 'Toy Story 5',                                       releaseDate: '2026-06-19' },
+    { title: 'The Invite',                                        releaseDate: '2026-06-26' },
+    { title: 'Jackass: Best and Last',                            releaseDate: '2026-06-26' },
+    { title: 'Supergirl',                                         releaseDate: '2026-06-26' },
+    { title: 'Minions & Monsters',                                releaseDate: '2026-07-01' },
+    { title: 'Young Washington',                                  releaseDate: '2026-07-03' },
+    { title: 'Evil Dead Burn',                                    releaseDate: '2026-07-10' },
+    { title: 'Gail Daughtry and the Celebrity Sex Pass',          releaseDate: '2026-07-10' },
+    { title: 'Moana',                                             releaseDate: '2026-07-10' },
+    { title: 'The Odyssey',                                       releaseDate: '2026-07-17' },
+    { title: 'I Want Your Sex',                                   releaseDate: '2026-07-31' },
+    { title: 'Spider-Man: Brand New Day',                         releaseDate: '2026-07-31' },
+    { title: 'Ice Cream Man',                                     releaseDate: '2026-08-07' },
+    { title: 'Super Troopers 3',                                  releaseDate: '2026-08-07' },
+    { title: 'Teenage Sex and Death at Camp Miasma',              releaseDate: '2026-08-07' },
+    { title: 'The End of Oak Street',                             releaseDate: '2026-08-14' },
+    { title: 'PAW Patrol: The Dino Movie',                        releaseDate: '2026-08-14' },
+    { title: 'Insidious: Out of the Further',                     releaseDate: '2026-08-21' },
+    { title: 'Spa Weekend',                                       releaseDate: '2026-08-21' },
+    { title: 'Coyote vs. Acme',                                   releaseDate: '2026-08-28' },
+    { title: 'The Dog Stars',                                     releaseDate: '2026-08-28' },
+    { title: 'Idiots',                                            releaseDate: '2026-08-28' },
+  ];
+
   // ── Init ───────────────────────────────────────────────────────────────
   async function init() {
     renderFilmHoles();
@@ -35,22 +78,22 @@ const App = (() => {
       return;
     }
 
-    db = supabase.createClient(CONFIG.supabase.url, CONFIG.supabase.anonKey);
+    try {
+      firebase.initializeApp(CONFIG.firebase);
+      db = firebase.firestore();
+      storage = firebase.storage();
+    } catch (e) {
+      // already initialized (e.g. hot reload)
+      db = firebase.firestore();
+      storage = firebase.storage();
+    }
 
     state.phase = new Date() >= CONFIG.deadline ? 'post' : 'pre';
     state.adminMode = new URLSearchParams(location.search).get('admin') === '1';
 
     try {
-      const [moviesRes, participantsRes] = await Promise.all([
-        db.from('movies').select('*').eq('is_eligible', true).order('release_date'),
-        db.from('participants').select('*').order('created_at'),
-      ]);
-      if (moviesRes.error) throw moviesRes.error;
-      if (participantsRes.error) throw participantsRes.error;
-
-      state.movies = moviesRes.data;
-      state.participants = participantsRes.data;
-
+      await loadMovies();
+      await loadParticipants();
       updateDeadlineBadge();
 
       if (state.phase === 'post') {
@@ -59,25 +102,53 @@ const App = (() => {
         showLanding();
       }
     } catch (err) {
-      showScreen('screenLoading');
       document.getElementById('screenLoading').innerHTML =
-        `<div class="loading-state"><div style="font-size:2rem;margin-bottom:1rem;">⚠️</div><div>Could not connect to the database.<br><small style="color:var(--text-dim)">${err.message}</small></div></div>`;
+        `<div class="loading-state"><div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>
+         <div>Could not connect to Firebase.<br><small style="color:var(--text-dim)">${err.message}</small></div></div>`;
+      showScreen('screenLoading');
     }
   }
 
   function isConfigured() {
-    return (
-      CONFIG.supabase.url !== 'YOUR_SUPABASE_URL' &&
-      CONFIG.supabase.anonKey !== 'YOUR_SUPABASE_ANON_KEY'
-    );
+    return CONFIG.firebase.projectId !== 'YOUR_PROJECT_ID';
+  }
+
+  async function loadMovies() {
+    const snap = await db.collection('movies').get();
+
+    // Seed on first run
+    if (snap.empty) {
+      const batch = db.batch();
+      SEED_MOVIES.forEach(m => {
+        const ref = db.collection('movies').doc();
+        batch.set(ref, { ...m, isEligible: true, domesticGross: 0, boxOfficeRank: null, posterPath: null, tmdbId: null });
+      });
+      await batch.commit();
+      const seeded = await db.collection('movies').get();
+      state.movies = seeded.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(m => m.isEligible !== false)
+        .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
+    } else {
+      state.movies = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(m => m.isEligible !== false)
+        .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
+    }
+  }
+
+  async function loadParticipants() {
+    const snap = await db.collection('participants').get();
+    state.participants = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   }
 
   // ── Film strip decoration ──────────────────────────────────────────────
   function renderFilmHoles() {
     ['filmHoles', 'filmHoles2'].forEach(id => {
       const el = document.getElementById(id);
-      if (!el) return;
-      el.innerHTML = Array(30).fill('<div class="film-hole"></div>').join('');
+      if (el) el.innerHTML = Array(30).fill('<div class="film-hole"></div>').join('');
     });
   }
 
@@ -112,13 +183,13 @@ const App = (() => {
       return;
     }
     grid.innerHTML = state.participants.map(p => `
-      <button class="participant-chip" onclick="App.selectExistingParticipant(${p.id})" title="Click to pick as ${esc(p.name)}">
-        ${p.avatar_url
-          ? `<img class="chip-avatar" src="${esc(p.avatar_url)}" alt="${esc(p.name)}" loading="lazy">`
+      <button class="participant-chip" onclick="App.selectExistingParticipant('${esc(p.id)}')" title="Pick as ${esc(p.name)}">
+        ${p.avatarUrl
+          ? `<img class="chip-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
           : `<div class="chip-avatar-placeholder">🎬</div>`}
         <div class="chip-name">${esc(p.name)}</div>
-        <div class="chip-status ${p.picks_submitted ? 'submitted' : ''}">
-          ${p.picks_submitted ? '✓ Submitted' : 'In Progress'}
+        <div class="chip-status ${p.picksSubmitted ? 'submitted' : ''}">
+          ${p.picksSubmitted ? '✓ Submitted' : 'In Progress'}
         </div>
       </button>
     `).join('');
@@ -134,26 +205,26 @@ const App = (() => {
     btn.textContent = 'Loading…';
 
     try {
-      // look up existing participant
-      const { data: existing } = await db
-        .from('participants')
-        .select('*')
-        .ilike('name', name)
-        .maybeSingle();
+      // Case-insensitive lookup via nameLower field
+      const snap = await db.collection('participants')
+        .where('nameLower', '==', name.toLowerCase())
+        .get();
 
-      if (existing) {
-        state.participant = existing;
-        await loadExistingPicks();
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        state.participant = { id: doc.id, ...doc.data() };
+        await loadExistingPicks(doc.id);
         showPicksScreen();
       } else {
-        // create new participant record (no picks yet)
-        const { data: created, error } = await db
-          .from('participants')
-          .insert({ name })
-          .select()
-          .single();
-        if (error) throw error;
-        state.participant = created;
+        const ref = await db.collection('participants').add({
+          name,
+          nameLower: name.toLowerCase(),
+          avatarUrl: null,
+          picksSubmitted: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        state.participant = { id: ref.id, name, nameLower: name.toLowerCase(), avatarUrl: null, picksSubmitted: false };
+        state.participants.push(state.participant);
         state.picks = [];
         showScreen('screenAvatar');
       }
@@ -161,7 +232,7 @@ const App = (() => {
       toast('Something went wrong: ' + err.message, 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Let\'s Go';
+      btn.textContent = "Let's Go";
     }
   }
 
@@ -169,22 +240,17 @@ const App = (() => {
     const p = state.participants.find(x => x.id === id);
     if (!p) return;
     state.participant = p;
-    await loadExistingPicks();
+    await loadExistingPicks(id);
     showPicksScreen();
   }
 
-  async function loadExistingPicks() {
-    const { data, error } = await db
-      .from('picks')
-      .select('*')
-      .eq('participant_id', state.participant.id)
-      .order('rank');
-    if (error) throw error;
-    state.picks = (data || []).map(r => ({
-      movieId: r.movie_id,
-      rank: r.rank,
-      isDarkHorse: r.is_dark_horse,
-    }));
+  async function loadExistingPicks(participantId) {
+    const snap = await db.collection('picks').get();
+    const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    state.picks = allPicks
+      .filter(p => p.participantId === participantId)
+      .map(p => ({ movieId: p.movieId, rank: p.rank, isDarkHorse: p.isDarkHorse }))
+      .sort((a, b) => a.rank - b.rank);
   }
 
   function goToLanding() {
@@ -198,7 +264,6 @@ const App = (() => {
   function handleAvatarFile(file) {
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) { toast('Image must be under 4MB.', 'error'); return; }
-
     state.avatarFile = file;
     const reader = new FileReader();
     reader.onload = e => {
@@ -210,50 +275,40 @@ const App = (() => {
     };
     reader.readAsDataURL(file);
 
-    // drag/drop style
     const zone = document.getElementById('avatarZone');
-    zone?.addEventListener('dragover', ev => { ev.preventDefault(); zone.classList.add('drag-over'); });
-    zone?.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-    zone?.addEventListener('drop', ev => {
-      ev.preventDefault();
-      zone.classList.remove('drag-over');
-      const f = ev.dataTransfer.files[0];
-      if (f) handleAvatarFile(f);
-    });
+    if (zone) {
+      zone.addEventListener('dragover', ev => { ev.preventDefault(); zone.classList.add('drag-over'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', ev => {
+        ev.preventDefault();
+        zone.classList.remove('drag-over');
+        const f = ev.dataTransfer.files[0];
+        if (f) handleAvatarFile(f);
+      });
+    }
   }
 
   async function submitAvatar() {
-    const btn = document.getElementById('avatarContinueBtn');
     if (!state.avatarFile || !state.participant) { showPicksScreen(); return; }
-
+    const btn = document.getElementById('avatarContinueBtn');
     btn.disabled = true;
     btn.textContent = 'Uploading…';
 
     try {
       const ext = state.avatarFile.name.split('.').pop() || 'jpg';
-      const path = `${state.participant.id}-${Date.now()}.${ext}`;
-      const { error: upErr } = await db.storage
-        .from('avatars')
-        .upload(path, state.avatarFile, { upsert: true });
-      if (upErr) throw upErr;
+      const path = `avatars/${state.participant.id}-${Date.now()}.${ext}`;
+      const ref = storage.ref(path);
+      await ref.put(state.avatarFile);
+      const avatarUrl = await ref.getDownloadURL();
 
-      const { data: urlData } = db.storage.from('avatars').getPublicUrl(path);
-      const avatarUrl = urlData.publicUrl;
-
-      const { error: updateErr } = await db
-        .from('participants')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', state.participant.id);
-      if (updateErr) throw updateErr;
-
-      state.participant.avatar_url = avatarUrl;
-      // Update local participants list
+      await db.collection('participants').doc(state.participant.id).update({ avatarUrl });
+      state.participant.avatarUrl = avatarUrl;
       const idx = state.participants.findIndex(p => p.id === state.participant.id);
-      if (idx >= 0) state.participants[idx].avatar_url = avatarUrl;
+      if (idx >= 0) state.participants[idx].avatarUrl = avatarUrl;
 
       showPicksScreen();
     } catch (err) {
-      toast('Avatar upload failed: ' + err.message, 'error');
+      toast('Upload failed: ' + err.message, 'error');
       btn.disabled = false;
       btn.textContent = 'Continue to Picks →';
     }
@@ -275,42 +330,31 @@ const App = (() => {
   function renderMoviePool(filter = '') {
     const grid = document.getElementById('movieGrid');
     if (!grid) return;
-
     const q = filter.toLowerCase();
-    const filtered = q
-      ? state.movies.filter(m => m.title.toLowerCase().includes(q))
-      : state.movies;
-
+    const filtered = q ? state.movies.filter(m => m.title.toLowerCase().includes(q)) : state.movies;
     const selectedIds = new Set(state.picks.map(p => p.movieId));
 
     grid.innerHTML = filtered.map(m => {
       const posterUrl = getPosterUrl(m);
       const isSelected = selectedIds.has(m.id);
       return `
-        <div class="movie-card ${isSelected ? 'selected' : ''}" data-id="${m.id}" onclick="App.addToPicks(${m.id})">
-          ${posterUrl
-            ? `<img class="movie-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy" onerror="this.parentNode.querySelector('.movie-poster-placeholder').style.display='flex';this.style.display='none'">`
-            : ''}
+        <div class="movie-card ${isSelected ? 'selected' : ''}" data-id="${m.id}" onclick="App.addToPicks('${m.id}')">
+          ${posterUrl ? `<img class="movie-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
           <div class="movie-poster-placeholder" style="${posterUrl ? 'display:none' : ''}">
             <div class="poster-icon">🎬</div>
           </div>
           <div class="movie-card-title">${esc(m.title)}</div>
-          <div class="movie-card-date">${formatDate(m.release_date)}</div>
+          <div class="movie-card-date">${formatDate(m.releaseDate)}</div>
         </div>
       `;
     }).join('');
 
-    // Kick off poster fetches for movies without a cached poster
     filtered.forEach(m => {
-      if (!m.poster_path && !state.posterCache[m.id]) {
-        fetchAndCachePoster(m);
-      }
+      if (!m.posterPath && !state.posterCache[m.id]) fetchAndCachePoster(m);
     });
   }
 
-  function filterPool(val) {
-    renderMoviePool(val);
-  }
+  function filterPool(val) { renderMoviePool(val); }
 
   function renderRankingSlots() {
     const list = document.getElementById('rankingList');
@@ -320,24 +364,22 @@ const App = (() => {
     for (let rank = 1; rank <= 10; rank++) {
       const pick = state.picks.find(p => p.rank === rank);
       const movie = pick ? state.movies.find(m => m.id === pick.movieId) : null;
+      const isBookend = rank === 1 || rank === 10;
+      const posterUrl = movie ? getPosterUrl(movie) : null;
 
       const slot = document.createElement('div');
       slot.className = `rank-slot ${pick ? '' : 'empty'}`;
       slot.dataset.rank = rank;
-
       slot.setAttribute('draggable', pick ? 'true' : 'false');
       slot.addEventListener('dragstart', onDragStart);
       slot.addEventListener('dragover', onDragOver);
       slot.addEventListener('drop', onDrop);
       slot.addEventListener('dragend', onDragEnd);
 
-      const isBookend = rank === 1 || rank === 10;
-      const posterUrl = movie ? getPosterUrl(movie) : null;
-
       slot.innerHTML = `
         <div class="rank-number ${isBookend ? 'bookend' : ''}">${rank}</div>
         ${pick && movie ? `
-          <div class="drag-handle" title="Drag to reorder">⠿</div>
+          <div class="drag-handle">⠿</div>
           ${posterUrl
             ? `<img class="rank-poster-thumb" src="${esc(posterUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
             : `<div class="rank-thumb-placeholder">🎬</div>`}
@@ -345,21 +387,18 @@ const App = (() => {
             <div class="rank-title">${esc(movie.title)}</div>
           </div>
           <button class="dark-horse-btn ${pick.isDarkHorse ? 'active' : ''}"
-            title="Mark as dark horse (+1 bonus if it cracks the top 10)"
-            onclick="App.toggleDarkHorse(${movie.id})">
+            onclick="App.toggleDarkHorse('${movie.id}')" title="Mark as dark horse (+1 bonus if it cracks top 10)">
             ${pick.isDarkHorse ? '🐴 Dark Horse' : 'Dark Horse'}
           </button>
-          <button class="remove-pick-btn" onclick="App.removeFromPicks(${movie.id})" title="Remove">✕</button>
+          <button class="remove-pick-btn" onclick="App.removeFromPicks('${movie.id}')" title="Remove">✕</button>
         ` : `
           <div class="rank-info">
             <div class="rank-empty-hint">${isBookend ? '⭐ Bookend bonus (13 pts)' : 'Empty slot'}</div>
           </div>
         `}
       `;
-
       list.appendChild(slot);
     }
-
     updatePickCount();
   }
 
@@ -370,21 +409,21 @@ const App = (() => {
     const btn = document.getElementById('submitPicksBtn');
     const hint = document.getElementById('submitHint');
     if (btn) btn.disabled = n < 10;
-    if (hint) hint.textContent = n < 10 ? `Select ${10 - n} more movie${10 - n !== 1 ? 's' : ''} to submit` : 'Ready to lock in your picks!';
+    if (hint) hint.textContent = n < 10
+      ? `Select ${10 - n} more movie${10 - n !== 1 ? 's' : ''} to submit`
+      : 'Ready to lock in your picks!';
   }
 
   function addToPicks(movieId) {
-    if (state.picks.length >= 10) { toast('You\'ve already picked 10 movies!', 'error'); return; }
+    if (state.picks.length >= 10) { toast('You've already picked 10 movies!', 'error'); return; }
     if (state.picks.find(p => p.movieId === movieId)) return;
-    const nextRank = state.picks.length + 1;
-    state.picks.push({ movieId, rank: nextRank, isDarkHorse: false });
+    state.picks.push({ movieId, rank: state.picks.length + 1, isDarkHorse: false });
     renderRankingSlots();
     renderMoviePool(document.getElementById('poolSearch')?.value || '');
   }
 
   function removeFromPicks(movieId) {
     state.picks = state.picks.filter(p => p.movieId !== movieId);
-    // Re-number ranks 1..n
     state.picks.sort((a, b) => a.rank - b.rank).forEach((p, i) => p.rank = i + 1);
     renderRankingSlots();
     renderMoviePool(document.getElementById('poolSearch')?.value || '');
@@ -392,10 +431,7 @@ const App = (() => {
 
   function toggleDarkHorse(movieId) {
     const pick = state.picks.find(p => p.movieId === movieId);
-    if (pick) {
-      pick.isDarkHorse = !pick.isDarkHorse;
-      renderRankingSlots();
-    }
+    if (pick) { pick.isDarkHorse = !pick.isDarkHorse; renderRankingSlots(); }
   }
 
   // ── Drag & drop reordering ─────────────────────────────────────────────
@@ -417,9 +453,7 @@ const App = (() => {
   function onDrop(e) {
     e.preventDefault();
     const toRank = parseInt(this.dataset.rank);
-    if (dragFromRank && toRank && dragFromRank !== toRank) {
-      reorderPicks(dragFromRank, toRank);
-    }
+    if (dragFromRank && toRank && dragFromRank !== toRank) reorderPicks(dragFromRank, toRank);
     document.querySelectorAll('.rank-slot').forEach(s => s.classList.remove('drag-over'));
   }
 
@@ -430,17 +464,13 @@ const App = (() => {
   }
 
   function reorderPicks(fromRank, toRank) {
-    const fromPick = state.picks.find(p => p.rank === fromRank);
-    const toPick   = state.picks.find(p => p.rank === toRank);
-
-    // Move fromPick to toRank, shifting others
     const direction = toRank > fromRank ? 1 : -1;
     state.picks.forEach(p => {
-      if (p === fromPick) {
+      if (p.rank === fromRank) {
         p.rank = toRank;
       } else if (
-        direction === 1 && p.rank > fromRank && p.rank <= toRank ||
-        direction === -1 && p.rank >= toRank && p.rank < fromRank
+        direction === 1  && p.rank > fromRank && p.rank <= toRank ||
+        direction === -1 && p.rank >= toRank  && p.rank < fromRank
       ) {
         p.rank -= direction;
       }
@@ -451,40 +481,39 @@ const App = (() => {
 
   // ── Submit picks ───────────────────────────────────────────────────────
   async function submitPicks() {
-    if (state.picks.length < 10) { toast('You need exactly 10 picks.', 'error'); return; }
-    if (!state.participant) return;
-
+    if (state.picks.length < 10 || !state.participant) return;
     const btn = document.getElementById('submitPicksBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';
 
     try {
       // Delete existing picks for this participant
-      await db.from('picks').delete().eq('participant_id', state.participant.id);
+      const existing = await db.collection('picks')
+        .where('participantId', '==', state.participant.id).get();
+      const deleteBatch = db.batch();
+      existing.docs.forEach(d => deleteBatch.delete(d.ref));
+      await deleteBatch.commit();
 
-      // Insert new picks
-      const rows = state.picks.map(p => ({
-        participant_id: state.participant.id,
-        movie_id: p.movieId,
-        rank: p.rank,
-        is_dark_horse: p.isDarkHorse,
-      }));
-      const { error } = await db.from('picks').insert(rows);
-      if (error) throw error;
+      // Write new picks
+      const writeBatch = db.batch();
+      state.picks.forEach(pick => {
+        const ref = db.collection('picks').doc();
+        writeBatch.set(ref, {
+          participantId: state.participant.id,
+          movieId: pick.movieId,
+          rank: pick.rank,
+          isDarkHorse: pick.isDarkHorse,
+        });
+      });
+      await writeBatch.commit();
 
-      // Mark submitted
-      await db.from('participants')
-        .update({ picks_submitted: true })
-        .eq('id', state.participant.id);
-
-      state.participant.picks_submitted = true;
+      await db.collection('participants').doc(state.participant.id).update({ picksSubmitted: true });
+      state.participant.picksSubmitted = true;
       const idx = state.participants.findIndex(p => p.id === state.participant.id);
-      if (idx >= 0) state.participants[idx].picks_submitted = true;
+      if (idx >= 0) state.participants[idx].picksSubmitted = true;
 
       toast('Your picks are locked in! 🎬', 'success');
       btn.textContent = '✓ Picks Saved';
-
-      // Update submit hint
       const hint = document.getElementById('submitHint');
       if (hint) hint.textContent = 'Picks submitted! You can update them before May 8.';
     } catch (err) {
@@ -497,8 +526,8 @@ const App = (() => {
   // ── Poster fetching ────────────────────────────────────────────────────
   function getPosterUrl(movie) {
     if (state.posterCache[movie.id]) return state.posterCache[movie.id];
-    if (movie.poster_path) {
-      const url = `https://image.tmdb.org/t/p/w342${movie.poster_path}`;
+    if (movie.posterPath) {
+      const url = `https://image.tmdb.org/t/p/w342${movie.posterPath}`;
       state.posterCache[movie.id] = url;
       return url;
     }
@@ -508,33 +537,29 @@ const App = (() => {
   async function fetchAndCachePoster(movie) {
     if (!CONFIG.tmdb?.apiKey || CONFIG.tmdb.apiKey === 'YOUR_TMDB_API_KEY') return;
     try {
-      const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 2026;
+      const year = movie.releaseDate ? new Date(movie.releaseDate + 'T12:00:00').getFullYear() : 2026;
       const res = await fetch(
         `https://api.themoviedb.org/3/search/movie?api_key=${CONFIG.tmdb.apiKey}&query=${encodeURIComponent(movie.title)}&year=${year}&language=en-US`
       );
       const data = await res.json();
       const result = data.results?.[0];
       if (result?.poster_path) {
-        state.posterCache[movie.id] = `https://image.tmdb.org/t/p/w342${result.poster_path}`;
+        const posterUrl = `https://image.tmdb.org/t/p/w342${result.poster_path}`;
+        state.posterCache[movie.id] = posterUrl;
+        await db.collection('movies').doc(movie.id).update({
+          posterPath: result.poster_path,
+          tmdbId: result.id,
+        });
+        movie.posterPath = result.poster_path;
+        movie.tmdbId = result.id;
 
-        // Save poster_path and tmdb_id back to Supabase so we only fetch once
-        await db.from('movies').update({
-          poster_path: result.poster_path,
-          tmdb_id: result.id,
-        }).eq('id', movie.id);
-
-        movie.poster_path = result.poster_path;
-        movie.tmdb_id = result.id;
-
-        // Re-render the card if visible
-        const card = document.querySelector(`.movie-card[data-id="${movie.id}"] .movie-poster-placeholder`);
+        // Update card if visible
+        const card = document.querySelector(`.movie-card[data-id="${movie.id}"]`);
         if (card) {
-          const img = card.previousElementSibling;
-          if (img?.classList.contains('movie-poster')) {
-            img.src = state.posterCache[movie.id];
-            img.style.display = '';
-            card.style.display = 'none';
-          }
+          const img = card.querySelector('.movie-poster');
+          const placeholder = card.querySelector('.movie-poster-placeholder');
+          if (img) { img.src = posterUrl; img.style.display = ''; }
+          if (placeholder) placeholder.style.display = 'none';
         }
       }
     } catch (_) { /* silently ignore */ }
@@ -542,19 +567,17 @@ const App = (() => {
 
   // ── Scoring ────────────────────────────────────────────────────────────
   function scoreParticipantPicks(picks) {
-    // Build actual rankings from movies sorted by box_office_rank
     const ranked = state.movies
-      .filter(m => m.box_office_rank && m.box_office_rank <= 10)
-      .sort((a, b) => a.box_office_rank - b.box_office_rank);
+      .filter(m => m.boxOfficeRank && m.boxOfficeRank <= 10)
+      .sort((a, b) => a.boxOfficeRank - b.boxOfficeRank);
 
-    const actualRank = {};        // movieId -> rank (1-indexed)
+    const actualRank = {};
     ranked.forEach((m, i) => { actualRank[m.id] = i + 1; });
 
     let total = 0;
     const scored = picks.map(pick => {
       const ar = actualRank[pick.movieId];
-      let pts = 0;
-      let label = '';
+      let pts = 0, label = '';
 
       if (ar === undefined) {
         pts = 0; label = 'Not in top 10';
@@ -570,9 +593,7 @@ const App = (() => {
         } else {
           pts = PTS_IN_TOP10; label = `In top 10 (#${ar})`;
         }
-        if (pick.isDarkHorse) {
-          pts += PTS_DARK_HORSE; label += ' +1🐴';
-        }
+        if (pick.isDarkHorse) { pts += PTS_DARK_HORSE; label += ' +1🐴'; }
       }
 
       total += pts;
@@ -586,7 +607,6 @@ const App = (() => {
   async function showResultsScreen() {
     showScreen('screenResults');
 
-    // Admin mode check
     if (state.adminMode) {
       const pw = sessionStorage.getItem('adminPw') || prompt('Admin password:');
       if (pw === CONFIG.adminPassword) {
@@ -597,53 +617,39 @@ const App = (() => {
       }
     }
 
-    await Promise.all([
-      renderLeaderboard(),
-      renderBoxOffice(),
-    ]);
+    await Promise.all([renderLeaderboard(), renderBoxOffice()]);
   }
 
   async function renderLeaderboard() {
     const list = document.getElementById('leaderboardList');
     if (!list) return;
 
-    // Fetch all picks
-    const { data: allPicks, error } = await db
-      .from('picks')
-      .select('*')
-      .order('rank');
-    if (error) { list.innerHTML = '<div class="text-dim" style="padding:1rem;">Error loading picks.</div>'; return; }
+    const snap = await db.collection('picks').get();
+    const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Group picks by participant
     const picksByParticipant = {};
     allPicks.forEach(row => {
-      if (!picksByParticipant[row.participant_id]) picksByParticipant[row.participant_id] = [];
-      picksByParticipant[row.participant_id].push({
-        movieId: row.movie_id,
-        rank: row.rank,
-        isDarkHorse: row.is_dark_horse,
+      if (!picksByParticipant[row.participantId]) picksByParticipant[row.participantId] = [];
+      picksByParticipant[row.participantId].push({
+        movieId: row.movieId, rank: row.rank, isDarkHorse: row.isDarkHorse,
       });
     });
+    state._picksByParticipant = picksByParticipant;
 
-    // Score each participant
     const scored = state.participants
-      .filter(p => p.picks_submitted)
+      .filter(p => p.picksSubmitted)
       .map(p => {
         const picks = picksByParticipant[p.id] || [];
         const { total } = scoreParticipantPicks(picks);
-        return { ...p, score: total, picks };
+        return { ...p, score: total };
       })
       .sort((a, b) => b.score - a.score);
 
-    // Cache picks for detail view
-    state._picksByParticipant = picksByParticipant;
-
     list.innerHTML = scored.length ? scored.map((p, i) => `
-      <div class="leaderboard-row ${state.selectedParticipantId === p.id ? 'active' : ''}"
-           onclick="App.showParticipantDetail(${p.id})">
+      <div class="leaderboard-row" onclick="App.showParticipantDetail('${esc(p.id)}')">
         <div class="lb-rank">${i + 1}</div>
-        ${p.avatar_url
-          ? `<img class="lb-avatar" src="${esc(p.avatar_url)}" alt="${esc(p.name)}" loading="lazy">`
+        ${p.avatarUrl
+          ? `<img class="lb-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
           : `<div class="lb-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>`}
         <div class="lb-name">${esc(p.name)}</div>
         <div class="lb-score">${p.score}</div>
@@ -653,10 +659,8 @@ const App = (() => {
 
   function showParticipantDetail(participantId) {
     state.selectedParticipantId = participantId;
-
-    // Highlight in leaderboard
     document.querySelectorAll('.leaderboard-row').forEach(row => {
-      row.classList.toggle('active', row.onclick?.toString().includes(participantId));
+      row.classList.toggle('active', row.getAttribute('onclick')?.includes(`'${participantId}'`));
     });
 
     const participant = state.participants.find(p => p.id === participantId);
@@ -667,17 +671,12 @@ const App = (() => {
     const panel = document.getElementById('detailPanel');
     if (!panel) return;
 
-    const getPts = pts => {
-      if (pts >= 13) return 'exact';
-      if (pts >= 7)  return 'close';
-      if (pts >= 3)  return 'in-top';
-      return 'miss';
-    };
+    const ptsClass = pts => pts >= 13 ? 'exact' : pts >= 7 ? 'close' : pts >= 3 ? 'in-top' : 'miss';
 
     panel.innerHTML = `
       <div class="detail-header">
-        ${participant.avatar_url
-          ? `<img class="detail-avatar" src="${esc(participant.avatar_url)}" alt="${esc(participant.name)}">`
+        ${participant.avatarUrl
+          ? `<img class="detail-avatar" src="${esc(participant.avatarUrl)}" alt="${esc(participant.name)}">`
           : `<div class="detail-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:var(--bg3);border:2px solid var(--gold);">🎬</div>`}
         <div>
           <div class="detail-name">${esc(participant.name)}</div>
@@ -694,7 +693,6 @@ const App = (() => {
           if (!movie) return '';
           const posterUrl = getPosterUrl(movie);
           const isBookend = pick.rank === 1 || pick.rank === 10;
-          const ptsClass = getPts(pick.pts);
           return `
             <div class="detail-pick-row">
               <div class="dp-rank ${isBookend ? 'bookend' : ''}">${pick.rank}</div>
@@ -706,7 +704,7 @@ const App = (() => {
                 <div class="dp-actual">${pick.label || '—'}</div>
               </div>
               ${pick.isDarkHorse ? '<div class="dp-dh">🐴 Dark Horse</div>' : ''}
-              <div class="dp-pts ${ptsClass}">${pick.pts}</div>
+              <div class="dp-pts ${ptsClass(pick.pts)}">${pick.pts}</div>
             </div>
           `;
         }).join('')}
@@ -720,8 +718,8 @@ const App = (() => {
     if (!boList) return;
 
     const ranked = state.movies
-      .filter(m => m.box_office_rank && m.box_office_rank <= 10)
-      .sort((a, b) => a.box_office_rank - b.box_office_rank);
+      .filter(m => m.boxOfficeRank && m.boxOfficeRank <= 10)
+      .sort((a, b) => a.boxOfficeRank - b.boxOfficeRank);
 
     if (!ranked.length) {
       boList.innerHTML = '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">Box office data not yet available.<br>Check back soon!</div>';
@@ -731,7 +729,7 @@ const App = (() => {
     boList.innerHTML = ranked.map((m, i) => {
       const rank = i + 1;
       const posterUrl = getPosterUrl(m);
-      const gross = m.domestic_gross ? `$${(m.domestic_gross / 1_000_000).toFixed(1)}M` : '—';
+      const gross = m.domesticGross ? `$${(m.domesticGross / 1_000_000).toFixed(1)}M` : '—';
       return `
         <div class="bo-row">
           <div class="bo-rank-num ${rank <= 3 ? 'top3' : ''}">${rank}</div>
@@ -753,17 +751,12 @@ const App = (() => {
   function showBoEditor() {
     const tbody = document.querySelector('#boEditTable tbody');
     if (!tbody) return;
-
     tbody.innerHTML = state.movies.map(m => `
       <tr>
         <td>${esc(m.title)}</td>
-        <td>
-          <input type="number" class="bo-edit-input" data-id="${m.id}"
-            value="${m.domestic_gross || ''}" placeholder="0" min="0">
-        </td>
+        <td><input type="number" class="bo-edit-input" data-id="${m.id}" value="${m.domesticGross || ''}" placeholder="0" min="0"></td>
       </tr>
     `).join('');
-
     document.getElementById('boEditor')?.classList.remove('hidden');
   }
 
@@ -778,26 +771,22 @@ const App = (() => {
 
     try {
       const updates = Array.from(inputs).map(inp => ({
-        id: parseInt(inp.dataset.id),
-        domestic_gross: parseInt(inp.value) || 0,
+        id: inp.dataset.id,
+        domesticGross: parseInt(inp.value) || 0,
       }));
+      const sorted = [...updates].sort((a, b) => b.domesticGross - a.domesticGross);
+      sorted.forEach((u, i) => { u.boxOfficeRank = u.domesticGross > 0 ? i + 1 : null; });
 
-      // Calculate ranks: sort by gross desc, assign ranks
-      const sorted = [...updates].sort((a, b) => b.domestic_gross - a.domestic_gross);
-      sorted.forEach((u, i) => { u.box_office_rank = u.domestic_gross > 0 ? i + 1 : null; });
-
-      for (const u of sorted) {
-        await db.from('movies').update({
-          domestic_gross: u.domestic_gross,
-          box_office_rank: u.box_office_rank,
-        }).eq('id', u.id);
-
+      const batch = db.batch();
+      sorted.forEach(u => {
+        batch.update(db.collection('movies').doc(u.id), {
+          domesticGross: u.domesticGross,
+          boxOfficeRank: u.boxOfficeRank,
+        });
         const movie = state.movies.find(m => m.id === u.id);
-        if (movie) {
-          movie.domestic_gross = u.domestic_gross;
-          movie.box_office_rank = u.box_office_rank;
-        }
-      }
+        if (movie) { movie.domesticGross = u.domesticGross; movie.boxOfficeRank = u.boxOfficeRank; }
+      });
+      await batch.commit();
 
       toast('Box office updated! 🎬', 'success');
       if (status) status.textContent = `Last saved ${new Date().toLocaleTimeString()}`;
@@ -819,30 +808,27 @@ const App = (() => {
 
     let updated = 0;
     for (const movie of state.movies) {
-      if (!movie.tmdb_id) await fetchAndCachePoster(movie);
-      if (!movie.tmdb_id) continue;
-
+      if (!movie.tmdbId) await fetchAndCachePoster(movie);
+      if (!movie.tmdbId) continue;
       try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${CONFIG.tmdb.apiKey}`
-        );
+        const res = await fetch(`https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${CONFIG.tmdb.apiKey}`);
         const data = await res.json();
         if (data.revenue > 0) {
-          await db.from('movies').update({ domestic_gross: data.revenue }).eq('id', movie.id);
-          movie.domestic_gross = data.revenue;
+          await db.collection('movies').doc(movie.id).update({ domesticGross: data.revenue });
+          movie.domesticGross = data.revenue;
           updated++;
         }
       } catch (_) { /* skip */ }
     }
 
-    // Recalculate ranks
-    const eligible = state.movies.filter(m => m.domestic_gross > 0)
-      .sort((a, b) => b.domestic_gross - a.domestic_gross);
-    for (let i = 0; i < eligible.length; i++) {
-      const rank = i + 1;
-      await db.from('movies').update({ box_office_rank: rank }).eq('id', eligible[i].id);
-      eligible[i].box_office_rank = rank;
-    }
+    const eligible = state.movies.filter(m => m.domesticGross > 0)
+      .sort((a, b) => b.domesticGross - a.domesticGross);
+    const batch = db.batch();
+    eligible.forEach((m, i) => {
+      m.boxOfficeRank = i + 1;
+      batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: i + 1 });
+    });
+    await batch.commit();
 
     toast(`Synced ${updated} movies from TMDB.`, 'success');
     if (status) status.textContent = `TMDB sync: ${updated} movies updated.`;
@@ -852,10 +838,7 @@ const App = (() => {
   // ── Helpers ────────────────────────────────────────────────────────────
   function esc(str) {
     return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function formatDate(dateStr) {
@@ -864,7 +847,6 @@ const App = (() => {
     return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
   }
 
-  let toastTimer = null;
   function toast(msg, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -877,23 +859,10 @@ const App = (() => {
 
   // ── Public API ─────────────────────────────────────────────────────────
   return {
-    init,
-    handleNameSubmit,
-    handleAvatarFile,
-    submitAvatar,
-    skipAvatar,
-    goToLanding,
-    selectExistingParticipant,
-    addToPicks,
-    removeFromPicks,
-    toggleDarkHorse,
-    filterPool,
-    submitPicks,
-    showParticipantDetail,
-    showBoEditor,
-    hideBoEditor,
-    saveBoxOffice,
-    tmdbSync,
+    init, handleNameSubmit, goToLanding, selectExistingParticipant,
+    handleAvatarFile, submitAvatar, skipAvatar,
+    addToPicks, removeFromPicks, toggleDarkHorse, filterPool, submitPicks,
+    showParticipantDetail, showBoEditor, hideBoEditor, saveBoxOffice, tmdbSync,
   };
 
 })();

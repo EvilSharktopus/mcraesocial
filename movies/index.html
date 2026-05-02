@@ -40,9 +40,9 @@
   <div class="setup-notice">
     <div style="font-size:3rem;margin-bottom:1rem;">🎥</div>
     <h2>Setup Required</h2>
-    <p>Fill in your credentials in <code>movies/config.js</code> before the game goes live.</p>
-    <p>You'll need a free <strong>Supabase</strong> project and a free <strong>TMDB API key</strong>.</p>
-    <p>Run <code>movies/setup.sql</code> in your Supabase SQL editor, then create a public storage bucket named <code>avatars</code>.</p>
+    <p>Fill in your Firebase config in <code>movies/config.js</code> before the game goes live.</p>
+    <p>You'll need your <strong>Firebase</strong> project credentials and a free <strong>TMDB API key</strong>.</p>
+    <p>Set your Firestore and Storage security rules to allow public read/write — see the comments in <code>config.js</code>.</p>
   </div>
 </div>
 
@@ -268,7 +268,9 @@
 </div>
 
 <!-- ── Scripts ── -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-storage-compat.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 
