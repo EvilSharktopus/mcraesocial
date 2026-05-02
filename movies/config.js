@@ -2,12 +2,12 @@
 // Find it in Firebase Console → Project Settings → Your apps → SDK setup.
 const CONFIG = {
   firebase: {
-    apiKey:            'YOUR_API_KEY',
-    authDomain:        'YOUR_PROJECT.firebaseapp.com',
-    projectId:         'YOUR_PROJECT_ID',
-    storageBucket:     'YOUR_PROJECT.appspot.com',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    appId:             'YOUR_APP_ID',
+    apiKey:            'AIzaSyBLaQWGOpqm-W1GhCKpFht96hKb8epgyno',
+    authDomain:        'movies-1999c.firebaseapp.com',
+    projectId:         'movies-1999c',
+    storageBucket:     'movies-1999c.firebasestorage.app',
+    messagingSenderId: '527350112307',
+    appId:             '1:527350112307:web:9a0f9be884a356c7680346',
   },
   tmdb: {
     // Free key at https://www.themoviedb.org/settings/api — used for movie posters.
