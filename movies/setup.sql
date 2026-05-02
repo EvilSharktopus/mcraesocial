@@ -68,6 +68,7 @@ INSERT INTO movies (title, release_date) VALUES
   ('The Breadwinner',                                   '2026-05-29'),
   ('Tuner',                                             '2026-05-29'),
   -- June 5
+  ('Masters of the Universe',                           '2026-06-05'),
   ('Power Ballad',                                      '2026-06-05'),
   ('Scary Movie',                                       '2026-06-05'),
   -- June 12
