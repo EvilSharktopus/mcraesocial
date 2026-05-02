@@ -323,9 +323,47 @@ const App = (() => {
   function showPicksScreen() {
     document.getElementById('currentPlayerName').textContent = state.participant?.name || '';
     if (state.adminMode) document.getElementById('adminPosterBtn')?.classList.remove('hidden');
+    renderPlayerAvatarThumb();
     renderRankingSlots();
     renderMoviePool();
     showScreen('screenPicks');
+  }
+
+  function renderPlayerAvatarThumb() {
+    const el = document.getElementById('playerAvatarThumb');
+    if (!el) return;
+    const p = state.participant;
+    el.innerHTML = p?.avatarUrl
+      ? `<img class="player-avatar-thumb" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" title="Click to change your avatar">`
+      : `<div class="player-avatar-placeholder" title="Click to add an avatar">🎬</div>`;
+  }
+
+  async function changeAvatar(file) {
+    if (!file || !state.participant) return;
+    if (file.size > 4 * 1024 * 1024) { toast('Image must be under 4MB.', 'error'); return; }
+
+    const thumb = document.getElementById('playerAvatarThumb');
+    if (thumb) thumb.style.opacity = '0.4';
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `avatars/${state.participant.id}-${Date.now()}.${ext}`;
+      const ref = storage.ref(path);
+      await ref.put(file);
+      const avatarUrl = await ref.getDownloadURL();
+
+      await db.collection('participants').doc(state.participant.id).update({ avatarUrl });
+      state.participant.avatarUrl = avatarUrl;
+      const idx = state.participants.findIndex(p => p.id === state.participant.id);
+      if (idx >= 0) state.participants[idx].avatarUrl = avatarUrl;
+
+      renderPlayerAvatarThumb();
+      toast('Avatar updated! 🎬', 'success');
+    } catch (err) {
+      toast('Upload failed: ' + err.message, 'error');
+    } finally {
+      if (thumb) thumb.style.opacity = '';
+    }
   }
 
   function renderMoviePool(filter = '') {
@@ -939,6 +977,7 @@ const App = (() => {
     addToPicks, removeFromPicks, toggleDarkHorse, filterPool, submitPicks,
     showParticipantDetail, showBoEditor, hideBoEditor, saveBoxOffice, tmdbSync,
     showPosterManager, hidePosterManager, handlePosterUpload,
+    changeAvatar,
   };
 
 })();

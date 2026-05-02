@@ -142,9 +142,13 @@
       <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.06em;color:var(--gold);">
         Build Your Top 10
       </h2>
-      <div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px;">
-        Picking as: <strong id="currentPlayerName" style="color:var(--text);"></strong>
-        · <button class="btn-ghost" onclick="App.goToLanding()">← Switch player</button>
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-top:4px;">
+        <div id="playerAvatarThumb" style="cursor:pointer;" onclick="document.getElementById('changeAvatarInput').click()" title="Click to change your avatar"></div>
+        <span style="font-size:0.78rem;color:var(--text-dim);">
+          Picking as: <strong id="currentPlayerName" style="color:var(--text);"></strong>
+          · <button class="btn-ghost" onclick="App.goToLanding()">← Switch player</button>
+        </span>
+        <input type="file" id="changeAvatarInput" accept="image/*" class="hidden" onchange="App.changeAvatar(this.files[0])">
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0.75rem;">
