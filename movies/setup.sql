@@ -49,21 +49,60 @@ CREATE POLICY "public_delete_picks"       ON picks FOR DELETE USING (true);
 
 CREATE POLICY "public_update_movies"      ON movies FOR UPDATE USING (true);
 
--- Summer 2026 movie list (May 8 – Labour Day, Sept 7)
--- Add/remove titles as needed before the deadline.
+-- Summer 2026 theatrical wide releases (May 8 – Labour Day)
+-- Source: Rotten Tomatoes Summer Movie Calendar 2026
+-- Streaming-only titles (Netflix/Prime/Apple) are excluded.
 INSERT INTO movies (title, release_date) VALUES
-  ('Star Wars: The Mandalorian & Grogu',  '2026-05-22'),
-  ('The Backrooms',                        '2026-05-29'),
-  ('Masters of the Universe',              '2026-06-05'),
-  ('Scary Movie',                          '2026-06-05'),
-  ('Disclosure Day',                       '2026-06-12'),
-  ('Toy Story 5',                          '2026-06-19'),
-  ('Jackass: Best and Last',               '2026-06-26'),
-  ('Supergirl: Woman of Tomorrow',         '2026-06-26'),
-  ('Minions & Monsters',                   '2026-07-01'),
-  ('Moana (Live-Action)',                  '2026-07-10'),
-  ('The Odyssey',                          '2026-07-17'),
-  ('Spider-Man: Brand New Day',            '2026-07-31'),
-  ('Animal Farm',                          '2026-08-07'),
-  ('Paw Patrol: The Mighty Movie 2',       '2026-08-14'),
-  ('Super Troopers 3',                     '2026-08-21');
+  -- May 8
+  ('Billie Eilish: Hit Me Hard and Soft (Live in 3D)', '2026-05-08'),
+  ('Mortal Kombat II',                                  '2026-05-08'),
+  ('The Sheep Detectives',                              '2026-05-08'),
+  -- May 15
+  ('In the Grey',                                       '2026-05-15'),
+  -- May 22
+  ('I Love Boosters',                                   '2026-05-22'),
+  ('Star Wars: The Mandalorian & Grogu',                '2026-05-22'),
+  -- May 29
+  ('Backrooms',                                         '2026-05-29'),
+  ('Pressure',                                          '2026-05-29'),
+  ('The Breadwinner',                                   '2026-05-29'),
+  ('Tuner',                                             '2026-05-29'),
+  -- June 5
+  ('Power Ballad',                                      '2026-06-05'),
+  ('Scary Movie',                                       '2026-06-05'),
+  -- June 12
+  ('Disclosure Day',                                    '2026-06-12'),
+  -- June 19
+  ('The Death of Robin Hood',                           '2026-06-19'),
+  ('Toy Story 5',                                       '2026-06-19'),
+  -- June 26
+  ('The Invite',                                        '2026-06-26'),
+  ('Jackass: Best and Last',                            '2026-06-26'),
+  ('Supergirl',                                         '2026-06-26'),
+  -- July 1
+  ('Minions & Monsters',                                '2026-07-01'),
+  -- July 3
+  ('Young Washington',                                  '2026-07-03'),
+  -- July 10
+  ('Evil Dead Burn',                                    '2026-07-10'),
+  ('Gail Daughtry and the Celebrity Sex Pass',          '2026-07-10'),
+  ('Moana',                                             '2026-07-10'),
+  -- July 17
+  ('The Odyssey',                                       '2026-07-17'),
+  -- July 31
+  ('I Want Your Sex',                                   '2026-07-31'),
+  ('Spider-Man: Brand New Day',                         '2026-07-31'),
+  -- August 7
+  ('Ice Cream Man',                                     '2026-08-07'),
+  ('Super Troopers 3',                                  '2026-08-07'),
+  ('Teenage Sex and Death at Camp Miasma',              '2026-08-07'),
+  -- August 14
+  ('The End of Oak Street',                             '2026-08-14'),
+  ('PAW Patrol: The Dino Movie',                        '2026-08-14'),
+  -- August 21
+  ('Insidious: Out of the Further',                     '2026-08-21'),
+  ('Spa Weekend',                                       '2026-08-21'),
+  -- August 28
+  ('Coyote vs. Acme',                                   '2026-08-28'),
+  ('The Dog Stars',                                     '2026-08-28'),
+  ('Idiots',                                            '2026-08-28');
