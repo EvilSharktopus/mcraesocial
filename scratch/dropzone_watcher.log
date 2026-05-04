@@ -3508,3 +3508,11 @@
 [2026-05-04 13:20:39]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\modern-globalization\index.html
 [2026-05-04 13:20:40]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\modern-globalization\_processed\Free Trade
 [2026-05-04 13:20:40]   Running git add -A ...
+[2026-05-04 13:20:40]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:20:46]   Committing: feat: auto-publish 'Case Studies' to social-10/historical
+[2026-05-04 13:20:51]   Pushing to origin...
+[2026-05-04 13:21:18]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-10\identity\intro-to-identity
+[2026-05-04 13:21:18]   Disabled animations in index.html
+[2026-05-04 13:21:18]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\identity\index.html
+[2026-05-04 13:21:18]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\_processed\Intro to Identity
+[2026-05-04 13:21:18]   Running git add -A ...
