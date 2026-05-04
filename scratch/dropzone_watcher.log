@@ -1087,3 +1087,34 @@
 [2026-05-04 12:51:59]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
 [2026-05-04 12:51:59]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\Cold War Intro.pptx
 [2026-05-04 12:51:59]   Running git add -A ...
+[2026-05-04 12:52:54]   Committing: feat: auto-publish 'Cold War Intro.pptx' to social-30/imposition
+[2026-05-04 12:53:08]   Pushing to origin...
+[2026-05-04 12:54:02]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\imposition\brinkmanship
+[2026-05-04 12:54:02]   Disabled animations in index.html
+[2026-05-04 12:54:02]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
+[2026-05-04 12:54:02]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\Brinkmanship
+[2026-05-04 12:54:02]   Running git add -A ...
+[2026-05-04 12:54:03]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 12:54:09]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\imposition\end-of-cold-war
+[2026-05-04 12:54:09]   Disabled animations in index.html
+[2026-05-04 12:54:09]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
+[2026-05-04 12:54:09]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\End of Cold War
+[2026-05-04 12:54:09]   Running git add -A ...
+[2026-05-04 12:54:10]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 12:54:30]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-10\identity\trade-and-containers
+[2026-05-04 12:54:30]   Disabled animations in index.html
+[2026-05-04 12:54:30]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\identity\index.html
+[2026-05-04 12:54:30]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\_processed\Trade and Containers
+[2026-05-04 12:54:30]   Running git add -A ...
+[2026-05-04 12:54:31]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 12:54:35]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\illiberalism\liberalism-in-action
+[2026-05-04 12:54:35]   Disabled animations in index.html
+[2026-05-04 12:54:35]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\illiberalism\index.html
+[2026-05-04 12:54:35]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\illiberalism\_processed\Liberalism in Action
+[2026-05-04 12:54:35]   Running git add -A ...
+[2026-05-04 12:54:36]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 12:54:38]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\dictatorships\fascism
+[2026-05-04 12:54:38]   Disabled animations in index.html
+[2026-05-04 12:54:38]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\dictatorships\index.html
+[2026-05-04 12:54:38]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\dictatorships\_processed\Fascism
+[2026-05-04 12:54:38]   Running git add -A ...

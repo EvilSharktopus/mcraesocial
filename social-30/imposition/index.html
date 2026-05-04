@@ -293,6 +293,36 @@
           </div>
         </div>
       </div>
+      <div class="kn-tile" data-slug="brinkmanship" data-total="1">
+        <div class="kn-tile__header">
+          <span class="kn-tile__title">Brinkmanship</span>
+          <div class="kn-tile__nav">
+            <input type="range" class="kn-scrubber" min="1" max="1" value="1" oninput="knScrub(this,'brinkmanship')" onchange="knScrub(this,'brinkmanship')">
+            <span class="kn-slide-label"><span id="kn-cur-brinkmanship">1</span> / 1</span>
+            <input class="kn-input" type="number" min="1" max="1" value="1" id="kn-input-brinkmanship">
+            <button class="kn-btn" onclick="knGoTo('brinkmanship')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
+          </div>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-30/imposition/brinkmanship/index.html" id="kn-frame-brinkmanship" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>    
+      <div class="kn-tile" data-slug="end-of-cold-war" data-total="1">
+        <div class="kn-tile__header">
+          <span class="kn-tile__title">End of Cold War</span>
+          <div class="kn-tile__nav">
+            <input type="range" class="kn-scrubber" min="1" max="1" value="1" oninput="knScrub(this,'end-of-cold-war')" onchange="knScrub(this,'end-of-cold-war')">
+            <span class="kn-slide-label"><span id="kn-cur-end-of-cold-war">1</span> / 1</span>
+            <input class="kn-input" type="number" min="1" max="1" value="1" id="kn-input-end-of-cold-war">
+            <button class="kn-btn" onclick="knGoTo('end-of-cold-war')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
+          </div>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-30/imposition/end-of-cold-war/index.html" id="kn-frame-end-of-cold-war" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>    
     </div>
   </section>
     </div>
@@ -318,6 +348,66 @@
     document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
     document.getElementById('counter-'+id).textContent = (v.idx+1) + ' / ' + v.slides.length;
   }
+})();
+</script>
+  <script>
+(function() {
+  function knStep(frame, forward) {
+    try {
+      var doc = frame.contentDocument || frame.contentWindow.document;
+      if (forward) {
+        var stage = doc.getElementById('stage') || doc.getElementById('stageArea') || doc.body;
+        stage.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, view: frame.contentWindow}));
+      } else {
+        var opts = {key: 'ArrowLeft', keyCode: 37, which: 37, bubbles: true, cancelable: true};
+        doc.dispatchEvent(new KeyboardEvent('keydown', opts));
+        doc.dispatchEvent(new KeyboardEvent('keyup', opts));
+      }
+    } catch(e) {}
+  }
+  function knNavigateTo(slug, target) {
+    var frame = document.getElementById('kn-frame-' + slug);
+    if (!frame) return;
+    var tile = frame.closest('[data-slug]');
+    var current = tile ? parseInt(tile.dataset.slide || '1', 10) : 1;
+    var delta = target - current;
+    if (delta === 0) return;
+    var forward = delta > 0;
+    var steps = Math.abs(delta);
+    var i = 0;
+    var interval = setInterval(function() {
+      if (i >= steps) {
+        clearInterval(interval);
+        if (tile) tile.dataset.slide = target;
+        var cur = document.getElementById('kn-cur-' + slug);
+        if (cur) cur.textContent = target;
+        var scrubber = tile ? tile.querySelector('.kn-scrubber') : null;
+        if (scrubber) scrubber.value = target;
+        return;
+      }
+      knStep(frame, forward);
+      i++;
+    }, 350);
+  }
+  window.knGoTo = function(slug) {
+    var input = document.getElementById('kn-input-' + slug);
+    if (!input) return;
+    var target = parseInt(input.value, 10);
+    if (isNaN(target) || target < 1) return;
+    knNavigateTo(slug, target);
+  };
+  window.knScrub = function(rangeEl, slug) {
+    var target = parseInt(rangeEl.value, 10);
+    var input = document.getElementById('kn-input-' + slug);
+    if (input) input.value = target;
+    knNavigateTo(slug, target);
+  };
+  window.knFullscreen = function(btn) {
+    var tile = btn.closest('.kn-tile');
+    var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer');
+    if (target && target.requestFullscreen) target.requestFullscreen();
+    else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen();
+  };
 })();
 </script>
   <footer class="site-footer">
