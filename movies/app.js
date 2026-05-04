@@ -9,7 +9,8 @@ const App = (() => {
     phase: 'pre',
     participant: null,      // { id, name, avatarUrl, picksSubmitted }
     avatarFile: null,
-    picks: [],              // [{ movieId, rank, isDarkHorse }]
+    picks: [],              // [{ movieId, rank }]  — top 10 ranked
+    darkHorses: [],         // [movieId, movieId, movieId] — 3 long shots
     movies: [],             // all eligible movies
     participants: [],       // all participants
     selectedParticipantId: null,
@@ -92,8 +93,10 @@ const App = (() => {
     state.adminMode = new URLSearchParams(location.search).get('admin') === '1';
 
     try {
-      await loadMovies();
-      await loadParticipants();
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timed out. Check that Firestore is enabled in your Firebase Console.')), 10000)
+      );
+      await Promise.race([Promise.all([loadMovies(), loadParticipants()]), timeout]);
       updateDeadlineBadge();
 
       if (state.phase === 'post') {
@@ -102,9 +105,16 @@ const App = (() => {
         showLanding();
       }
     } catch (err) {
-      document.getElementById('screenLoading').innerHTML =
-        `<div class="loading-state"><div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>
-         <div>Could not connect to Firebase.<br><small style="color:var(--text-dim)">${err.message}</small></div></div>`;
+      console.error('Firebase init error:', err);
+      const hint = err.message?.includes('offline') || err.code === 'unavailable'
+        ? 'Firestore may not be enabled yet. Go to Firebase Console → Firestore Database → Create database.'
+        : err.message;
+      document.getElementById('screenLoading').innerHTML = `
+        <div style="text-align:center;padding:3rem 1.5rem;max-width:500px;margin:0 auto;">
+          <div style="font-size:2.5rem;margin-bottom:1rem;">⚠️</div>
+          <div style="font-size:1rem;color:#f0e6d3;margin-bottom:0.75rem;font-weight:600;">Could not connect to Firebase</div>
+          <div style="font-size:0.82rem;color:#9a8e7e;line-height:1.6;">${hint}</div>
+        </div>`;
       showScreen('screenLoading');
     }
   }
@@ -139,8 +149,13 @@ const App = (() => {
 
   async function loadParticipants() {
     const snap = await db.collection('participants').get();
+    const excludeExact = ['verifier', 'admin'];
     state.participants = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => {
+        const name = (p.name || '').toLowerCase();
+        return !excludeExact.includes(name) && !name.startsWith('console.log');
+      })
       .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   }
 
@@ -171,8 +186,54 @@ const App = (() => {
   // ── Landing screen ─────────────────────────────────────────────────────
   function showLanding() {
     renderParticipantGrid();
+    renderPosterWall();
     showScreen('screenLanding');
     document.getElementById('nameInput')?.focus();
+  }
+
+  function renderPosterWall() {
+    const wall  = document.getElementById('posterWall');
+    const strip = document.getElementById('participantStrip');
+
+    // ── Movie poster rows ──────────────────────────────────────────────
+    if (wall) {
+      const withPosters = state.movies.filter(m => m.posterPath);
+      if (withPosters.length < 4) {
+        wall.style.display = 'none';
+      } else {
+        const doubled = [...withPosters, ...withPosters];
+        const half    = Math.ceil(doubled.length / 2);
+        const row1    = doubled.slice(0, half);
+        const row2    = doubled.slice(half).reverse();
+
+        function makeStrip(movies, cls) {
+          return `<div class="poster-strip ${cls}">${
+            movies.map(m => `<img src="${esc(m.posterPath)}" alt="${esc(m.title)}" class="poster-strip-img" loading="lazy" onerror="this.style.display='none'">`).join('')
+          }</div>`;
+        }
+
+        wall.innerHTML = makeStrip(row1, 'strip-ltr') + makeStrip(row2, 'strip-rtl');
+        wall.style.display = 'flex';
+      }
+    }
+
+    // ── Participant avatar row ─────────────────────────────────────────
+    if (strip) {
+      const participants = state.participants;
+      if (!participants.length) {
+        strip.style.display = 'none';
+      } else {
+        strip.style.display = '';
+        strip.innerHTML = participants.map(p => `
+          <div class="ps-card">
+            ${p.avatarUrl
+              ? `<img src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" class="ps-poster">`
+              : `<div class="ps-poster ps-poster-ph">🎬</div>`}
+            <div class="ps-nameplate"><div class="ps-name">${esc(p.name)}</div></div>
+            ${p.picksSubmitted ? '<div class="ps-check">✓</div>' : ''}
+          </div>`).join('');
+      }
+    }
   }
 
   function renderParticipantGrid() {
@@ -182,8 +243,12 @@ const App = (() => {
       grid.innerHTML = '<div class="text-dim" style="font-size:0.8rem;width:100%;text-align:center;">Be the first to submit picks!</div>';
       return;
     }
+    // Pre-deadline: chips are display-only (picks are private until May 8)
+    // Post-deadline: chips are clickable to view picks on the results screen
+    const isPreDeadline = state.phase === 'pre';
     grid.innerHTML = state.participants.map(p => `
-      <button class="participant-chip" onclick="App.selectExistingParticipant('${esc(p.id)}')" title="Pick as ${esc(p.name)}">
+      <div class="participant-chip ${isPreDeadline ? 'no-click' : ''}"
+        ${isPreDeadline ? '' : `onclick="App.selectExistingParticipant('${esc(p.id)}')" title="View ${esc(p.name)}'s picks"`}>
         ${p.avatarUrl
           ? `<img class="chip-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
           : `<div class="chip-avatar-placeholder">🎬</div>`}
@@ -191,7 +256,7 @@ const App = (() => {
         <div class="chip-status ${p.picksSubmitted ? 'submitted' : ''}">
           ${p.picksSubmitted ? '✓ Submitted' : 'In Progress'}
         </div>
-      </button>
+      </div>
     `).join('');
   }
 
@@ -213,6 +278,7 @@ const App = (() => {
       if (!snap.empty) {
         const doc = snap.docs[0];
         state.participant = { id: doc.id, ...doc.data() };
+        if (state.participant.name.toUpperCase() === 'MCRAE') state.adminMode = true;
         await loadExistingPicks(doc.id);
         showPicksScreen();
       } else {
@@ -224,6 +290,7 @@ const App = (() => {
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
         state.participant = { id: ref.id, name, nameLower: name.toLowerCase(), avatarUrl: null, picksSubmitted: false };
+        if (name.toUpperCase() === 'MCRAE') state.adminMode = true;
         state.participants.push(state.participant);
         state.picks = [];
         showScreen('screenAvatar');
@@ -240,6 +307,7 @@ const App = (() => {
     const p = state.participants.find(x => x.id === id);
     if (!p) return;
     state.participant = p;
+    if (state.participant.name.toUpperCase() === 'MCRAE') state.adminMode = true;
     await loadExistingPicks(id);
     showPicksScreen();
   }
@@ -247,15 +315,21 @@ const App = (() => {
   async function loadExistingPicks(participantId) {
     const snap = await db.collection('picks').get();
     const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    state.picks = allPicks
-      .filter(p => p.participantId === participantId)
-      .map(p => ({ movieId: p.movieId, rank: p.rank, isDarkHorse: p.isDarkHorse }))
+    const mine = allPicks.filter(p => p.participantId === participantId);
+    state.picks = mine
+      .filter(p => !p.isDarkHorse)
+      .map(p => ({ movieId: p.movieId, rank: p.rank }))
       .sort((a, b) => a.rank - b.rank);
+    state.darkHorses = mine
+      .filter(p => p.isDarkHorse)
+      .map(p => p.movieId);
   }
 
   function goToLanding() {
     state.participant = null;
+    state.adminMode = new URLSearchParams(location.search).get('admin') === '1';
     state.picks = [];
+    state.darkHorses = [];
     state.avatarFile = null;
     showLanding();
   }
@@ -322,9 +396,14 @@ const App = (() => {
   // ── Picks screen ───────────────────────────────────────────────────────
   function showPicksScreen() {
     document.getElementById('currentPlayerName').textContent = state.participant?.name || '';
-    if (state.adminMode) document.getElementById('adminPosterBtn')?.classList.remove('hidden');
+    if (state.adminMode) {
+      document.getElementById('adminPosterBtn')?.classList.remove('hidden');
+    } else {
+      document.getElementById('adminPosterBtn')?.classList.add('hidden');
+    }
     renderPlayerAvatarThumb();
     renderRankingSlots();
+    renderDarkHorseSlots();
     renderMoviePool();
     showScreen('screenPicks');
   }
@@ -371,19 +450,22 @@ const App = (() => {
     if (!grid) return;
     const q = filter.toLowerCase();
     const filtered = q ? state.movies.filter(m => m.title.toLowerCase().includes(q)) : state.movies;
-    const selectedIds = new Set(state.picks.map(p => p.movieId));
+    const rankedIds = new Set(state.picks.map(p => p.movieId));
+    const dhIds = new Set(state.darkHorses);
 
     grid.innerHTML = filtered.map(m => {
       const posterUrl = getPosterUrl(m);
-      const isSelected = selectedIds.has(m.id);
+      const isRanked = rankedIds.has(m.id);
+      const isDH = dhIds.has(m.id);
+      const cls = isRanked ? 'selected' : isDH ? 'dh-selected' : '';
       return `
-        <div class="movie-card ${isSelected ? 'selected' : ''}" data-id="${m.id}" onclick="App.addToPicks('${m.id}')">
+        <div class="movie-card ${cls}" data-id="${m.id}" onclick="App.addToPicks('${m.id}')">
           ${posterUrl ? `<img class="movie-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
           <div class="movie-poster-placeholder" style="${posterUrl ? 'display:none' : ''}">
-            <div class="poster-icon">🎬</div>
+            <div class="poster-icon">${isDH ? '🐴' : '🎬'}</div>
           </div>
           <div class="movie-card-title">${esc(m.title)}</div>
-          <div class="movie-card-date">${formatDate(m.releaseDate)}</div>
+          <div class="movie-card-date">${isDH ? '🐴 Dark Horse' : formatDate(m.releaseDate)}</div>
         </div>
       `;
     }).join('');
@@ -423,16 +505,13 @@ const App = (() => {
             ? `<img class="rank-poster-thumb" src="${esc(posterUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
             : `<div class="rank-thumb-placeholder">🎬</div>`}
           <div class="rank-info">
-            <div class="rank-title">${esc(movie.title)}</div>
+            <div class="rank-title rank-title-full">${esc(movie.title)}</div>
+            <div class="rank-title rank-title-abbrev">${esc(abbrev(movie.title))}</div>
           </div>
-          <button class="dark-horse-btn ${pick.isDarkHorse ? 'active' : ''}"
-            onclick="App.toggleDarkHorse('${movie.id}')" title="Mark as dark horse (+1 bonus if it cracks top 10)">
-            ${pick.isDarkHorse ? '🐴 Dark Horse' : 'Dark Horse'}
-          </button>
           <button class="remove-pick-btn" onclick="App.removeFromPicks('${movie.id}')" title="Remove">✕</button>
         ` : `
           <div class="rank-info">
-            <div class="rank-empty-hint">${isBookend ? '⭐ Bookend bonus (13 pts)' : 'Empty slot'}</div>
+            <div class="rank-empty-hint"><span class="hidden-mobile">${isBookend ? '⭐ Bookend bonus (13 pts)' : 'Empty slot'}</span><span class="show-mobile">${isBookend ? '⭐ Bookend' : 'Empty'}</span></div>
           </div>
         `}
       `;
@@ -441,23 +520,64 @@ const App = (() => {
     updatePickCount();
   }
 
+  function renderDarkHorseSlots() {
+    const list = document.getElementById('darkHorseList');
+    if (!list) return;
+    list.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const movieId = state.darkHorses[i];
+      const movie = movieId ? state.movies.find(m => m.id === movieId) : null;
+      const posterUrl = movie ? getPosterUrl(movie) : null;
+      const slot = document.createElement('div');
+      slot.className = `dh-slot ${movie ? '' : 'empty'}`;
+      if (movie) {
+        slot.innerHTML = `
+          <span class="dh-badge">🐴</span>
+          ${posterUrl ? `<img class="dh-thumb" src="${esc(posterUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="dh-thumb-placeholder">🎬</div>'}
+          <div class="dh-title dh-title-full">${esc(movie.title)}</div>
+          <div class="dh-title dh-title-abbrev">${esc(abbrev(movie.title))}</div>
+          <button class="remove-pick-btn" onclick="App.removeDarkHorse('${movie.id}')" title="Remove">✕</button>
+        `;
+      } else {
+        slot.innerHTML = `
+          <span class="dh-badge" style="opacity:0.25">🐴</span>
+          <div class="dh-title" style="color:var(--text-dim);font-style:italic;"><span class="hidden-mobile">Pick from movie pool</span><span class="show-mobile">Empty</span></div>
+        `;
+      }
+      list.appendChild(slot);
+    }
+    updatePickCount();
+  }
+
   function updatePickCount() {
     const n = state.picks.length;
+    const dh = state.darkHorses.length;
     const el = document.getElementById('pickCountNum');
-    if (el) el.textContent = n;
+    if (el) el.textContent = n + dh;
     const btn = document.getElementById('submitPicksBtn');
     const hint = document.getElementById('submitHint');
-    if (btn) btn.disabled = n < 10;
-    if (hint) hint.textContent = n < 10
-      ? `Select ${10 - n} more movie${10 - n !== 1 ? 's' : ''} to submit`
-      : 'Ready to lock in your picks!';
+    const ready = n === 10 && dh === 3;
+    if (btn) btn.disabled = !ready;
+    if (hint) {
+      if (n < 10) hint.textContent = `Add ${10 - n} more ranked pick${10 - n !== 1 ? 's' : ''}`;
+      else if (dh < 3) hint.textContent = `Add ${3 - dh} more dark horse${3 - dh !== 1 ? 's' : ''} to submit`;
+      else hint.textContent = 'Ready to lock in your picks!';
+    }
   }
 
   function addToPicks(movieId) {
-    if (state.picks.length >= 10) { toast('You've already picked 10 movies!', 'error'); return; }
     if (state.picks.find(p => p.movieId === movieId)) return;
-    state.picks.push({ movieId, rank: state.picks.length + 1, isDarkHorse: false });
-    renderRankingSlots();
+    if (state.darkHorses.includes(movieId)) return;
+    if (state.picks.length < 10) {
+      state.picks.push({ movieId, rank: state.picks.length + 1 });
+      renderRankingSlots();
+    } else if (state.darkHorses.length < 3) {
+      state.darkHorses.push(movieId);
+      renderDarkHorseSlots();
+    } else {
+      toast("All 13 picks are filled! Remove one to swap.", 'error');
+      return;
+    }
     renderMoviePool(document.getElementById('poolSearch')?.value || '');
   }
 
@@ -465,12 +585,14 @@ const App = (() => {
     state.picks = state.picks.filter(p => p.movieId !== movieId);
     state.picks.sort((a, b) => a.rank - b.rank).forEach((p, i) => p.rank = i + 1);
     renderRankingSlots();
+    renderDarkHorseSlots();
     renderMoviePool(document.getElementById('poolSearch')?.value || '');
   }
 
-  function toggleDarkHorse(movieId) {
-    const pick = state.picks.find(p => p.movieId === movieId);
-    if (pick) { pick.isDarkHorse = !pick.isDarkHorse; renderRankingSlots(); }
+  function removeDarkHorse(movieId) {
+    state.darkHorses = state.darkHorses.filter(id => id !== movieId);
+    renderDarkHorseSlots();
+    renderMoviePool(document.getElementById('poolSearch')?.value || '');
   }
 
   // ── Drag & drop reordering ─────────────────────────────────────────────
@@ -520,7 +642,7 @@ const App = (() => {
 
   // ── Submit picks ───────────────────────────────────────────────────────
   async function submitPicks() {
-    if (state.picks.length < 10 || !state.participant) return;
+    if (state.picks.length < 10 || state.darkHorses.length < 3 || !state.participant) return;
     const btn = document.getElementById('submitPicksBtn');
     btn.disabled = true;
     btn.textContent = 'Saving…';
@@ -533,7 +655,7 @@ const App = (() => {
       existing.docs.forEach(d => deleteBatch.delete(d.ref));
       await deleteBatch.commit();
 
-      // Write new picks
+      // Write ranked picks + dark horses
       const writeBatch = db.batch();
       state.picks.forEach(pick => {
         const ref = db.collection('picks').doc();
@@ -541,7 +663,16 @@ const App = (() => {
           participantId: state.participant.id,
           movieId: pick.movieId,
           rank: pick.rank,
-          isDarkHorse: pick.isDarkHorse,
+          isDarkHorse: false,
+        });
+      });
+      state.darkHorses.forEach(movieId => {
+        const ref = db.collection('picks').doc();
+        writeBatch.set(ref, {
+          participantId: state.participant.id,
+          movieId,
+          rank: null,
+          isDarkHorse: true,
         });
       });
       await writeBatch.commit();
@@ -590,9 +721,19 @@ const App = (() => {
             : `<div class="pm-poster-placeholder"><div class="pm-icon">🎬</div><span>No poster</span></div>`}
           <div class="pm-title">${esc(m.title)}</div>
           <label class="pm-upload-label">
-            ${posterUrl ? '↑ Replace' : '+ Upload'}
+            ${posterUrl ? '↑ Replace file' : '+ Upload file'}
             <input type="file" accept="image/*" class="hidden" onchange="App.handlePosterUpload('${m.id}', this.files[0])">
           </label>
+          <div class="pm-url-row">
+            <input
+              type="text"
+              class="pm-url-input"
+              id="pm-url-${m.id}"
+              placeholder="…or paste image URL"
+              onkeydown="if(event.key==='Enter'){App.handlePosterUrlSet('${m.id}',this.value);this.value='';}"
+            >
+            <button class="pm-url-btn" onclick="App.handlePosterUrlSet('${m.id}',document.getElementById('pm-url-${m.id}').value);document.getElementById('pm-url-${m.id}').value='';">Set</button>
+          </div>
           <div class="pm-spinner"><span class="spinner"></span></div>
         </div>
       `;
@@ -647,6 +788,41 @@ const App = (() => {
     }
   }
 
+  async function handlePosterUrlSet(movieId, url) {
+    url = (url || '').trim();
+    if (!url) { toast('Paste a URL first.', 'error'); return; }
+    if (!/^https?:\/\//.test(url)) { toast('URL must start with http:// or https://', 'error'); return; }
+
+    const card = document.getElementById(`pm-${movieId}`);
+    card?.classList.add('uploading');
+
+    try {
+      await db.collection('movies').doc(movieId).update({ posterPath: url });
+
+      const movie = state.movies.find(m => m.id === movieId);
+      if (movie) { movie.posterPath = url; state.posterCache[movieId] = url; }
+
+      // Swap placeholder / old image for the new one
+      const existing = card?.querySelector('.pm-poster, .pm-poster-placeholder');
+      if (existing) {
+        const newImg = document.createElement('img');
+        newImg.className = 'pm-poster';
+        newImg.src = url;
+        newImg.alt = '';
+        newImg.loading = 'lazy';
+        existing.replaceWith(newImg);
+      }
+
+      toast(`Poster URL saved for ${movie?.title || 'movie'}! 🎬`, 'success');
+      renderMoviePool(document.getElementById('poolSearch')?.value || '');
+      renderRankingSlots();
+    } catch (err) {
+      toast('Failed to save URL: ' + err.message, 'error');
+    } finally {
+      card?.classList.remove('uploading');
+    }
+  }
+
   async function fetchAndCachePoster(movie) {
     if (!CONFIG.tmdb?.apiKey || CONFIG.tmdb.apiKey === 'YOUR_TMDB_API_KEY') return;
     try {
@@ -680,18 +856,20 @@ const App = (() => {
 
   // ── Scoring ────────────────────────────────────────────────────────────
   function scoreParticipantPicks(picks) {
-    const ranked = state.movies
+    const actualTop10 = state.movies
       .filter(m => m.boxOfficeRank && m.boxOfficeRank <= 10)
       .sort((a, b) => a.boxOfficeRank - b.boxOfficeRank);
 
     const actualRank = {};
-    ranked.forEach((m, i) => { actualRank[m.id] = i + 1; });
+    actualTop10.forEach((m, i) => { actualRank[m.id] = i + 1; });
 
     let total = 0;
-    const scored = picks.map(pick => {
+    const rankedPicks = picks.filter(p => !p.isDarkHorse);
+    const dhPicks = picks.filter(p => p.isDarkHorse);
+
+    const scoredRanked = rankedPicks.map(pick => {
       const ar = actualRank[pick.movieId];
       let pts = 0, label = '';
-
       if (ar === undefined) {
         pts = 0; label = 'Not in top 10';
       } else {
@@ -706,17 +884,57 @@ const App = (() => {
         } else {
           pts = PTS_IN_TOP10; label = `In top 10 (#${ar})`;
         }
-        if (pick.isDarkHorse) { pts += PTS_DARK_HORSE; label += ' +1🐴'; }
       }
-
       total += pts;
       return { ...pick, pts, label, actualRank: ar };
     });
 
-    return { scored, total };
+    const scoredDH = dhPicks.map(pick => {
+      const ar = actualRank[pick.movieId];
+      const pts = ar !== undefined ? PTS_DARK_HORSE : 0;
+      const label = ar !== undefined ? `🐴 Made it! (#${ar})` : '🐴 Missed';
+      total += pts;
+      return { ...pick, pts, label, actualRank: ar };
+    });
+
+    return { scored: [...scoredRanked, ...scoredDH], total };
   }
 
   // ── Results screen ─────────────────────────────────────────────────────
+  const MOVIE_PALETTE = [
+    '#ef5350','#ec407a','#ab47bc','#7e57c2','#5c6bc0',
+    '#42a5f5','#00acc1','#26a69a','#66bb6a','#d4e157',
+    '#ffca28','#ffa726','#ff7043','#a1887f','#78909c',
+    '#29b6f6','#9ccc65','#fff176','#f06292','#ce93d8',
+    '#80cbc4','#aed581','#ffd54f','#ff8a65','#b0bec5',
+    '#e57373','#4dd0e1','#81c784','#ffb74d','#9575cd',
+  ];
+
+  function abbrev(title) {
+    const stop = /^(the|and|of|&|in|a|an|to|at|by|for|from|with|on|vs|best|last|hit|me|hard|soft|live|3d)$/i;
+    const words = title.split(/[\s:&\-–!]+/).filter(Boolean);
+    const sig = words.filter(w => !stop.test(w));
+    const src = sig.length ? sig : words;
+    if (src.length === 1) return src[0].slice(0, 5).toUpperCase();
+    return src.map(w => w[0].toUpperCase()).join('').slice(0, 6);
+  }
+
+  function moviePtsForPlayer(movieId, picks, actualRankMap) {
+    const rp = picks.filter(p => !p.isDarkHorse).find(p => p.movieId === movieId);
+    const dp = picks.filter(p => p.isDarkHorse).find(p => p.movieId === movieId);
+    if (!rp && !dp) return null;
+    const ar = actualRankMap[movieId];
+    if (rp) {
+      if (ar === undefined) return 0;
+      const diff = Math.abs(rp.rank - ar);
+      if (diff === 0) return BOOKEND_RANKS.has(rp.rank) ? PTS_EXACT_BOOKEND : PTS_EXACT;
+      if (diff === 1) return PTS_OFF1;
+      if (diff === 2) return PTS_OFF2;
+      return PTS_IN_TOP10;
+    }
+    return ar !== undefined ? PTS_DARK_HORSE : 0;
+  }
+
   async function showResultsScreen() {
     showScreen('screenResults');
 
@@ -730,135 +948,175 @@ const App = (() => {
       }
     }
 
-    await Promise.all([renderLeaderboard(), renderBoxOffice()]);
+    // Load all picks once, share across renderers
+    const snap = await db.collection('picks').get();
+    const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const pbp = {};
+    allPicks.forEach(row => {
+      if (!pbp[row.participantId]) pbp[row.participantId] = [];
+      pbp[row.participantId].push({ movieId: row.movieId, rank: row.rank, isDarkHorse: row.isDarkHorse });
+    });
+    state._picksByParticipant = pbp;
+
+    // Sort participants by score
+    const withScores = state.participants
+      .filter(p => p.picksSubmitted)
+      .map(p => { const { total } = scoreParticipantPicks(pbp[p.id] || []); return { ...p, score: total }; })
+      .sort((a, b) => b.score - a.score);
+
+    renderLeaderboard(withScores);
+    renderQuickLookGrid(withScores, pbp);
+    renderBoxOfficeTable(withScores, pbp);
   }
 
-  async function renderLeaderboard() {
+  function renderLeaderboard(participants) {
     const list = document.getElementById('leaderboardList');
     if (!list) return;
 
-    const snap = await db.collection('picks').get();
-    const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const topScore = participants.length ? participants[0].score : null;
 
-    const picksByParticipant = {};
-    allPicks.forEach(row => {
-      if (!picksByParticipant[row.participantId]) picksByParticipant[row.participantId] = [];
-      picksByParticipant[row.participantId].push({
-        movieId: row.movieId, rank: row.rank, isDarkHorse: row.isDarkHorse,
-      });
+    // Assign display medals by score tier (not position)
+    let tierIdx = -1;
+    let lastScore = null;
+    const tierMedals = ['👑', '🥈', '🥉'];
+    const withTier = participants.map(p => {
+      if (p.score !== lastScore) { tierIdx++; lastScore = p.score; }
+      return { ...p, tier: tierIdx };
     });
-    state._picksByParticipant = picksByParticipant;
 
-    const scored = state.participants
-      .filter(p => p.picksSubmitted)
-      .map(p => {
-        const picks = picksByParticipant[p.id] || [];
-        const { total } = scoreParticipantPicks(picks);
-        return { ...p, score: total };
-      })
-      .sort((a, b) => b.score - a.score);
-
-    list.innerHTML = scored.length ? scored.map((p, i) => `
-      <div class="leaderboard-row" onclick="App.showParticipantDetail('${esc(p.id)}')">
-        <div class="lb-rank">${i + 1}</div>
+    list.innerHTML = withTier.length ? withTier.map((p) => {
+      const isFirst = p.score === topScore && topScore !== null;
+      const medal = tierMedals[p.tier] ?? (p.tier + 1);
+      return `
+      <div class="leaderboard-row${isFirst ? ' lb-first' : ''}">
+        <div class="lb-rank${isFirst ? ' lb-rank-first' : ''}">${medal}</div>
         ${p.avatarUrl
           ? `<img class="lb-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
           : `<div class="lb-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>`}
-        <div class="lb-name">${esc(p.name)}</div>
-        <div class="lb-score">${p.score}</div>
-      </div>
-    `).join('') : '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">No picks submitted yet.</div>';
+        <div class="lb-name${isFirst ? ' lb-name-first' : ''}">${esc(p.name)}</div>
+        <div class="lb-score${isFirst ? ' lb-score-first' : ''}">${p.score}</div>
+      </div>`;
+    }).join('') : '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">No picks submitted yet.</div>';
   }
 
-  function showParticipantDetail(participantId) {
-    state.selectedParticipantId = participantId;
-    document.querySelectorAll('.leaderboard-row').forEach(row => {
-      row.classList.toggle('active', row.getAttribute('onclick')?.includes(`'${participantId}'`));
+  function renderQuickLookGrid(participants, pbp) {
+    const grid = document.getElementById('comparisonGrid');
+    if (!grid || !participants.length) { if (grid) grid.innerHTML = ''; return; }
+
+    // Assign colors in first-appearance order
+    const colorMap = {};
+    let ci = 0;
+    const color = id => { if (!colorMap[id]) colorMap[id] = MOVIE_PALETTE[ci++ % MOVIE_PALETTE.length]; return colorMap[id]; };
+    participants.forEach(p => {
+      const picks = pbp[p.id] || [];
+      [...picks.filter(x=>!x.isDarkHorse).sort((a,b)=>a.rank-b.rank),
+       ...picks.filter(x=>x.isDarkHorse)].forEach(pk => color(pk.movieId));
     });
 
-    const participant = state.participants.find(p => p.id === participantId);
-    if (!participant) return;
-    const picks = (state._picksByParticipant?.[participantId] || []).sort((a, b) => a.rank - b.rank);
-    const { scored, total } = scoreParticipantPicks(picks);
+    const cell = (movieId) => {
+      if (!movieId) return `<td class="cg-cell cg-empty">—</td>`;
+      const m = state.movies.find(m => m.id === movieId);
+      return `<td class="cg-cell" style="background:${color(movieId)};" title="${m ? esc(m.title) : ''}">${m ? abbrev(m.title) : '?'}</td>`;
+    };
 
-    const panel = document.getElementById('detailPanel');
-    if (!panel) return;
+    let html = `<div class="cg-scroll"><table class="cg-table"><thead><tr>
+      <th class="cg-th cg-row-label"></th>
+      ${participants.map(p=>`<th class="cg-th">${esc(p.name)}</th>`).join('')}
+    </tr></thead><tbody>`;
 
-    const ptsClass = pts => pts >= 13 ? 'exact' : pts >= 7 ? 'close' : pts >= 3 ? 'in-top' : 'miss';
+    for (let r = 1; r <= 10; r++) {
+      html += `<tr><td class="cg-row-label${r===1||r===10?' cg-bookend':''}">${r}</td>`;
+      participants.forEach(p => {
+        const pk = (pbp[p.id]||[]).filter(x=>!x.isDarkHorse).find(x=>x.rank===r);
+        html += cell(pk?.movieId);
+      });
+      html += '</tr>';
+    }
+    for (let dhi = 0; dhi < 3; dhi++) {
+      html += `<tr><td class="cg-row-label cg-dh-label">🐴</td>`;
+      participants.forEach(p => {
+        const dhs = (pbp[p.id]||[]).filter(x=>x.isDarkHorse);
+        html += cell(dhs[dhi]?.movieId);
+      });
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
 
-    panel.innerHTML = `
-      <div class="detail-header">
-        ${participant.avatarUrl
-          ? `<img class="detail-avatar" src="${esc(participant.avatarUrl)}" alt="${esc(participant.name)}">`
-          : `<div class="detail-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.8rem;background:var(--bg3);border:2px solid var(--gold);">🎬</div>`}
-        <div>
-          <div class="detail-name">${esc(participant.name)}</div>
-          <div style="font-size:0.75rem;color:var(--text-dim);">Summer 2026 Picks</div>
-        </div>
-        <div class="detail-score-total">
-          <div class="score-val">${total}</div>
-          <div class="score-label">pts</div>
-        </div>
-      </div>
-      <div class="detail-picks">
-        ${scored.map(pick => {
-          const movie = state.movies.find(m => m.id === pick.movieId);
-          if (!movie) return '';
-          const posterUrl = getPosterUrl(movie);
-          const isBookend = pick.rank === 1 || pick.rank === 10;
-          return `
-            <div class="detail-pick-row">
-              <div class="dp-rank ${isBookend ? 'bookend' : ''}">${pick.rank}</div>
-              ${posterUrl
-                ? `<img class="dp-poster" src="${esc(posterUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-                : `<div class="dp-poster" style="background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:0.9rem;">🎬</div>`}
-              <div class="dp-info">
-                <div class="dp-title">${esc(movie.title)}</div>
-                <div class="dp-actual">${pick.label || '—'}</div>
-              </div>
-              ${pick.isDarkHorse ? '<div class="dp-dh">🐴 Dark Horse</div>' : ''}
-              <div class="dp-pts ${ptsClass(pick.pts)}">${pick.pts}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
+    // Legend
+    const legendItems = Object.keys(colorMap)
+      .map(id => ({ id, bg: colorMap[id], m: state.movies.find(m=>m.id===id) }))
+      .filter(x=>x.m);
+    html += `<div class="cg-legend">${legendItems.map(x=>`
+      <div class="cg-legend-item">
+        <span class="cg-swatch" style="background:${x.bg};"></span>
+        <span class="cg-ab">${abbrev(x.m.title)}</span>
+        <span class="cg-legend-full">${esc(x.m.title)}</span>
+      </div>`).join('')}</div>`;
+
+    grid.innerHTML = html;
   }
 
-  async function renderBoxOffice() {
-    const boList = document.getElementById('boList');
-    const boUpdated = document.getElementById('boUpdated');
-    if (!boList) return;
+  function renderBoxOfficeTable(participants, pbp) {
+    const wrap = document.getElementById('boTableWrap');
+    const updatedEl = document.getElementById('boUpdated');
+    if (!wrap) return;
 
-    const ranked = state.movies
-      .filter(m => m.boxOfficeRank && m.boxOfficeRank <= 10)
-      .sort((a, b) => a.boxOfficeRank - b.boxOfficeRank);
-
-    if (!ranked.length) {
-      boList.innerHTML = '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">Box office data not yet available.<br>Check back soon!</div>';
+    const hasGross = state.movies.filter(m => m.domesticGross > 0).sort((a,b) => b.domesticGross - a.domesticGross);
+    if (!hasGross.length) {
+      wrap.innerHTML = '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">Box office data not yet available. Check back soon!</div>';
       return;
     }
 
-    boList.innerHTML = ranked.map((m, i) => {
-      const rank = i + 1;
-      const posterUrl = getPosterUrl(m);
-      const gross = m.domesticGross ? `$${(m.domesticGross / 1_000_000).toFixed(1)}M` : '—';
-      return `
-        <div class="bo-row">
-          <div class="bo-rank-num ${rank <= 3 ? 'top3' : ''}">${rank}</div>
-          ${posterUrl
-            ? `<img class="bo-poster" src="${esc(posterUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-            : `<div class="bo-poster" style="background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:0.8rem;">🎬</div>`}
-          <div class="bo-info">
-            <div class="bo-title">${esc(m.title)}</div>
-            <div class="bo-gross">${gross} domestic</div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    const actualRankMap = {};
+    state.movies.filter(m => m.boxOfficeRank && m.boxOfficeRank <= 10).forEach(m => { actualRankMap[m.id] = m.boxOfficeRank; });
 
-    if (boUpdated) boUpdated.textContent = `Updated ${new Date().toLocaleDateString()}`;
+    const ptTotals = {};
+    participants.forEach(p => { ptTotals[p.id] = 0; });
+
+    let html = `<table class="bot-table"><thead><tr>
+      <th class="bot-rank-h">#</th>
+      <th class="bot-poster-h"></th>
+      <th class="bot-title-h">Movie</th>
+      <th class="bot-gross-h">Domestic Gross</th>
+      ${participants.map(p=>`<th class="bot-player-h">${esc(p.name)}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+    hasGross.forEach((m, i) => {
+      const posterUrl = getPosterUrl(m);
+      const rank = m.boxOfficeRank || '—';
+      const gross = `$${(m.domesticGross/1_000_000).toFixed(1)}M`;
+      const inTop10 = m.boxOfficeRank && m.boxOfficeRank <= 10;
+
+      html += `<tr class="bot-row${i%2?' bot-odd':''}">
+        <td class="bot-rank-cell${inTop10?' bot-top10':''}">${rank}</td>
+        <td class="bot-poster-cell">${posterUrl
+          ? `<img src="${esc(posterUrl)}" class="bot-poster-img" loading="lazy" onerror="this.style.display='none'">`
+          : `<div class="bot-poster-ph">🎬</div>`}</td>
+        <td class="bot-title-cell">${esc(m.title)}</td>
+        <td class="bot-gross-cell">${gross}</td>`;
+
+      participants.forEach(p => {
+        const picks = pbp[p.id] || [];
+        const pts = moviePtsForPlayer(m.id, picks, actualRankMap);
+        const isDH = picks.filter(x=>x.isDarkHorse).some(x=>x.movieId===m.id);
+        const isAny = picks.some(x=>x.movieId===m.id);
+        if (pts !== null && pts > 0) ptTotals[p.id] += pts;
+        const cls = pts===null ? 'bot-none' : pts>=13 ? 'bot-exact' : pts>=7 ? 'bot-close' : pts>0 ? 'bot-ok' : isAny ? 'bot-zero' : 'bot-none';
+        const disp = pts===null ? '' : isDH && pts>0 ? `🐴 +${pts}` : pts>0 ? pts : isAny ? (isDH?'🐴 0':'0') : '';
+        html += `<td class="bot-pts-cell ${cls}">${disp}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += `<tr class="bot-totals-row">
+      <td colspan="4">Total Points</td>
+      ${participants.map(p=>`<td class="bot-pts-cell bot-total">${ptTotals[p.id]}</td>`).join('')}
+    </tr></tbody></table>`;
+
+    wrap.innerHTML = html;
+    if (updatedEl) updatedEl.textContent = `🎯 Box Office — Updated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
   }
+
 
   // ── Admin: Box Office editor ───────────────────────────────────────────
   function showBoEditor() {
@@ -904,48 +1162,114 @@ const App = (() => {
       toast('Box office updated! 🎬', 'success');
       if (status) status.textContent = `Last saved ${new Date().toLocaleTimeString()}`;
       hideBoEditor();
-      await Promise.all([renderLeaderboard(), renderBoxOffice()]);
+      // Re-render results with updated data
+      const snap2 = await db.collection('picks').get();
+      const pbp2 = {};
+      snap2.docs.forEach(d => {
+        const r = d.data();
+        if (!pbp2[r.participantId]) pbp2[r.participantId] = [];
+        pbp2[r.participantId].push({ movieId: r.movieId, rank: r.rank, isDarkHorse: r.isDarkHorse });
+      });
+      const ws2 = state.participants
+        .filter(p => p.picksSubmitted)
+        .map(p => { const {total} = scoreParticipantPicks(pbp2[p.id]||[]); return {...p,score:total}; })
+        .sort((a,b) => b.score - a.score);
+      renderLeaderboard(ws2);
+      renderQuickLookGrid(ws2, pbp2);
+      renderBoxOfficeTable(ws2, pbp2);
     } catch (err) {
       toast('Save failed: ' + err.message, 'error');
       if (status) status.textContent = 'Save failed.';
     }
   }
 
-  async function tmdbSync() {
-    if (!CONFIG.tmdb?.apiKey || CONFIG.tmdb.apiKey === 'YOUR_TMDB_API_KEY') {
-      toast('Add your TMDB API key to config.js first.', 'error');
+  async function apifySync() {
+    const token = CONFIG.apify?.token;
+    if (!token || token === 'YOUR_APIFY_TOKEN') {
+      toast('Add your Apify token to config.js first. Free at console.apify.com/account/integrations', 'error');
       return;
     }
     const status = document.getElementById('adminStatus');
-    if (status) status.textContent = 'Fetching from TMDB…';
+    if (status) status.textContent = 'Fetching from Box Office Mojo via Apify…';
 
-    let updated = 0;
-    for (const movie of state.movies) {
-      if (!movie.tmdbId) await fetchAndCachePoster(movie);
-      if (!movie.tmdbId) continue;
-      try {
-        const res = await fetch(`https://api.themoviedb.org/3/movie/${movie.tmdbId}?api_key=${CONFIG.tmdb.apiKey}`);
-        const data = await res.json();
-        if (data.revenue > 0) {
-          await db.collection('movies').doc(movie.id).update({ domesticGross: data.revenue });
-          movie.domesticGross = data.revenue;
-          updated++;
-        }
-      } catch (_) { /* skip */ }
-    }
+    // Send all movies — BOM returns nothing for unreleased ones, which is fine
+    const released = state.movies.filter(m => m.title);
+    if (!released.length) { toast('No movies loaded yet.', 'error'); return; }
 
-    const eligible = state.movies.filter(m => m.domesticGross > 0)
-      .sort((a, b) => b.domesticGross - a.domesticGross);
-    const batch = db.batch();
-    eligible.forEach((m, i) => {
-      m.boxOfficeRank = i + 1;
-      batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: i + 1 });
+    const movieList = released.map(m => {
+      const year = m.releaseDate ? m.releaseDate.slice(0, 4) : '';
+      return year ? `${m.title} ${year}` : m.title;
     });
-    await batch.commit();
 
-    toast(`Synced ${updated} movies from TMDB.`, 'success');
-    if (status) status.textContent = `TMDB sync: ${updated} movies updated.`;
-    await Promise.all([renderLeaderboard(), renderBoxOffice()]);
+    try {
+      if (status) status.textContent = `Querying Box Office Mojo for ${movieList.length} movies… (~30s)`;
+      const res = await fetch(
+        `https://api.apify.com/v2/acts/trovevault~movie-box-office-tracker/run-sync-get-dataset-items?token=${token}&timeout=120`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ movies: movieList }) }
+      );
+      if (!res.ok) throw new Error(`Apify ${res.status}: ${await res.text()}`);
+      const results = await res.json();
+      if (!results.length) { toast('Apify returned no results.', 'error'); return; }
+
+      let updated = 0;
+      const batch = db.batch();
+      for (const row of results) {
+        if (!row.domesticGross) continue;
+        const gross = typeof row.domesticGross === 'number'
+          ? row.domesticGross
+          : parseInt(String(row.domesticGross).replace(/[^0-9]/g, ''));
+        if (!gross || gross <= 0) continue;
+        const rowTitle = (row.title || '').toLowerCase();
+        const match = released.find(m => {
+          const t = m.title.toLowerCase();
+          return t === rowTitle || t.includes(rowTitle) || rowTitle.includes(t);
+        });
+        if (!match) { console.warn('No BOM match for:', row.title); continue; }
+        batch.update(db.collection('movies').doc(match.id), { domesticGross: gross });
+        match.domesticGross = gross;
+        updated++;
+      }
+
+      // Recalculate all ranks
+      const withGross = state.movies.filter(m => m.domesticGross > 0).sort((a, b) => b.domesticGross - a.domesticGross);
+      withGross.forEach((m, i) => { m.boxOfficeRank = i + 1; batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: i + 1 }); });
+      state.movies.filter(m => !m.domesticGross && m.boxOfficeRank).forEach(m => { m.boxOfficeRank = null; batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: null }); });
+      await batch.commit();
+
+      toast(`✅ Synced ${updated} movies from Box Office Mojo!`, 'success');
+      if (status) status.textContent = `BOM sync: ${updated} updated · ${new Date().toLocaleTimeString()}`;
+
+      const snap2 = await db.collection('picks').get();
+      const pbp2 = {};
+      snap2.docs.forEach(d => { const r = d.data(); if (!pbp2[r.participantId]) pbp2[r.participantId] = []; pbp2[r.participantId].push({ movieId: r.movieId, rank: r.rank, isDarkHorse: r.isDarkHorse }); });
+      const ws2 = state.participants.filter(p => p.picksSubmitted).map(p => { const {total} = scoreParticipantPicks(pbp2[p.id]||[]); return {...p,score:total}; }).sort((a,b) => b.score-a.score);
+      renderLeaderboard(ws2); renderQuickLookGrid(ws2, pbp2); renderBoxOfficeTable(ws2, pbp2);
+    } catch (err) {
+      toast('Sync failed: ' + err.message, 'error');
+      if (status) status.textContent = 'Sync failed: ' + err.message;
+    }
+  }
+
+
+  async function deleteUser() {
+    if (!state.participant) return;
+    if (!confirm('Are you sure you want to delete your player profile? This will permanently erase your picks.')) return;
+
+    try {
+      const existing = await db.collection('picks')
+        .where('participantId', '==', state.participant.id).get();
+      const batch = db.batch();
+      existing.docs.forEach(d => batch.delete(d.ref));
+
+      batch.delete(db.collection('participants').doc(state.participant.id));
+      await batch.commit();
+
+      state.participants = state.participants.filter(p => p.id !== state.participant.id);
+      toast('Player profile deleted.', 'success');
+      goToLanding();
+    } catch (err) {
+      toast('Failed to delete user: ' + err.message, 'error');
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────
@@ -974,10 +1298,10 @@ const App = (() => {
   return {
     init, handleNameSubmit, goToLanding, selectExistingParticipant,
     handleAvatarFile, submitAvatar, skipAvatar,
-    addToPicks, removeFromPicks, toggleDarkHorse, filterPool, submitPicks,
-    showParticipantDetail, showBoEditor, hideBoEditor, saveBoxOffice, tmdbSync,
-    showPosterManager, hidePosterManager, handlePosterUpload,
-    changeAvatar,
+    addToPicks, removeFromPicks, filterPool, submitPicks,
+    showBoEditor, hideBoEditor, saveBoxOffice, apifySync,
+    showPosterManager, hidePosterManager, handlePosterUpload, handlePosterUrlSet,
+    changeAvatar, removeDarkHorse, deleteUser,
   };
 
 })();

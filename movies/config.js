@@ -13,8 +13,12 @@ const CONFIG = {
     // Free key at https://www.themoviedb.org/settings/api — used for movie posters.
     apiKey: 'YOUR_TMDB_API_KEY',
   },
+  apify: {
+    // Free token at https://console.apify.com/account/integrations
+    token: 'YOUR_APIFY_TOKEN', // ← paste locally for manual sync; do NOT commit
+  },
   deadline: new Date('2026-05-08T00:00:00'), // picks lock at midnight May 8
-  adminPassword: 'YOUR_ADMIN_PASSWORD',
+  adminPassword: 'Starss22',
 };
 
 // Firestore security rules to paste into Firebase Console → Firestore → Rules:

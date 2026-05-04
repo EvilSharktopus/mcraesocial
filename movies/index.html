@@ -6,7 +6,7 @@
   <title>Summer Movie Wager 2026</title>
   <meta name="description" content="Pick the top 10 summer 2026 box office hits. Compete against friends for bragging rights.">
   <link rel="icon" href="/assets/images/favicon.png" type="image/png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/movies/style.css">
 </head>
 <body>
 
@@ -49,7 +49,7 @@
 <!-- ══════════════════════════════════════════
      SCREEN: Loading
 ════════════════════════════════════════════ -->
-<div id="screenLoading" class="hidden">
+<div id="screenLoading">
   <div class="loading-state">
     <div class="spinner" style="width:36px;height:36px;border-width:3px;margin-bottom:1rem;"></div>
     <div>Loading the show…</div>
@@ -60,6 +60,27 @@
      SCREEN: Landing (pre-deadline)
 ════════════════════════════════════════════ -->
 <div id="screenLanding" class="screen hidden">
+
+  <!-- Scrolling movie poster wall + participant strip -->
+  <div id="posterWall" class="poster-wall" style="display:none;"></div>
+  <div id="participantStrip" class="participant-strip"></div>
+
+  <!-- Login form — between poster wall and title -->
+  <div class="landing-signin">
+    <form class="name-form" id="nameForm" onsubmit="return false;">
+      <input
+        type="text"
+        class="name-input"
+        id="nameInput"
+        placeholder="Enter your name to join"
+        autocomplete="off"
+        maxlength="30"
+      >
+      <button type="submit" class="btn-primary" id="nameSubmitBtn" onclick="App.handleNameSubmit()">
+        Let's Go →
+      </button>
+    </form>
+  </div>
 
   <div class="landing-hero">
     <div class="landing-title">Pick Your Top 10</div>
@@ -85,19 +106,6 @@
       </div>
     </div>
 
-    <form class="name-form" id="nameForm" onsubmit="return false;">
-      <input
-        type="text"
-        class="name-input"
-        id="nameInput"
-        placeholder="Enter your name"
-        autocomplete="off"
-        maxlength="30"
-      >
-      <button type="submit" class="btn-primary" id="nameSubmitBtn" onclick="App.handleNameSubmit()">
-        Let's Go
-      </button>
-    </form>
   </div>
 
 </div>
@@ -147,6 +155,7 @@
         <span style="font-size:0.78rem;color:var(--text-dim);">
           Picking as: <strong id="currentPlayerName" style="color:var(--text);"></strong>
           · <button class="btn-ghost" onclick="App.goToLanding()">← Switch player</button>
+          · <button class="btn-ghost" style="color:var(--red);" onclick="App.deleteUser()">Delete user</button>
         </span>
         <input type="file" id="changeAvatarInput" accept="image/*" class="hidden" onchange="App.changeAvatar(this.files[0])">
       </div>
@@ -156,7 +165,7 @@
         <button class="btn-secondary" style="font-size:0.78rem;padding:0.35rem 0.7rem;" onclick="App.showPosterManager()">🖼 Posters</button>
       </div>
       <div class="pick-count">
-        <span id="pickCountNum">0</span>/10 selected
+        <span id="pickCountNum">0</span>/13 selected
       </div>
     </div>
   </div>
@@ -184,6 +193,16 @@
         <!-- Slots 1–10 rendered by JS -->
       </div>
 
+      <div class="dh-section">
+        <div class="dh-section-header">
+          <span>🐴 Dark Horses</span>
+          <span class="dh-section-hint">long shots — +1 pt each if they crack the real top 10</span>
+        </div>
+        <div class="dh-list" id="darkHorseList">
+          <!-- 3 DH slots rendered by JS -->
+        </div>
+      </div>
+
       <div class="ranking-footer">
         <button class="btn-primary" id="submitPicksBtn" style="width:100%;" onclick="App.submitPicks()" disabled>
           Lock In My Picks
@@ -208,8 +227,8 @@
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showBoEditor()">
       Edit Grosses
     </button>
-    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.tmdbSync()">
-      Sync from TMDB
+    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.apifySync()">
+      📡 Sync Box Office (BOM)
     </button>
     <div id="adminStatus" style="font-size:0.78rem;color:var(--text-dim);"></div>
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showPosterManager()">
@@ -244,39 +263,32 @@
     </div>
   </div>
 
-  <div class="results-layout">
+  <!-- Box office table full width — shown first -->
+  <div class="bo-table-panel">
+    <div class="panel-title" id="boUpdated" style="margin-bottom:0.75rem;">🎯 Box Office Results</div>
+    <div id="boTableWrap">
+      <div class="text-dim" style="padding:1rem;font-size:0.8rem;">Loading…</div>
+    </div>
+  </div>
 
-    <!-- Left: leaderboard -->
-    <div>
-      <div class="leaderboard-panel">
-        <div class="panel-title">🏆 Leaderboard</div>
-        <div class="leaderboard-list" id="leaderboardList">
-          <div class="text-dim" style="padding:1rem;font-size:0.8rem;">Loading…</div>
-        </div>
+  <div class="results-top-row">
+
+    <!-- Leaderboard (left) -->
+    <div class="leaderboard-panel">
+      <div class="panel-title">🏆 Leaderboard</div>
+      <div class="leaderboard-list" id="leaderboardList">
+        <div class="text-dim" style="padding:1rem;font-size:0.8rem;">Loading…</div>
       </div>
     </div>
 
-    <!-- Center: participant detail -->
-    <div>
-      <div class="detail-panel" id="detailPanel">
-        <div class="detail-empty">
-          ← Click a player to see their picks
-        </div>
-      </div>
-    </div>
-
-    <!-- Right: box office -->
-    <div>
-      <div class="boxoffice-panel">
-        <div class="panel-title">🎯 Current Box Office Top 10</div>
-        <div class="bo-list" id="boList">
-          <div class="text-dim" style="padding:1rem;font-size:0.8rem;">Loading…</div>
-        </div>
-        <div class="bo-updated" id="boUpdated"></div>
-      </div>
+    <!-- Pick comparison grid (right) -->
+    <div class="comparison-panel">
+      <div class="panel-title" style="margin-bottom:0.75rem;">📊 Pick Comparison</div>
+      <div id="comparisonGrid"></div>
     </div>
 
   </div>
+
 </div>
 
 <!-- ── Poster manager modal ── -->
@@ -297,11 +309,11 @@
 </div>
 
 <!-- ── Scripts ── -->
-<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-storage-compat.js"></script>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.12.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.12.1/firebase-storage-compat.js"></script>
+<script src="/movies/config.js"></script>
+<script src="/movies/app.js"></script>
 
 </body>
 </html>
