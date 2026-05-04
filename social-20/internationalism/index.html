@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -106,25 +106,24 @@
       </div>
     </div>
   </section>
-  <section class="unit-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">— hover over the left side for slide controls</span></h2>
-    <div class="stream-groups">
-    <div class="stream-group">
-    <a href="https://drive.google.com/file/d/1EkjlTwddIV3Vl0AcxIunqi0szB0IAwO4/view" target="_blank" class="pdf-thumb">
-      <div class="pdf-thumb__img-wrap">
-        <img
-          src="https://drive.google.com/thumbnail?id=1EkjlTwddIV3Vl0AcxIunqi0szB0IAwO4&sz=w800"
-          alt="Unit Notes"
-          class="pdf-thumb__img"
-          onerror="this.style.display='none';this.nextElementSibling.style.removeProperty('display')"
-        >
-        <div class="pdf-thumb__placeholder" style="display:none;">
-          <span class="pdf-thumb__icon">PDF</span>
-          <span class="pdf-thumb__label">View Notes</span>
+  <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
+    <div class="kn-grid">
+      <div class="kn-tile" data-slug="internationalism" data-total="24">
+        <div class="kn-tile__header">
+          <span class="kn-tile__title">Internationalism</span>
+          <div class="kn-tile__nav">
+            <input type="range" class="kn-scrubber" min="1" max="24" value="1" oninput="knScrub(this,'internationalism')" onchange="knScrub(this,'internationalism')">
+            <span class="kn-slide-label"><span id="kn-cur-internationalism">1</span> / 24</span>
+            <input class="kn-input" type="number" min="1" max="24" value="1" id="kn-input-internationalism">
+            <button class="kn-btn" onclick="knGoTo('internationalism')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
+          </div>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-20/internationalism/internationalism/index.html" id="kn-frame-internationalism" allowfullscreen loading="lazy"></iframe>
         </div>
       </div>
-    </a>
-    </div>
     </div>
   </section>
   <section class="unit-section" style="background: rgba(181,143,123,0.06);">
@@ -147,27 +146,6 @@
     <a href="https://docs.google.com/document/d/1kXUnTj7Xc9oFpv714wXylz8NlHgqt_A0zvK5hNtLEMo/edit?usp=sharing" target="_blank" class="utility-btn" style="margin-top: 1rem; display: inline-block;">Solving Climate Change - Article</a>
   </section>
   </div>
-
-      <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
-    <div class="kn-grid">
-      <div class="kn-tile" data-slug="internationalism" data-total="1">
-        <div class="kn-tile__header">
-          <span class="kn-tile__title">Internationalism</span>
-          <div class="kn-tile__nav">
-            <input type="range" class="kn-scrubber" min="1" max="1" value="1" oninput="knScrub(this,'internationalism')" onchange="knScrub(this,'internationalism')">
-            <span class="kn-slide-label"><span id="kn-cur-internationalism">1</span> / 1</span>
-            <input class="kn-input" type="number" min="1" max="1" value="1" id="kn-input-internationalism">
-            <button class="kn-btn" onclick="knGoTo('internationalism')">Go</button>
-            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
-          </div>
-        </div>
-        <div class="slide-viewer-iframe">
-          <iframe src="/assets/slides/social-20/internationalism/internationalism/index.html" id="kn-frame-internationalism" allowfullscreen loading="lazy"></iframe>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <script>
 (function() {
