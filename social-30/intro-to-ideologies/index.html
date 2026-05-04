@@ -153,7 +153,7 @@
     </div>
   </section>
   <section class="unit-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">— hover over the left side for slide controls</span></h2>
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">â€” hover over the left side for slide controls</span></h2>
     <a href="https://drive.google.com/file/d/18JLPNuW2t25jqbKZEsLdfIbIAm0swOYQ/view" target="_blank" class="pdf-thumb">
       <div class="pdf-thumb__img-wrap">
         <img
@@ -246,6 +246,21 @@
           <iframe src="/assets/slides/social-30/intro-to-ideologies/intro-to-ideologies/index.html" id="kn-frame-intro-to-ideologies" allowfullscreen loading="lazy"></iframe>
         </div>
       </div>
+      <div class="kn-tile" data-slug="philosophers" data-total="1">
+        <div class="kn-tile__header">
+          <span class="kn-tile__title">Philosophers</span>
+          <div class="kn-tile__nav">
+            <input type="range" class="kn-scrubber" min="1" max="1" value="1" oninput="knScrub(this,'philosophers')" onchange="knScrub(this,'philosophers')">
+            <span class="kn-slide-label"><span id="kn-cur-philosophers">1</span> / 1</span>
+            <input class="kn-input" type="number" min="1" max="1" value="1" id="kn-input-philosophers">
+            <button class="kn-btn" onclick="knGoTo('philosophers')">Go</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
+          </div>
+        </div>
+        <div class="slide-viewer-iframe">
+          <iframe src="/assets/slides/social-30/intro-to-ideologies/philosophers/index.html" id="kn-frame-philosophers" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>    
     </div>
   </section>
 
