@@ -108,7 +108,7 @@
     </div>
   </section>
   <section class="unit-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">— hover over the left side for slide controls</span></h2>
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">â€” hover over the left side for slide controls</span></h2>
     <div class="stream-groups">
       <div class="stream-group">
         <a href="https://drive.google.com/file/d/11oJ19tK4YAhfRTODcWO8fK_Zt-rlQUEH/view?usp=sharing" target="_blank" class="pdf-thumb">
@@ -157,9 +157,72 @@
     <h2 class="unit-section__title">REQUIRED READING</h2>
     <p class="unit-para" style="color:var(--text-dim);">Required reading will be posted here.</p>
   </section>
-  </div>
 
-    <footer class="site-footer">
+  <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
+    <div class="kn-grid">
+      <div class="kn-tile" data-slug="econ-global">
+        <div class="kn-tile__header">
+          <span class="kn-tile__title">Econ Global</span>
+          <div class="kn-tile__nav">
+            <button class="slide-btn" onclick="slidePrev('econ-global')">&#8592;</button>
+            <span class="slide-counter" id="counter-econ-global">1 / 19</span>
+            <button class="slide-btn" onclick="slideNext('econ-global')">&#8594;</button>
+            <button class="kn-fs-btn" onclick="knFullscreen(this)" title="Fullscreen">&#x26F6;</button>
+          </div>
+        </div>
+        <div class="slide-viewer" id="viewer-econ-global">
+          <div class="slide-viewer__track" id="track-econ-global">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_001.png" alt="Slide 1" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_002.png" alt="Slide 2" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_003.png" alt="Slide 3" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_004.png" alt="Slide 4" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_005.png" alt="Slide 5" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_006.png" alt="Slide 6" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_007.png" alt="Slide 7" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_008.png" alt="Slide 8" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_009.png" alt="Slide 9" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_010.png" alt="Slide 10" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_011.png" alt="Slide 11" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_012.png" alt="Slide 12" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_013.png" alt="Slide 13" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_014.png" alt="Slide 14" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_015.png" alt="Slide 15" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_016.png" alt="Slide 16" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_017.png" alt="Slide 17" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_018.png" alt="Slide 18" loading="lazy">
+        <img class="slide-viewer__slide" src="/assets/slides/social-10/modern-globalization/econ-global/slide_019.png" alt="Slide 19" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+    </div>
+
+    <script>
+(function(){
+  var viewers = {};
+  document.querySelectorAll('.slide-viewer').forEach(function(v){
+    var id = v.id.replace('viewer-','');
+    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
+  });
+  window.slidePrev = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
+    updateViewer(id, v);
+  };
+  window.slideNext = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx + 1) % v.slides.length;
+    updateViewer(id, v);
+  };
+  function updateViewer(id, v){
+    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
+    document.getElementById('counter-'+id).textContent = (v.idx+1) + ' / ' + v.slides.length;
+  }
+})();
+</script>
+  <footer class="site-footer">
     <a href="/" aria-label="Home" style="display:inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
       <picture>
         <source srcset="/assets/images/home/mcrae-logo.webp" type="image/webp">
