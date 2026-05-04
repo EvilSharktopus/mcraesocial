@@ -1163,3 +1163,131 @@
 [2026-05-04 12:58:02]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\economics\index.html
 [2026-05-04 12:58:02]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\economics\_processed\Econ Part 2
 [2026-05-04 12:58:02]   Running git add -A ...
+[2026-05-04 13:08:02] Watching: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone
+[2026-05-04 13:08:02] Debounce window: 30s ---------------------------------------------------------------------------------- dispatches 30s after last file activity.
+[2026-05-04 13:08:02] Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.
+[2026-05-04 13:08:02] Scanning dropzone for existing unprocessed files...
+[2026-05-04 13:08:02] [startup] Found PPTX: Slave Trade.pptx in social-10/historical
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\historical\Slave Trade.pptx
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Trade and Containers in social-10/identity
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\Trade and Containers
+[2026-05-04 13:08:02] [startup] Found PPTX: Econ Global.pptx in social-10/modern-globalization
+[2026-05-04 13:08:02]   Copying Keynote export 'Trade and Containers' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\modern-globalization\Econ Global.pptx
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Democracy in social-30/democracy
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\democracy\Democracy
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Fascism in social-30/dictatorships
+[2026-05-04 13:08:02]   Copying Keynote export 'Democracy' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\dictatorships\Fascism
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Intro Dictators in social-30/dictatorships
+[2026-05-04 13:08:02]   Copying Keynote export 'Fascism' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\dictatorships\Intro Dictators
+[2026-05-04 13:08:02]   Copying Keynote export 'Intro Dictators' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Econ Part 1 in social-30/economics
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\economics\Econ Part 1
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Econ Part 2 in social-30/economics
+[2026-05-04 13:08:02]   Copying Keynote export 'Econ Part 1' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\economics\Econ Part 2
+[2026-05-04 13:08:02]   Copying Keynote export 'Econ Part 2' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Liberalism in Action in social-30/illiberalism
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\illiberalism\Liberalism in Action
+[2026-05-04 13:08:02]   Copying Keynote export 'Liberalism in Action' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] [startup] Found PPTX: Cold War Intro.pptx in social-30/imposition
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\Cold War Intro.pptx
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Brinkmanship in social-30/imposition
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\Brinkmanship
+[2026-05-04 13:08:02] [startup] Found Keynote folder: End of Cold War in social-30/imposition
+[2026-05-04 13:08:02]   Copying Keynote export 'Brinkmanship' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\End of Cold War
+[2026-05-04 13:08:02]   Copying Keynote export 'End of Cold War' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] [startup] Found Keynote folder: Philosophers in social-30/intro-to-ideologies
+[2026-05-04 13:08:02] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\intro-to-ideologies\Philosophers
+[2026-05-04 13:08:02]   Copying Keynote export 'Philosophers' (OneDrive will download on-demand)...
+[2026-05-04 13:08:02] Startup scan complete - dispatched 13 item(s) in background threads.
+[2026-05-04 13:08:06]   Converting convert_a5f534ad.pptx with LibreOffice ---------------------------------------------------------------------------------------- PDF...
+[2026-05-04 13:08:09]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\imposition\brinkmanship
+[2026-05-04 13:08:09]   Disabled animations in index.html
+[2026-05-04 13:08:09]   Slug 'brinkmanship' exists - replacing with updated version.
+[2026-05-04 13:08:09]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
+[2026-05-04 13:08:09]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\Brinkmanship
+[2026-05-04 13:08:09]   Running git add -A ...
+[2026-05-04 13:08:10]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-10\identity\trade-and-containers
+[2026-05-04 13:08:10]   Disabled animations in index.html
+[2026-05-04 13:08:10]   Slug 'trade-and-containers' exists - replacing with updated version.
+[2026-05-04 13:08:10]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\identity\index.html
+[2026-05-04 13:08:10]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\_processed\Trade and Containers
+[2026-05-04 13:08:10]   Running git add -A ...
+[2026-05-04 13:08:10]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:12]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\imposition\end-of-cold-war
+[2026-05-04 13:08:12]   Disabled animations in index.html
+[2026-05-04 13:08:12]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
+[2026-05-04 13:08:12]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\End of Cold War
+[2026-05-04 13:08:12]   Running git add -A ...
+[2026-05-04 13:08:13]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\dictatorships\fascism
+[2026-05-04 13:08:13]   Disabled animations in index.html
+[2026-05-04 13:08:13]   Slug 'fascism' exists - replacing with updated version.
+[2026-05-04 13:08:13]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\dictatorships\index.html
+[2026-05-04 13:08:13]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\dictatorships\_processed\Fascism
+[2026-05-04 13:08:13]   Running git add -A ...
+[2026-05-04 13:08:13]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\illiberalism\liberalism-in-action
+[2026-05-04 13:08:13]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:13]   Disabled animations in index.html
+[2026-05-04 13:08:13]   Slug 'liberalism-in-action' exists - replacing with updated version.
+[2026-05-04 13:08:13]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\illiberalism\index.html
+[2026-05-04 13:08:13]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\illiberalism\_processed\Liberalism in Action
+[2026-05-04 13:08:13]   Running git add -A ...
+[2026-05-04 13:08:13]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:13]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:14]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\dictatorships\intro-dictators
+[2026-05-04 13:08:14]   Disabled animations in index.html
+[2026-05-04 13:08:14]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\dictatorships\index.html
+[2026-05-04 13:08:14]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\dictatorships\_processed\Intro Dictators
+[2026-05-04 13:08:14]   Running git add -A ...
+[2026-05-04 13:08:14]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\economics\econ-part-1
+[2026-05-04 13:08:14]   Disabled animations in index.html
+[2026-05-04 13:08:14]   Slug 'econ-part-1' exists - replacing with updated version.
+[2026-05-04 13:08:14]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\economics\index.html
+[2026-05-04 13:08:14]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\economics\_processed\Econ Part 1
+[2026-05-04 13:08:14]   Running git add -A ...
+[2026-05-04 13:08:14]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\intro-to-ideologies\philosophers
+[2026-05-04 13:08:14]   Disabled animations in index.html
+[2026-05-04 13:08:14]   Slug 'philosophers' exists - replacing with updated version.
+[2026-05-04 13:08:14]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\intro-to-ideologies\index.html
+[2026-05-04 13:08:14]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\intro-to-ideologies\_processed\Philosophers
+[2026-05-04 13:08:14]   Running git add -A ...
+[2026-05-04 13:08:14]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:14]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:14]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:14]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\democracy\democracy
+[2026-05-04 13:08:14]   Disabled animations in index.html
+[2026-05-04 13:08:15]   Slug 'democracy' exists - replacing with updated version.
+[2026-05-04 13:08:15]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\democracy\index.html
+[2026-05-04 13:08:15]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\democracy\_processed\Democracy
+[2026-05-04 13:08:15]   Running git add -A ...
+[2026-05-04 13:08:15]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:16]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-30\economics\econ-part-2
+[2026-05-04 13:08:16]   Disabled animations in index.html
+[2026-05-04 13:08:16]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\economics\index.html
+[2026-05-04 13:08:16]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\economics\_processed\Econ Part 2
+[2026-05-04 13:08:16]   Running git add -A ...
+[2026-05-04 13:08:16]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:23]   Converting PDF to slide images...
+[2026-05-04 13:08:34]   Slug 'slave-trade' exists - replacing with updated version.
+[2026-05-04 13:08:34]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\historical\index.html
+[2026-05-04 13:08:34]   Converting convert_940fdcac.pptx with LibreOffice ---------------------------------------------------------------------------------------- PDF...
+[2026-05-04 13:08:36]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:08:39]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\historical\_processed\Slave Trade.pptx
+[2026-05-04 13:08:39]   Running git add -A ...
+[2026-05-04 13:08:42]   Converting PDF to slide images...
+[2026-05-04 13:08:51]   Slug 'econ-global' exists - replacing with updated version.
+[2026-05-04 13:08:51]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\modern-globalization\index.html
+[2026-05-04 13:08:51]   Converting convert_2e41b9b0.pptx with LibreOffice ---------------------------------------------------------------------------------------- PDF...
+[2026-05-04 13:08:58]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\modern-globalization\_processed\Econ Global.pptx
+[2026-05-04 13:08:58]   Running git add -A ...
+[2026-05-04 13:08:58]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:09:00]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-04 13:09:05]   Converting PDF to slide images...
+[2026-05-04 13:09:33]   Slug 'cold-war-intro' exists - replacing with updated version.
+[2026-05-04 13:09:33]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-30\imposition\index.html
+[2026-05-04 13:09:37]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-30\imposition\_processed\Cold War Intro.pptx
+[2026-05-04 13:09:37]   Running git add -A ...
