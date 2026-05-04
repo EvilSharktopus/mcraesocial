@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ Little Kickers Drill Book</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --grass: #2d6a2d;
+    --grass-light: #3d8c3d;
+    --lime: #8bc34a;
+    --lime-bright: #aeea00;
+    --orange: #ff6d00;
+    --orange-light: #ff9e40;
+    --yellow: #ffd600;
+    --sky: #29b6f6;
+    --white: #f9fdf4;
+    --dark: #1a2e1a;
+    --card-bg: #ffffff;
+    --shadow: 0 4px 20px rgba(0,0,0,0.12);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: #1e3d1e;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,255,255,0.03) 60px, rgba(255,255,255,0.03) 61px),
+      repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(255,255,255,0.03) 60px, rgba(255,255,255,0.03) 61px);
+    min-height: 100vh;
+    color: var(--dark);
+  }
+
+  header {
+    background: linear-gradient(135deg, #ff6d00 0%, #ff9e40 50%, #ffd600 100%);
+    padding: 28px 24px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -40px; right: -40px; bottom: -40px;
+    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+  }
+
+  header h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    color: #1a2e1a;
+    letter-spacing: 1px;
+    position: relative;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.3);
+  }
+
+  header p {
+    font-size: 1rem;
+    color: rgba(26,46,26,0.8);
+    font-weight: 700;
+    margin-top: 4px;
+    position: relative;
+  }
+
+  .ball-emoji { font-size: 1.4em; display: inline-block; animation: spin 3s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+    .plan-sidebar { position: static !important; order: -1; }
+  }
+
+  /* DRILL BOOK */
+  .drill-book { min-width: 0; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    border-left: 5px solid var(--lime-bright);
+  }
+
+  .section-header:not(:first-child) { margin-top: 28px; }
+
+  .section-icon { font-size: 1.6rem; }
+
+  .section-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    color: var(--lime-bright);
+    letter-spacing: 0.5px;
+  }
+
+  .section-subtitle {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.5);
+    font-weight: 600;
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .drills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+
+  .drill-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 18px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .drill-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--category-color, var(--lime));
+    border-radius: 2px 2px 0 0;
+  }
+
+  .drill-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+    border-color: var(--category-color, var(--lime));
+  }
+
+  .drill-card.selected {
+    border-color: var(--category-color, var(--lime));
+    background: linear-gradient(135deg, #f0fff0, #ffffff);
+    box-shadow: 0 0 0 3px rgba(139,195,74,0.25), var(--shadow);
+  }
+
+  .drill-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 12px; right: 12px;
+    background: var(--category-color, var(--lime));
+    color: white;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 900;
+  }
+
+  .drill-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.15rem;
+    color: var(--dark);
+    margin-bottom: 6px;
+    padding-right: 20px;
+  }
+
+  .drill-meta {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #f0f0f0;
+    color: #555;
+  }
+
+  .tag.time {
+    background: #fff3e0;
+    color: #e65100;
+  }
+
+  .tag.players {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  .drill-desc {
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .drill-why {
+    font-size: 0.78rem;
+    color: #888;
+    font-style: italic;
+    border-top: 1px dashed #e0e0e0;
+    padding-top: 8px;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+
+  .video-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    color: #e53935;
+    background: #fff0f0;
+    border: 1.5px solid #ffcdd2;
+    border-radius: 20px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 2px;
+  }
+
+  .video-btn:hover {
+    background: #e53935;
+    color: white;
+    border-color: #e53935;
+  }
+
+  .video-embed {
+    display: none;
+    margin-top: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    background: #000;
+  }
+
+  .video-embed.open { display: block; }
+
+  .video-embed iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* PLAN SIDEBAR */
+  .plan-sidebar {
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+  }
+
+  .plan-box {
+    background: #1a2e1a;
+    border-radius: var(--radius);
+    border: 2px solid rgba(174,234,0,0.3);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .plan-header {
+    background: linear-gradient(135deg, var(--orange), var(--yellow));
+    padding: 16px 18px;
+    text-align: center;
+  }
+
+  .plan-header h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.4rem;
+    color: #1a2e1a;
+  }
+
+  .plan-timer {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .timer-bar-wrap {
+    flex: 1;
+    height: 10px;
+    background: rgba(26,46,26,0.25);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .timer-bar {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s ease, background 0.4s ease;
+    background: #2d6a2d;
+  }
+
+  .timer-bar.ok { background: #2d6a2d; }
+  .timer-bar.close { background: #e65100; }
+  .timer-bar.over { background: #c62828; }
+
+  .timer-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #1a2e1a;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .plan-body { padding: 14px; }
+
+  .plan-empty {
+    text-align: center;
+    padding: 28px 16px;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .plan-empty .empty-icon { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+
+  .plan-item {
+    background: rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 4px solid var(--item-color, var(--lime));
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .plan-item-info { flex: 1; min-width: 0; }
+
+  .plan-item-name {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    color: var(--white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .plan-item-meta {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .plan-item-time {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    color: var(--orange-light);
+    white-space: nowrap;
+  }
+
+  .plan-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(255,255,255,0.25);
+    font-size: 1.1rem;
+    padding: 2px 4px;
+    transition: color 0.15s;
+    line-height: 1;
+  }
+
+  .plan-remove:hover { color: #ff5252; }
+
+  .plan-divider {
+    border: none;
+    border-top: 1px dashed rgba(255,255,255,0.1);
+    margin: 10px 0;
+  }
+
+  .plan-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px 2px;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .plan-total span:last-child {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: var(--white);
+  }
+
+  .plan-actions { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-print {
+    background: linear-gradient(135deg, var(--lime), #66bb6a);
+    color: #1a2e1a;
+  }
+
+  .btn-print:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(139,195,74,0.4); }
+
+  .btn-clear {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.85rem;
+  }
+
+  .btn-clear:hover { background: rgba(255,82,82,0.15); color: #ff5252; }
+
+  .btn-share {
+    background: rgba(41,182,246,0.15);
+    color: #29b6f6;
+  }
+
+  .btn-share:hover { background: #29b6f6; color: #1a2e1a; }
+
+  .share-toast {
+    display: none;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #aeea00;
+    padding: 6px 0 2px;
+    animation: fadeOut 2.5s forwards;
+  }
+
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    60% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .plan-tip {
+    margin: 0 14px 14px;
+    background: rgba(255,214,0,0.1);
+    border: 1px solid rgba(255,214,0,0.2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.76rem;
+    color: rgba(255,214,0,0.8);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  /* FEEDBACK SECTION */
+  .feedback-section {
+    max-width: 800px;
+    margin: 40px auto 60px;
+    background: #1a2e1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    color: var(--white);
+    text-align: center;
+    border: 2px solid rgba(174,234,0,0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .feedback-section h3 {
+    font-family: 'Fredoka One', cursive;
+    color: var(--lime-bright);
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  .feedback-section p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 24px;
+  }
+  .feedback-form {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--lime);
+  }
+  .form-group select, .form-group textarea, .form-group input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+  }
+  .form-group select option {
+    color: black;
+  }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--orange), var(--yellow));
+    color: #1a2e1a;
+    margin-top: 8px;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(255,109,0,0.4); }
+
+  /* PRINT */
+  @media print {
+    body { background: white !important; }
+    header { background: #ff6d00 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .drill-book { display: none; }
+    .layout { grid-template-columns: 1fr; padding: 0; }
+    .plan-sidebar { position: static; }
+    .plan-box { border: 2px solid #333; box-shadow: none; background: white !important; }
+    .plan-header { background: #ff6d00 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .plan-body, .plan-actions { display: block; }
+    .btn-clear, .btn-print { display: none; }
+    .plan-item { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .plan-item-name { color: #1a2e1a !important; }
+    .plan-item-meta { color: #555 !important; }
+    .plan-item-time { color: #e65100 !important; }
+    .plan-total span:last-child { color: #1a2e1a !important; }
+    .plan-tip { display: none; }
+  }
+</style>
+  <link rel="icon" href="/assets/images/favicon.png" type="image/png">
+</head>
+<body>
+
+<header>
+  <h1><span class="ball-emoji">⚽</span> Little Kickers Drill Book</h1>
+  <p>Ages 5–6 · Build your 30-minute practice plan</p>
+</header>
+
+<div class="layout">
+  <div class="drill-book" id="drillBook"></div>
+
+  <div class="plan-sidebar">
+    <div class="plan-box">
+      <div class="plan-header">
+        <h2>📋 Today's Plan</h2>
+        <div class="plan-timer">
+          <div class="timer-bar-wrap">
+            <div class="timer-bar ok" id="timerBar" style="width:0%"></div>
+          </div>
+          <div class="timer-label" id="timerLabel">0 / 30 min</div>
+        </div>
+      </div>
+      <div class="plan-body" id="planBody">
+        <div class="plan-empty">
+          <span class="empty-icon">👆</span>
+          Pick drills from the left to build your plan
+        </div>
+      </div>
+      <div class="plan-tip" id="planTip" style="display:none"></div>
+      <div class="plan-actions">
+        <button class="btn btn-print" onclick="window.print()">🖨️ Print Plan</button>
+        <button class="btn btn-share" onclick="sharePlan()">🔗 Copy Shareable Link</button>
+        <button class="btn btn-clear" onclick="clearPlan()">✕ Clear All</button>
+      </div>
+      <div class="share-toast" id="shareToast">✅ Link copied to clipboard!</div>
+    </div>
+  </div>
+</div>
+
+<div class="feedback-section">
+  <h3>Missing a skill?</h3>
+  <p>Let Coach McRae know what kind of drills you want to see next!</p>
+  <form action="https://formspree.io/f/mykldgye" method="POST" class="feedback-form">
+    <div class="form-group">
+        <label for="skill-request">I need more drills for:</label>
+        <select id="skill-request" name="Requested Skill" required>
+            <option value="" disabled selected>Select a skill category</option>
+            <option value="Warm-Up Games">🏃 Warm-Up Games</option>
+            <option value="Ball Control">🦶 Ball Control</option>
+            <option value="Shooting & Kicking">🎯 Shooting & Kicking</option>
+            <option value="Passing & Teamwork">↔️ Passing & Teamwork</option>
+            <option value="Cool-Down">🌟 Cool-Down</option>
+            <option value="Other">Other (tell me below)</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="details">Any specific requests? (Optional)</label>
+        <textarea id="details" name="Details" rows="3" placeholder="e.g. Need indoor drills for rainy days..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="email">Your Email (if you want a reply!)</label>
+        <input type="email" id="email" name="_replyto" placeholder="coach@example.com">
+    </div>
+    <input type="hidden" name="_subject" value="New Drill Request for Little Kickers!">
+    <button type="submit" class="btn btn-submit">Send Request!</button>
+  </form>
+</div>
+
+<script>
+const CATEGORIES = [
+  {
+    id: 'warmup',
+    icon: '🏃',
+    title: 'Warm-Up Games',
+    subtitle: 'Start here',
+    color: '#ff6d00',
+    drills: [
+      {
+        id: 'sharks',
+        name: 'Sharks & Minnows',
+        time: 5,
+        desc: 'Everyone has a ball. Coach is the shark in the middle. Kids dribble across the zone without getting their ball kicked away. If tagged, they become a shark too.',
+        why: 'No lines, instant ball contact, high engagement. More kids = more fun.',
+        tags: ['Any size group'],
+        video: 'd_4T1DMBy1A'
+      },
+      {
+        id: 'follow',
+        name: 'Follow the Leader',
+        time: 4,
+        desc: 'Everyone dribbles and copies whatever the coach does — fast, slow, zigzag, stop, turn. Swap leaders to let a kid take a turn.',
+        why: 'Sneaks in change-of-direction and ball-at-feet comfort before they know it\'s a drill.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'colors',
+        name: 'Colour Tag',
+        time: 5,
+        desc: 'Set up cones of different colours across the area. Coach calls a colour and everyone dribbles to touch a cone of that colour as fast as possible.',
+        why: 'Listening + dribbling at once. Builds directional change naturally.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'traffic',
+        name: 'Traffic Lights',
+        time: 4,
+        desc: 'Kids dribble freely. Coach calls Red (stop ball with foot), Yellow (slow dribble), Green (fast dribble). Add "Purple" for silly walk.',
+        why: 'Introduces ball control commands in a fun, pressure-free way.',
+        tags: ['Any size group'],
+        video: 'ixQ6Ybf1-RA'
+      },
+      {
+        id: 'dragontails',
+        name: 'Dragon Tails',
+        time: 5,
+        desc: 'All players tuck a pinny into the back of their shorts. On go, everyone tries to snatch other players\' pinnies while protecting their own. Last player with their pinny wins. Can progress to doing it while dribbling a ball.',
+        why: 'Pure chaos and laughter. Teaches body awareness and evasion without any formal instruction.',
+        tags: ['Any size group'],
+        video: 'PAtjJlBfU60'
+      },
+      {
+        id: 'wreckitralph',
+        name: 'Wreck It Ralph',
+        time: 5,
+        desc: 'Scatter equal numbers of flat cones face-up (domes) and face-down (dishes) across the area. Split into two teams — one team flips cones to domes, the other flips to dishes. Players can only flip one cone at a time. Team with the most cones their way when time is called wins. Can progress to dribbling a ball while flipping.',
+        why: 'High-energy competition that builds hustle and spatial awareness. Great equalizer — speed matters more than skill.',
+        tags: ['2 teams'],
+        video: 'oH_dkDmGZ-U'
+      },
+      {
+        id: 'britishbulldog',
+        name: 'British Bulldog',
+        time: 5,
+        desc: 'One catcher in the middle, everyone else runs from one end line to the other without being tagged. If tagged, that player becomes a catcher too. Last player untagged wins. Can progress to dribbling a ball while crossing.',
+        why: 'Classic for a reason. Builds decision-making under pressure and explosive directional change.',
+        tags: ['Any size group'],
+        video: 'KkTh95SX8W0'
+      }
+    ]
+  },
+  {
+    id: 'control',
+    icon: '🦶',
+    title: 'Ball Control',
+    subtitle: 'Touch & dribbling',
+    color: '#29b6f6',
+    drills: [
+      {
+        id: 'freeze',
+        name: 'Freeze Dribble',
+        time: 7,
+        desc: 'Kids dribble freely in a 25×25 yard square. Shout "Freeze!" and they stop the ball with their foot. Add fun commands: Fast Feet, Slow Motion, Silly Walk.',
+        why: 'Ball mastery without them realizing it. Works great for 8–12 kids.',
+        tags: ['8–12 kids'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'islands',
+        name: 'Islands',
+        time: 6,
+        desc: 'Scatter flat cones (islands) around the space. Kids dribble between islands and step on each one with their foot. Count how many you can step on.',
+        why: 'Head-up dribbling. Reward natural scanning without teaching it formally.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'gates',
+        name: 'Dribble Through the Gates',
+        time: 6,
+        desc: 'Set up 8–10 small "gates" (two cones 1m apart) scattered around. Kids dribble through as many gates as possible in 60 seconds. Count them up!',
+        why: 'Change of direction + close control. Self-competitive so no loser.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'bodyparts',
+        name: 'Body Part Ball Stop',
+        time: 5,
+        desc: 'Kids dribble freely. When you call a body part (knee, elbow, nose, tummy), they stop the ball and touch it with that part before dribbling on.',
+        why: 'Pure giggles + ball-stopping comfort. Elbow and nose stops are chaos in the best way.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'animalgame',
+        name: 'Animal Game',
+        time: 7,
+        desc: 'Kids dribble freely in a grid. Coach calls out an animal that maps to a ball skill: Penguin = toe taps, Kangaroo = foundations, Snake = inside/outside touches, Cat = roll with sole, Squish a Bug = stop ball with foot, Snail = dribble slow, Cheetah = dribble fast, Frog = stop and jump over ball, Crocodile = inside cut.',
+        why: 'Disguises skill repetition as creative play. Kids remember the animal long after they\'ve forgotten the technique.',
+        tags: ['Any size group'],
+        video: 'pHnAskgdEbk'
+      },
+      {
+        id: 'pirates',
+        name: 'Pirates',
+        time: 6,
+        desc: 'Set up a 20x20 grid with small 3x3 "island" grids in each corner. 1-2 players are pirates in the middle without a ball. Everyone else starts on an island with a ball. On "Go", players dribble to a new island without being tagged by a pirate. Tagged players do 10 toe taps then rejoin. Score a point for each island reached.',
+        why: 'Combines dribbling under pressure with spatial awareness. The penalty keeps tagged players active.',
+        tags: ['Any size group'],
+        video: 'vCx07J6iX20'
+      },
+      {
+        id: 'sharkattack',
+        name: 'Shark Attack',
+        time: 5,
+        desc: 'Mark a circle. All players dribble inside the circle; one shark jogs around the outside. On "Shark Attack!", the shark enters and kicks out one ball. That player joins the sharks. Repeat until one player remains.',
+        why: 'Classic elimination format. Builds ball protection instincts in tight spaces.',
+        tags: ['Any size group'],
+        video: 'w-ojctbP3D8'
+      },
+      {
+        id: 'runaway',
+        name: 'Runaway',
+        time: 5,
+        desc: 'Coach stands at the far end with their back to the players. Kids dribble toward the coach. When the coach feels they\'re close, they shout "Runaway!" and turn to chase. Players must turn with the ball and dribble back to safety. Tagged players join the coach as chasers.',
+        why: 'Teaches turning with the ball under surprise pressure. The suspense before the shout is half the fun.',
+        tags: ['Any size group'],
+        video: 'IPcAL_Bry20'
+      }
+    ]
+  },
+  {
+    id: 'shooting',
+    icon: '🎯',
+    title: 'Shooting & Kicking',
+    subtitle: 'Scoring fun',
+    color: '#e53935',
+    drills: [
+      {
+        id: 'knockcones',
+        name: 'Knock Down the Cones',
+        time: 8,
+        desc: 'Spread 6–7 cones wide across the area. Each kid has a ball and tries to knock them over by kicking. Retrieve ball and go again. Optional: who can get 3 first?',
+        why: 'Aiming practice with instant satisfying feedback. No goalie, no pressure.',
+        tags: ['10 kids', 'High energy'],
+        video: 'nA6DKYOhO54'
+      },
+      {
+        id: 'lineshoot',
+        name: 'Score in the Big Goal',
+        time: 7,
+        desc: 'Line up 3–4 balls just outside a large goal. Each kid takes a turn shooting. Celebrate every attempt. Rotate through 2–3 times.',
+        why: 'Every kid\'s favourite moment. Keep lines short — max 3 kids per goal.',
+        tags: ['Small groups'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'targets',
+        name: 'Target Shooting',
+        time: 6,
+        desc: 'Hang hula hoops or place a laundry basket as targets. Kids shoot from close range trying to hit the target. Move it back as confidence grows.',
+        why: 'Introduces accuracy. The target format removes the "missed the goal" disappointment.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'goalkeeper',
+        name: 'Beat the Keeper',
+        time: 7,
+        desc: 'Coach plays goalkeeper (go easy!). Kids take turns shooting one at a time. Let a few goals in dramatically. Rotate a brave kid into goal.',
+        why: 'Massive confidence boost when they beat the adult. Theatrical saves = instant legend status.',
+        tags: ['Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'alieninvasion',
+        name: 'Alien Invasion',
+        time: 7,
+        desc: 'Place a pile of balls 10-15 yards from the goal. Some kids are Aliens — they grab a ball, dribble toward the goal and shoot. Others are Astronauts (goalies) — they stay in the box and try to stop shots with hands or feet. Rotate roles every 2-3 minutes.',
+        why: 'Everyone shoots, everyone saves. The role-playing removes the pressure of formal shooting practice.',
+        tags: ['High energy', 'Any size group'],
+        video: 'sWjp3zd-qKU'
+      },
+      {
+        id: 'hungryhippos',
+        name: 'Hungry Hippos',
+        time: 7,
+        desc: 'Set up a 20x20 grid with 4 small goals (one per side) and a pile of balls in the centre. Teams of 2-3 line up at each goal. One player at a time races to grab a ball, dribbles back, and shoots into their team\'s goal. Next player goes when they return. Most balls in net wins.',
+        why: 'Combines hustle, dribbling, and shooting in a relay format. Teams naturally cheer each other on.',
+        tags: ['Teams of 2–3'],
+        video: 'EbYf0ICrtAg'
+      },
+      {
+        id: 'cleanyourroom',
+        name: 'Clean Your Room',
+        time: 6,
+        desc: 'Place 8-10 balls in a box in the middle. Teams of up to 4 line up at a cone 15 yards away. One at a time, players run to the box, grab a ball, dribble it back to their line, then the next player goes. First team to empty the box wins. Progression: shoot into a small goal instead of returning to line.',
+        why: 'Instantly relatable theme. The relay format keeps everyone engaged and waiting their turn excitedly.',
+        tags: ['Teams of 4'],
+        video: '9QMlskAHQPI'
+      }
+    ]
+  },
+  {
+    id: 'passing',
+    icon: '↔️',
+    title: 'Passing & Teamwork',
+    subtitle: 'Playing together',
+    color: '#7b1fa2',
+    drills: [
+      {
+        id: 'pairpass',
+        name: 'Partner Passing',
+        time: 6,
+        desc: 'Pair kids up about 3–4 metres apart. Pass back and forth. Encourage them to stop the ball before passing back. Count their passes in a row.',
+        why: 'Counting streaks makes it self-motivating. Don\'t worry about technique — inside foot comes naturally.',
+        tags: ['Pairs', '5–10 min'],
+        video: 'TUd-xDbmGv4'
+      },
+      {
+        id: 'passthroughgate',
+        name: 'Pass Through the Gate',
+        time: 6,
+        desc: 'Put a small gate (two cones) between two partners. They pass back and forth aiming through the gate. Start wide, narrow it as they improve.',
+        why: 'Adds a target to passing — makes accuracy feel like a game not a lesson.',
+        tags: ['Pairs'],
+        video: 'TUd-xDbmGv4'
+      },
+      {
+        id: 'circle',
+        name: 'Circle Passing',
+        time: 5,
+        desc: 'Kids stand in a circle about 3m diameter. One ball passes around. Coach joins to keep energy up. Progress to calling a name before you pass.',
+        why: 'Introduces passing to a teammate. Calling a name = eye contact + communication.',
+        tags: ['6–10 kids'],
+        video: '6RGJBj1tNC8'
+      },
+      {
+        id: 'movingpass',
+        name: 'Pass & Follow',
+        time: 6,
+        desc: 'Two lines of kids facing each other, 4m apart. Kid passes to the player across, then runs to the back of that line. Keep the ball moving continuously.',
+        why: 'First taste of passing and moving. The running-after-pass habit is gold to build early.',
+        tags: ['6–10 kids'],
+        video: '6RGJBj1tNC8'
+      },
+      {
+        id: 'keepaway',
+        name: 'Keepaway (2v1)',
+        time: 6,
+        desc: 'Groups of 3. Two kids try to keep the ball away from one defender in a small grid. Rotate the defender every 30–45 seconds.',
+        why: 'First real decision-making drill — when to pass, who to pass to. Keep grids tiny so action is constant.',
+        tags: ['Groups of 3'],
+        video: '6RGJBj1tNC8'
+      },
+      {
+        id: 'nutssquirrels',
+        name: 'Nuts & Squirrels',
+        time: 6,
+        desc: 'Set up 4 corner "trees" (large cones). Scatter small cones or balls in the middle. Teams of 2-3 at each tree. One at a time, players run to the middle, grab one item, and dribble it back. High five the next teammate who then goes. First round no ball, second round dribble a ball too.',
+        why: 'Introduces relay teamwork in a way kids instantly understand. The progression to dribbling adds challenge without changing the game.',
+        tags: ['Teams of 2–3'],
+        video: 'r-j0E8NxeQk'
+      },
+      {
+        id: 'dontfeedthemonkeys',
+        name: 'Don\'t Feed the Monkeys',
+        time: 6,
+        desc: 'Set up a 10-yard outer square with a 3-yard inner square (the cage). 2 players are monkeys in the cage, 2 are zookeepers in the outer square, rest are visitors on the perimeter with a ball each. Visitors pass balls into the cage for monkeys to control. Zookeepers try to intercept. Score a point each successful feed. Rotate roles every 2-3 minutes.',
+        why: 'Makes passing purposeful — there\'s an actual target. The cage structure naturally creates passing angles.',
+        tags: ['8–12 kids'],
+        video: 'OsgWbm2LrlI'
+      },
+      {
+        id: 'balltag',
+        name: 'Ball Tag',
+        time: 5,
+        desc: 'Split into two teams with different coloured pinnies. One team is the taggers for 60 seconds — they use their ball to tag (touch) opponents\' balls. Each tag = 1 point. After 60 seconds ask taggers what worked (passing to a partner to double-team). Play 2-3 rounds then switch.',
+        why: 'Introduces passing as a tactical decision, not just a skill. The debrief question plants the idea of combination play.',
+        tags: ['2 teams'],
+        video: 'U-a1jYaN2s8'
+      }
+    ]
+  },
+  {
+    id: 'cooldown',
+    icon: '🌟',
+    title: 'Cool-Down',
+    subtitle: 'End on a high',
+    color: '#f9a825',
+    drills: [
+      {
+        id: 'besttrick',
+        name: 'Show Me Your Best Trick',
+        time: 2,
+        desc: 'Each kid gets 10 seconds to show any move with the ball. Everyone claps. End with a team huddle and a cheer.',
+        why: 'Builds confidence, ends on joy. They\'ll remember this more than any drill.',
+        tags: ['2 min', 'Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'redlight',
+        name: 'Red Light / Green Light',
+        time: 3,
+        desc: 'Kids dribble toward coach. Red Light = stop the ball. Green Light = go. First to reach coach without moving on Red Light wins.',
+        why: 'Classic game that reinforces ball stopping in a wind-down way.',
+        tags: ['3 min', 'Any size group'],
+        video: 'rNih_5ZY8SQ'
+      },
+      {
+        id: 'freestyle',
+        name: 'Free Kick Circle',
+        time: 3,
+        desc: 'Place a ball in the centre. Each kid takes one big free kick while the rest watch and cheer. Coach gives everyone a silly nickname based on their kick style.',
+        why: 'Pure fun send-off. Silly nicknames = smiles all the way to the car.',
+        tags: ['3 min', 'Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'statues',
+        name: 'Balloon Statues',
+        time: 3,
+        desc: 'Kids dribble slowly in a big circle. When coach calls "Statue!" they freeze in the silliest pose they can while keeping a foot on the ball. Coach picks the best statue.',
+        why: 'Gentle wind-down energy. Silly posing + ball control = perfect ending combo.',
+        tags: ['3 min', 'Any size group'],
+        video: 'eD2T5GXeaYE'
+      },
+      {
+        id: 'highfive',
+        name: 'Dribble & High Five',
+        time: 2,
+        desc: 'Everyone dribbles around slowly. Goal is to give a high five to every single teammate before time is up. Coach counts down from 60.',
+        why: 'Ends practice with connection and laughter. Sneaks in gentle dribbling as a cooldown.',
+        tags: ['2 min', 'Any size group'],
+        video: 'eD2T5GXeaYE'
+      }
+    ]
+  }
+];
+
+const selectedDrills = {};
+
+function getDrillById(id) {
+  for (const cat of CATEGORIES) {
+    for (const d of cat.drills) {
+      if (d.id === id) return { ...d, color: cat.color, category: cat.title };
+    }
+  }
+  return null;
+}
+
+function toggleDrill(drillId, catColor) {
+  if (selectedDrills[drillId]) {
+    delete selectedDrills[drillId];
+  } else {
+    selectedDrills[drillId] = true;
+  }
+  document.querySelectorAll(`.drill-card[data-id="${drillId}"]`).forEach(el => {
+    el.classList.toggle('selected', !!selectedDrills[drillId]);
+  });
+  renderPlan();
+}
+
+function renderPlan() {
+  const ids = Object.keys(selectedDrills);
+  const planBody = document.getElementById('planBody');
+  const timerBar = document.getElementById('timerBar');
+  const timerLabel = document.getElementById('timerLabel');
+  const planTip = document.getElementById('planTip');
+
+  if (ids.length === 0) {
+    planBody.innerHTML = `<div class="plan-empty"><span class="empty-icon">👆</span>Pick drills from the left to build your plan</div>`;
+    timerBar.style.width = '0%';
+    timerBar.className = 'timer-bar ok';
+    timerLabel.textContent = '0 / 30 min';
+    planTip.style.display = 'none';
+    return;
+  }
+
+  // Order by category
+  const ordered = [];
+  for (const cat of CATEGORIES) {
+    for (const d of cat.drills) {
+      if (selectedDrills[d.id]) ordered.push({ ...d, color: cat.color, category: cat.title });
+    }
+  }
+
+  const totalTime = ordered.reduce((s, d) => s + d.time, 0);
+  const pct = Math.min((totalTime / 30) * 100, 100);
+
+  timerBar.style.width = pct + '%';
+  if (totalTime <= 30) {
+    timerBar.className = 'timer-bar ok';
+    timerLabel.textContent = `${totalTime} / 30 min`;
+  } else {
+    timerBar.className = 'timer-bar over';
+    timerLabel.textContent = `${totalTime} min ⚠️`;
+  }
+
+  // Tips
+  const warmupCat = CATEGORIES.find(c => c.id === 'warmup');
+  const cooldownCat = CATEGORIES.find(c => c.id === 'cooldown');
+  const hasWarmup = warmupCat && ordered.some(d => warmupCat.drills.some(wd => wd.id === d.id));
+  const hasCooldown = cooldownCat && ordered.some(d => cooldownCat.drills.some(cd => cd.id === d.id));
+  let tip = '';
+  if (!hasWarmup && ordered.length > 0) tip = '💡 Consider adding a warm-up game to start!';
+  else if (!hasCooldown && ordered.length > 1) tip = '💡 A cool-down drill ends practice on a high note.';
+  else if (totalTime < 25 && ordered.length > 0) tip = `💡 You have ${30 - totalTime} min to fill — add another drill!`;
+  else if (totalTime > 30) tip = `⚠️ Plan is ${totalTime - 30} min over. Consider removing one drill.`;
+  else tip = '✅ Great plan! Ready to print.';
+
+  planTip.style.display = 'block';
+  planTip.textContent = tip;
+
+  let html = '';
+  ordered.forEach(d => {
+    html += `
+      <div class="plan-item" style="--item-color: ${d.color}">
+        <div class="plan-item-info">
+          <div class="plan-item-name">${d.name}</div>
+          <div class="plan-item-meta">${d.category}</div>
+        </div>
+        <div class="plan-item-time">${d.time} min</div>
+        <button class="plan-remove" onclick="toggleDrill('${d.id}')" title="Remove">✕</button>
+      </div>`;
+  });
+
+  html += `<hr class="plan-divider">
+    <div class="plan-total">
+      <span>Total</span>
+      <span>${totalTime} min</span>
+    </div>`;
+
+  planBody.innerHTML = html;
+}
+
+function sharePlan() {
+  const ids = Object.keys(selectedDrills);
+  if (ids.length === 0) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('plan', ids.join(','));
+  navigator.clipboard.writeText(url.toString()).then(() => {
+    const toast = document.getElementById('shareToast');
+    toast.style.display = 'block';
+    toast.style.animation = 'none';
+    void toast.offsetWidth; // reflow to restart animation
+    toast.style.animation = 'fadeOut 2.5s forwards';
+    setTimeout(() => { toast.style.display = 'none'; }, 2600);
+  });
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan');
+  if (!plan) return;
+  const ids = plan.split(',');
+  ids.forEach(id => {
+    const valid = CATEGORIES.some(cat => cat.drills.some(d => d.id === id));
+    if (valid) selectedDrills[id] = true;
+  });
+}
+
+function clearPlan() {
+  Object.keys(selectedDrills).forEach(k => delete selectedDrills[k]);
+  document.querySelectorAll('.drill-card.selected').forEach(el => el.classList.remove('selected'));
+  // Clear URL param too
+  const url = new URL(window.location.href);
+  url.searchParams.delete('plan');
+  window.history.replaceState({}, '', url);
+  renderPlan();
+}
+
+function toggleVideo(drillId, videoId, btn) {
+  const embed = document.getElementById('video-' + drillId);
+  const isOpen = embed.classList.contains('open');
+  if (isOpen) {
+    embed.classList.remove('open');
+    embed.innerHTML = '';
+    btn.textContent = '▶ Watch video';
+  } else {
+    embed.classList.add('open');
+    embed.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    btn.textContent = '✕ Close video';
+  }
+}
+
+function renderDrillBook() {
+  const book = document.getElementById('drillBook');
+  let html = '';
+
+  CATEGORIES.forEach(cat => {
+    html += `
+      <div class="section-header" style="border-left-color: ${cat.color}">
+        <span class="section-icon">${cat.icon}</span>
+        <span class="section-title" style="color: ${cat.color}">${cat.title}</span>
+        <span class="section-subtitle">${cat.subtitle}</span>
+      </div>
+      <div class="drills-grid">`;
+
+    cat.drills.forEach(drill => {
+      html += `
+        <div class="drill-card" data-id="${drill.id}" style="--category-color: ${cat.color}" onclick="toggleDrill('${drill.id}', '${cat.color}')">
+          <div class="drill-name">${drill.name}</div>
+          <div class="drill-meta">
+            <span class="tag time">⏱ ${drill.time} min</span>
+            ${drill.tags.map(t => `<span class="tag players">${t}</span>`).join('')}
+          </div>
+          <div class="drill-desc">${drill.desc}</div>
+          <div class="drill-why">💡 ${drill.why}</div>
+          ${drill.video ? `
+          <button class="video-btn" onclick="event.stopPropagation(); toggleVideo('${drill.id}', '${drill.video}', this)">
+            ▶ Watch video
+          </button>
+          <div class="video-embed" id="video-${drill.id}"></div>` : ''}
+        </div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  book.innerHTML = html;
+}
+
+loadFromURL();
+renderDrillBook();
+// Mark any URL-loaded drills as selected on cards
+Object.keys(selectedDrills).forEach(id => {
+  document.querySelectorAll(`.drill-card[data-id="${id}"]`).forEach(el => el.classList.add('selected'));
+});
+renderPlan();
+</script>
+</body>
+</html>
