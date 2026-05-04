@@ -1,0 +1,23 @@
+name: Sync Box Office
+
+on:
+  schedule:
+    - cron: '0 16 * * *'  # 9:00 AM PDT (UTC-7, summer time)
+  workflow_dispatch:        # also allows a manual "Run workflow" button on GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run box office sync
+        run: node movies/scripts/sync_box_office.js
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
