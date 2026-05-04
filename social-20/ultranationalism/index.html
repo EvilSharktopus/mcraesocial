@@ -59,6 +59,7 @@
       </div>
     </div>
   </section>
+  
   <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
     <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
     <div class="kn-grid">
@@ -77,6 +78,51 @@
 
     </div>
   </section>
+
+  <script>
+(function(){
+  var viewers = {};
+  document.querySelectorAll('.slide-viewer').forEach(function(v){
+    var id = v.id.replace('viewer-','');
+    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
+  });
+  window.slidePrev = function(id){
+    var v = viewers[id]; if(!v || !v.slides.length) return;
+    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
+    updateViewer(id, v);
+  };
+  window.slideNext = function(id){
+    var v = viewers[id]; if(!v || !v.slides.length) return;
+    v.idx = (v.idx + 1) % v.slides.length;
+    updateViewer(id, v);
+  };
+  function updateViewer(id, v){
+    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
+    var c = document.getElementById('counter-'+id);
+    if(c) c.textContent = (v.idx+1) + ' / ' + v.slides.length;
+  }
+  function knStep(frame, forward) {
+    try {
+      var doc = frame.contentDocument || frame.contentWindow.document;
+      if (forward) { var stage = doc.getElementById('stage') || doc.getElementById('stageArea') || doc.body; stage.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:frame.contentWindow})); }
+      else { var opts={key:'ArrowLeft',keyCode:37,which:37,bubbles:true,cancelable:true}; doc.dispatchEvent(new KeyboardEvent('keydown',opts)); doc.dispatchEvent(new KeyboardEvent('keyup',opts)); }
+    } catch(e) {}
+  }
+  function knNavigateTo(slug, target) {
+    var frame = document.getElementById('kn-frame-' + slug); if (!frame) return;
+    var tile = frame.closest('[data-slug]');
+    var current = tile ? parseInt(tile.dataset.slide || '1', 10) : 1;
+    var delta = target - current; if (delta === 0) return;
+    var forward = delta > 0, steps = Math.abs(delta), i = 0;
+    var interval = setInterval(function() {
+      if (i >= steps) { clearInterval(interval); if (tile) tile.dataset.slide = target; var cur = document.getElementById('kn-cur-' + slug); if (cur) cur.textContent = target; var s = tile ? tile.querySelector('.kn-scrubber') : null; if (s) s.value = target; return; }
+      knStep(frame, forward); i++;
+    }, 350);
+  }
+  window.knGoTo = function(slug) { var input = document.getElementById('kn-input-' + slug); if (!input) return; var t = parseInt(input.value, 10); if (!isNaN(t) && t >= 1) knNavigateTo(slug, t); };
+  window.knScrub = function(el, slug) { var t = parseInt(el.value, 10); var inp = document.getElementById('kn-input-' + slug); if (inp) inp.value = t; knNavigateTo(slug, t); };
+})();
+</script>
   <section class="unit-section" style="background: rgba(181,143,123,0.06);">
     <h2 class="unit-section__title">HANDOUTS</h2>
     <div class="assignment-block">
@@ -230,51 +276,6 @@
       </div>
     </div>
   </section>
-
-  <script>
-(function(){
-  var viewers = {};
-  document.querySelectorAll('.slide-viewer').forEach(function(v){
-    var id = v.id.replace('viewer-','');
-    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
-  });
-  window.slidePrev = function(id){
-    var v = viewers[id]; if(!v || !v.slides.length) return;
-    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
-    updateViewer(id, v);
-  };
-  window.slideNext = function(id){
-    var v = viewers[id]; if(!v || !v.slides.length) return;
-    v.idx = (v.idx + 1) % v.slides.length;
-    updateViewer(id, v);
-  };
-  function updateViewer(id, v){
-    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
-    var c = document.getElementById('counter-'+id);
-    if(c) c.textContent = (v.idx+1) + ' / ' + v.slides.length;
-  }
-  function knStep(frame, forward) {
-    try {
-      var doc = frame.contentDocument || frame.contentWindow.document;
-      if (forward) { var stage = doc.getElementById('stage') || doc.getElementById('stageArea') || doc.body; stage.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:frame.contentWindow})); }
-      else { var opts={key:'ArrowLeft',keyCode:37,which:37,bubbles:true,cancelable:true}; doc.dispatchEvent(new KeyboardEvent('keydown',opts)); doc.dispatchEvent(new KeyboardEvent('keyup',opts)); }
-    } catch(e) {}
-  }
-  function knNavigateTo(slug, target) {
-    var frame = document.getElementById('kn-frame-' + slug); if (!frame) return;
-    var tile = frame.closest('[data-slug]');
-    var current = tile ? parseInt(tile.dataset.slide || '1', 10) : 1;
-    var delta = target - current; if (delta === 0) return;
-    var forward = delta > 0, steps = Math.abs(delta), i = 0;
-    var interval = setInterval(function() {
-      if (i >= steps) { clearInterval(interval); if (tile) tile.dataset.slide = target; var cur = document.getElementById('kn-cur-' + slug); if (cur) cur.textContent = target; var s = tile ? tile.querySelector('.kn-scrubber') : null; if (s) s.value = target; return; }
-      knStep(frame, forward); i++;
-    }, 350);
-  }
-  window.knGoTo = function(slug) { var input = document.getElementById('kn-input-' + slug); if (!input) return; var t = parseInt(input.value, 10); if (!isNaN(t) && t >= 1) knNavigateTo(slug, t); };
-  window.knScrub = function(el, slug) { var t = parseInt(el.value, 10); var inp = document.getElementById('kn-input-' + slug); if (inp) inp.value = t; knNavigateTo(slug, t); };
-})();
-</script>
   <footer class="site-footer">
     <a href="/" aria-label="Home" style="display:inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
       <picture>
