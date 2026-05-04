@@ -930,12 +930,7 @@ def process_keynote_html(src_dir: Path, course: str, unit: str):
         log(f"  Disabled animations in {entry.name}")
 
     web_src = "/assets/slides/" + "/".join([course, unit, slug, entry.name])
-    # Count UUID slide folders inside assets/ subdirectory
-    assets_subdir = dest / "assets"
-    if assets_subdir.exists():
-        total = sum(1 for _ in assets_subdir.iterdir() if _.is_dir() and "-" in _.name)
-    else:
-        total = sum(1 for _ in dest.iterdir() if _.is_dir() and "-" in _.name)
+    total = sum(1 for _ in dest.iterdir() if _.is_dir() and "-" in _.name)
     total = max(total, 1)
     tile = IFRAME_TILE.format(slug=slug, title=title, src=web_src, total=total)
     inject_into_html(unit_html_path(course, unit), tile, slug, is_iframe=True)
