@@ -103,7 +103,7 @@
   
   
   <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; click inside to advance slides</span></h2>
     <div class="kn-grid">
       
     </div>
@@ -158,7 +158,7 @@
 
   
   <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
-    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
+    <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; click inside to advance slides</span></h2>
     <div class="kn-grid">
 <div class="kn-tile" data-slug="flq-crisis">
         <div class="kn-tile__header">
@@ -206,5 +206,14 @@
 
   <script src="/js/nav.js"></script>
   <script src="/assets/js/submit-widget.js"></script>
+
+  <script>
+  window.knFullscreen = function(btn) {
+    var tile = btn.closest('.kn-tile');
+    var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer');
+    if (target && target.requestFullscreen) target.requestFullscreen();
+    else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen();
+  };
+  </script>
 </body>
 </html>
