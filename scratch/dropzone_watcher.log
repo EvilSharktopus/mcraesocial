@@ -3809,3 +3809,11 @@
 [2026-05-06 08:22:03]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-9\collective-rights\index.html
 [2026-05-06 08:22:03]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\collective-rights\_processed\Chapter 4 Notes
 [2026-05-06 08:22:03]   Running git add -A ...
+[2026-05-06 08:22:08]   Committing: feat: auto-publish 'Chapter 4 Notes' to social-9/collective-rights
+[2026-05-06 08:22:10]   Pushing to origin...
+[2026-05-06 08:22:12]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'push']' returned non-zero exit status 1.
+[2026-05-06 08:22:23]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-9\ccrf\charter-cases
+[2026-05-06 08:22:23]   Disabled animations in index.html
+[2026-05-06 08:22:23]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-9\ccrf\index.html
+[2026-05-06 08:22:23]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\ccrf\_processed\Charter Cases
+[2026-05-06 08:22:23]   Running git add -A ...
