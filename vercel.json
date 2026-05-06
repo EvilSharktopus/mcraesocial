@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/workbooks/10-2/:path*",
-      "destination": "https://mcraesocial.vercel.app/:path*"
+      "destination": "https://socialsite-eta.vercel.app/:path*"
     },
     {
       "source": "/workbooks/10-2",
-      "destination": "https://mcraesocial.vercel.app/"
+      "destination": "https://socialsite-eta.vercel.app/"
     }
   ]
 }
