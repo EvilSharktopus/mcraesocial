@@ -50,7 +50,7 @@
           const now     = Date.now();
           const openMs  = toMs(f.openAt);
           const closeMs = toMs(f.closeAt);
-          const isTimed = !!(f.openAt || f.closeAt);
+          const isTimed = !!(openMs || closeMs);
 
           const isArchived = f.archived && f.archived.booleanValue === true;
 
