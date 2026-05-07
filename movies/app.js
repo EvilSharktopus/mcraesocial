@@ -917,6 +917,13 @@ const App = (() => {
     '#e57373', '#4dd0e1', '#81c784', '#ffb74d', '#9575cd',
   ];
 
+  // Returns first name only if full name is longer than maxLen characters
+  function shortName(name, maxLen = 10) {
+    if (!name) return '';
+    if (name.length <= maxLen) return name;
+    return name.split(/\s+/)[0];
+  }
+
   function abbrev(title) {
     const overrides = [
       ['mortal kombat ii', 'MKII'],
@@ -1081,7 +1088,7 @@ const App = (() => {
 
     let html = `<div class="cg-scroll"><table class="cg-table"><thead><tr>
       <th class="cg-th cg-row-label"></th>
-      ${participants.map(p => `<th class="cg-th">${esc(p.name)}</th>`).join('')}
+      ${participants.map(p => `<th class="cg-th">${esc(shortName(p.name))}</th>`).join('')}
     </tr></thead><tbody>`;
 
     for (let r = 1; r <= 10; r++) {
@@ -1142,7 +1149,7 @@ const App = (() => {
       <th class="bot-poster-h"></th>
       <th class="bot-title-h">Movie</th>
       <th class="bot-gross-h">Domestic Gross</th>
-      ${participants.map(p => `<th class="bot-player-h">${esc(p.name)}</th>`).join('')}
+      ${participants.map(p => `<th class="bot-player-h">${esc(shortName(p.name))}</th>`).join('')}
     </tr></thead><tbody>`;
 
     hasGross.forEach((m, i) => {
