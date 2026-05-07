@@ -91,9 +91,7 @@ const App = (() => {
 
     const _params = new URLSearchParams(location.search);
     const _phaseOverride = _params.get('phase');
-    state.phase = _phaseOverride === 'post' ? 'post'
-      : _phaseOverride === 'pre' ? 'pre'
-        : new Date() >= CONFIG.deadline ? 'post' : 'pre';
+    state.phase = _phaseOverride === 'pre' ? 'pre' : 'post'; // scoreboard always on
     state.adminMode = _params.get('admin') === '1';
 
     try {
