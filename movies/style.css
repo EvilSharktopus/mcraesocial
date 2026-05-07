@@ -1756,8 +1756,6 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  overflow-y: auto;
-  max-height: 400px;
 }
 
 .lb-card {
