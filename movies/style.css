@@ -850,30 +850,128 @@ button { cursor: pointer; font-family: inherit; }
   border-top: 1px solid var(--border);
 }
 
-/* ── Post-deadline layout ── */
-.results-top-row {
-  display: flex;
-  gap: 1.5rem;
-  align-items: start;
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+/* ── Post-deadline layout: hero + sections ── */
+.results-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.leaderboard-panel {
-  flex-shrink: 0;
-  width: 220px;
+.hero-card {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  position: sticky;
-  top: 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
-.comparison-panel {
-  flex: 1;
-  min-width: 0;
+/* Mini leaderboard rows */
+.mini-lb-list { padding: 0.25rem 0.5rem 0; }
+.mini-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.25rem;
+  border-bottom: 1px solid rgba(42,42,58,0.6);
+  font-size: 0.82rem;
 }
+.mini-lb-row:last-child { border-bottom: none; }
+.mini-lb-first { font-weight: 700; color: var(--gold); }
+.mini-lb-medal { font-size: 1rem; flex-shrink: 0; }
+.mini-lb-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.mini-lb-avatar-ph {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg3); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 0.75rem; flex-shrink: 0;
+}
+.mini-lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-lb-score { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--gold); flex-shrink: 0; }
+
+/* Mini box office rows */
+.mini-bo-list { padding: 0.25rem 0.5rem 0; }
+.mini-bo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.25rem;
+  border-bottom: 1px solid rgba(42,42,58,0.6);
+  font-size: 0.82rem;
+}
+.mini-bo-row:last-child { border-bottom: none; }
+.mini-bo-medal { font-size: 1rem; flex-shrink: 0; }
+.mini-bo-poster {
+  width: 22px; height: 33px; object-fit: cover;
+  border-radius: 2px; flex-shrink: 0;
+}
+.mini-bo-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-bo-gross { font-size: 0.72rem; color: var(--gold); flex-shrink: 0; font-weight: 600; }
+
+/* Section toggle buttons (inside hero cards) */
+.section-toggle-btn {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0.55rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  margin-top: auto;
+}
+.section-toggle-btn:hover { background: rgba(212,160,23,0.08); }
+.section-toggle-btn.active { background: rgba(212,160,23,0.12); color: var(--text); }
+
+/* Section nav row (Comparison + Chatter buttons) */
+.section-nav {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.section-nav-btn {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.section-nav-btn:hover { border-color: var(--gold); color: var(--text); }
+.section-nav-btn.active {
+  border-color: var(--gold);
+  background: rgba(212,160,23,0.1);
+  color: var(--gold);
+}
+
+/* Expandable result sections */
+.result-section { margin-bottom: 1.5rem; }
+
+.leaderboard-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.comparison-panel { min-width: 0; }
 
 .bo-table-panel {
   background: var(--bg2);
@@ -883,8 +981,7 @@ button { cursor: pointer; font-family: inherit; }
 }
 
 @media (max-width: 900px) {
-  .results-top-row { flex-direction: column; }
-  .leaderboard-panel { width: 100%; position: static; }
+  .results-hero { grid-template-columns: 1fr; }
 
   /* Compact leaderboard rows on mobile */
   .leaderboard-list { padding: 0.25rem; }
@@ -897,6 +994,7 @@ button { cursor: pointer; font-family: inherit; }
   .lb-score-first { font-size: 1.15rem; }
   .panel-title { padding: 0.5rem 0.75rem 0.4rem; font-size: 0.95rem; }
 }
+
 
 /* ── Comparison grid ── */
 .cg-scroll { overflow-x: auto; }

@@ -996,9 +996,76 @@ const App = (() => {
       .sort((a, b) => b.score - a.score);
 
     renderLeaderboard(withScores);
+    renderMiniLeaderboard(withScores);
     renderQuickLookGrid(withScores, pbp);
     renderBoxOfficeTable(withScores, pbp);
+    renderMiniBoxOffice();
     initChatter();
+  }
+
+  function renderMiniLeaderboard(participants) {
+    const el = document.getElementById('miniLeaderboard');
+    if (!el) return;
+    const top3 = participants.slice(0, 3);
+    if (!top3.length) { el.innerHTML = '<div class="text-dim" style="font-size:0.8rem;padding:0.75rem;">No scores yet.</div>'; return; }
+    const medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = top3.map((p, i) => {
+      const avatar = p.avatarUrl
+        ? `<img class="mini-lb-avatar" src="${esc(p.avatarUrl)}" alt="" loading="lazy">`
+        : `<div class="mini-lb-avatar mini-lb-avatar-ph">${medals[i]}</div>`;
+      return `<div class="mini-lb-row${i === 0 ? ' mini-lb-first' : ''}">
+        <span class="mini-lb-medal">${medals[i]}</span>
+        ${avatar}
+        <span class="mini-lb-name">${esc(p.name)}</span>
+        <span class="mini-lb-score">${p.score}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMiniBoxOffice() {
+    const el = document.getElementById('miniBoxOffice');
+    if (!el) return;
+    const top3 = state.movies
+      .filter(m => m.boxOfficeRank && m.boxOfficeRank <= 3)
+      .sort((a, b) => a.boxOfficeRank - b.boxOfficeRank);
+    if (!top3.length) { el.innerHTML = '<div class="text-dim" style="font-size:0.8rem;padding:0.75rem;">Box office data not yet available.</div>'; return; }
+    const medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = top3.map(m => {
+      const gross = `$${(m.domesticGross / 1_000_000).toFixed(1)}M`;
+      const poster = getPosterUrl(m);
+      return `<div class="mini-bo-row">
+        <span class="mini-bo-medal">${medals[m.boxOfficeRank - 1]}</span>
+        ${poster ? `<img class="mini-bo-poster" src="${esc(poster)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+        <span class="mini-bo-title">${esc(m.title)}</span>
+        <span class="mini-bo-gross">${gross}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const SECTIONS = ['leaderboard', 'boxoffice', 'comparison', 'chatter'];
+  function toggleSection(id) {
+    const sectionEl = document.getElementById(`section-${id}`);
+    if (!sectionEl) return;
+    const isOpen = !sectionEl.classList.contains('hidden');
+    // Close all
+    SECTIONS.forEach(s => {
+      document.getElementById(`section-${s}`)?.classList.add('hidden');
+      document.getElementById(`btn-${s}`)?.classList.remove('active');
+    });
+    // Toggle the target
+    if (!isOpen) {
+      sectionEl.classList.remove('hidden');
+      document.getElementById(`btn-${id}`)?.classList.add('active');
+      // Update hero button text
+      const btn = document.getElementById(`btn-${id}`);
+      if (id === 'leaderboard' && btn) btn.textContent = 'Hide Leaderboard ↑';
+      if (id === 'boxoffice'   && btn) btn.textContent = 'Hide Box Office ↑';
+      sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // Restore hero button labels when closing
+      if (id === 'leaderboard') { const b = document.getElementById('btn-leaderboard'); if (b) b.textContent = 'Show Full Leaderboard ↓'; }
+      if (id === 'boxoffice')   { const b = document.getElementById('btn-boxoffice');   if (b) b.textContent = 'Show Box Office ↓'; }
+    }
   }
 
   function renderLeaderboard(participants) {
@@ -1793,6 +1860,7 @@ const App = (() => {
     showLbEditor, hideLbEditor, saveLbEditorRow,
     selectChatterMovie, postChatter, deleteChatter, toggleChatterSheet,
     setChatterIdentity, clearChatterIdentity,
+    toggleSection,
   };
 
 })();
