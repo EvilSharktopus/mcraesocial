@@ -17,7 +17,7 @@ const CONFIG = {
     // Free token at https://console.apify.com/account/integrations
     token: 'YOUR_APIFY_TOKEN', // ← paste locally for manual sync; do NOT commit
   },
-  deadline: new Date('2026-05-07T12:00:00Z'), // locked — scoreboard mode always on
+  deadline: new Date('2026-05-09T18:00:00Z'), // picks re-open — close May 9 noon MDT
   adminPassword: 'Starss22',
 };
 
