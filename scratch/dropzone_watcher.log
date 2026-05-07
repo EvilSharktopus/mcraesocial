@@ -3924,3 +3924,44 @@
 [2026-05-06 08:28:45]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\ycja\_processed\YCJA Questions
 [2026-05-06 08:28:45]   Running git add -A ...
 [2026-05-06 08:28:46]   --------------------------------------------------------------------------------------------------------------------  git error: Command '['git', '-C', 'C:\\Users\\Owner\\Desktop\\mcraesocial', 'add', '-A']' returned non-zero exit status 128.
+[2026-05-06 09:29:50] Watching: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone
+[2026-05-06 09:29:50] Debounce window: 30s ---------------------------------------------------------------------------------- dispatches 30s after last file activity.
+[2026-05-06 09:29:50] Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.
+[2026-05-06 09:29:50] Scanning dropzone for existing unprocessed files...
+[2026-05-06 09:29:50] [startup] Found Keynote folder: Intro to Imperial in social-10/historical
+[2026-05-06 09:29:50] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\historical\Intro to Imperial
+[2026-05-06 09:29:50]   Copying Keynote export 'Intro to Imperial' (OneDrive will download on-demand)...
+[2026-05-07 08:15:42] Watching: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone
+[2026-05-07 08:15:42] Debounce window: 30s ---------------------------------------------------------------------------------- dispatches 30s after last file activity.
+[2026-05-07 08:15:42] Drop a .pptx, Keynote HTML folder, or .txt iCloud link into a unit subfolder.
+[2026-05-07 08:15:42] Scanning dropzone for existing unprocessed files...
+[2026-05-07 08:15:42] [startup] Found Keynote folder: Intro to Imperial in social-10/historical
+[2026-05-07 08:15:42] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\historical\Intro to Imperial
+[2026-05-07 08:15:42]   Copying Keynote export 'Intro to Imperial' (OneDrive will download on-demand)...
+[2026-05-07 08:15:42] [startup] Found Keynote folder: Media and Identity in social-10/identity
+[2026-05-07 08:15:42] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\Media and Identity
+[2026-05-07 08:15:42]   Copying Keynote export 'Media and Identity' (OneDrive will download on-demand)...
+[2026-05-07 08:15:42] [startup] Found Keynote folder: Charter Qs in social-9/ccrf
+[2026-05-07 08:15:42] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\ccrf\Charter Qs
+[2026-05-07 08:15:42]   Copying Keynote export 'Charter Qs' (OneDrive will download on-demand)...
+[2026-05-07 08:15:42] [startup] Found PPTX: Economic Systems and Quality of Life.pptx in social-9/economics
+[2026-05-07 08:15:42] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\economics\Economic Systems and Quality of Life.pptx
+[2026-05-07 08:15:42] [startup] Found PPTX: Numbers.pptx in social-9/federal-political-systems
+[2026-05-07 08:15:42] New file detected: C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\federal-political-systems\Numbers.pptx
+[2026-05-07 08:15:42] Startup scan complete - dispatched 5 item(s) in background threads.
+[2026-05-07 08:15:43]   Waiting for OneDrive to download Numbers.pptx...
+[2026-05-07 08:15:43]   Waiting for OneDrive to download Economic Systems and Quality of Life.pptx...
+[2026-05-07 08:15:46]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-9\ccrf\charter-qs
+[2026-05-07 08:15:46]   Disabled animations in index.html
+[2026-05-07 08:15:46]   Slug 'charter-qs' exists - replacing with updated version.
+[2026-05-07 08:15:46]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-9\ccrf\index.html
+[2026-05-07 08:15:46]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-9\ccrf\_processed\Charter Qs
+[2026-05-07 08:15:46]   Running git add -A ...
+[2026-05-07 08:15:48]   Waiting for OneDrive to download Numbers.pptx...
+[2026-05-07 08:15:48]   Waiting for OneDrive to download Economic Systems and Quality of Life.pptx...
+[2026-05-07 08:15:50]   Copied Keynote HTML to C:\Users\Owner\Desktop\mcraesocial\assets\slides\social-10\identity\media-and-identity
+[2026-05-07 08:15:50]   Disabled animations in index.html
+[2026-05-07 08:15:50]   Slug 'media-and-identity' exists - replacing with updated version.
+[2026-05-07 08:15:50]   Injected into C:\Users\Owner\Desktop\mcraesocial\social-10\identity\index.html
+[2026-05-07 08:15:50]   Archived to C:\Users\Owner\OneDrive - Rocky View Schools\McRae Dropzone\social-10\identity\_processed\Media and Identity
+[2026-05-07 08:15:50]   Running git add -A ...
