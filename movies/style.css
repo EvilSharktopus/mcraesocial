@@ -1221,6 +1221,32 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
 .lb-details > summary::-webkit-details-marker { display: none; }
 .lb-details > summary.leaderboard-row:hover { background: var(--bg3); }
 
+/* Mobile collapse group (wraps 2nd+ rows) */
+.lb-collapse-group { }
+.lb-collapse-group > summary { display: none; } /* hidden on desktop */
+@media (max-width: 900px) {
+  .lb-collapse-group > summary.lb-collapse-summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    list-style: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--gold);
+    border-top: 1px solid var(--border);
+    margin-top: 0.25rem;
+    background: transparent;
+    border-radius: 0 0 6px 6px;
+    transition: background 0.15s;
+  }
+  .lb-collapse-group > summary.lb-collapse-summary::-webkit-details-marker { display: none; }
+  .lb-collapse-group > summary.lb-collapse-summary:hover { background: var(--bg3); }
+  .lb-collapse-group[open] > summary.lb-collapse-summary { border-top: none; border-bottom: 1px solid var(--border); margin-top: 0; margin-bottom: 0.25rem; }
+}
+
 /* Participant detail view */
 .detail-panel {
   background: var(--bg2);
@@ -1811,15 +1837,17 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
 
 /* Mobile: hide desktop chatter, show FAB */
 @media (max-width: 900px) {
-  .chatter-section { display: none; }
+  /* Chatter shows inline on mobile — single-column layout */
+  .chatter-section { margin-top: 1rem; }
   .chatter-columns { grid-template-columns: 1fr; }
   .chatter-local { border-right: none; border-bottom: 1px solid var(--border); }
 
+  /* FAB scrolls to chatter section — keep it visible */
   .chat-fab {
     display: flex;
   }
   .chatter-sheet {
-    display: flex;
+    display: none !important;
   }
 }
 

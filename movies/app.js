@@ -1036,33 +1036,36 @@ const App = (() => {
 
     const topScore = participants.length ? participants[0].score : null;
 
-    list.innerHTML = withTier.length ? withTier.map((p) => {
-      const isFirst = p.score === topScore && topScore !== null;
-      const imgSrc = placeImage(p.pos);
+    const firstRows  = withTier.filter(p => p.score === topScore && topScore !== null);
+    const otherRows  = withTier.filter(p => p.score !== topScore || topScore === null);
 
-      const badge = imgSrc
+    const renderRow = (p) => {
+      const imgSrc  = placeImage(p.pos);
+      const isFirst = p.score === topScore && topScore !== null;
+      const badge   = imgSrc
         ? `<img class="lb-place-img" src="${imgSrc}" alt="${p.pos + 1} place" loading="lazy" onclick="event.stopPropagation();App.openLightbox('${imgSrc}')">`
         : `<div class="lb-rank${isFirst ? ' lb-rank-first' : ''}">${p.pos + 1}</div>`;
-
-      // Avatar becomes faded background of the row tile
-      const bgStyle = p.avatarUrl
-        ? `style="background-image:url('${esc(p.avatarUrl)}');"`
-        : '';
-
+      const bgStyle = p.avatarUrl ? `style="background-image:url('${esc(p.avatarUrl)}');"` : '';
       const rowInner = `
         <div class="lb-row-bg" ${bgStyle}></div>
         ${badge}
         <div class="lb-name${isFirst ? ' lb-name-first' : ''}">${esc(p.name)}</div>
         <div class="lb-score${isFirst ? ' lb-score-first' : ''}">${p.score}</div>`;
+      if (isFirst) return `<div class="leaderboard-row lb-first">${rowInner}</div>`;
+      return `<details class="lb-details"><summary class="leaderboard-row">${rowInner}</summary></details>`;
+    };
 
-      if (isFirst) {
-        return `<div class="leaderboard-row lb-first">${rowInner}</div>`;
-      }
-      return `
-        <details class="lb-details">
-          <summary class="leaderboard-row">${rowInner}</summary>
-        </details>`;
-    }).join('') : '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">No picks submitted yet.</div>';
+    const firstHtml = firstRows.map(renderRow).join('');
+    const otherHtml = otherRows.map(renderRow).join('');
+    const isMobile  = window.innerWidth < 900;
+
+    list.innerHTML = withTier.length
+      ? firstHtml + (otherHtml
+          ? (isMobile
+              ? `<details class="lb-collapse-group"><summary class="lb-collapse-summary">Show all ${otherRows.length} more</summary>${otherHtml}</details>`
+              : otherHtml)
+          : '')
+      : '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">No picks submitted yet.</div>';
   }
 
 
@@ -1755,26 +1758,9 @@ const App = (() => {
   }
 
   function toggleChatterSheet() {
-    const sheet = document.getElementById('chatterSheet');
-    if (!sheet) return;
-    const isHidden = sheet.classList.contains('hidden');
-    if (isHidden) {
-      // Populate the sheet with a copy of the chatter section contents
-      const inner = document.getElementById('chatterSheetInner');
-      if (inner && !inner.querySelector('.chatter-movie-selector')) {
-        const src = document.getElementById('chatterSection');
-        if (src) inner.innerHTML = src.innerHTML;
-        // Re-attach dynamic event for the input char counter inside sheet
-        const inp = inner.querySelector('.chatter-input');
-        const cc = inner.querySelector('.chatter-char-count');
-        if (inp && cc) inp.addEventListener('input', () => { cc.textContent = `${inp.value.length} / 500`; });
-      }
-      sheet.classList.remove('hidden');
-      document.body.classList.add('sheet-open');
-    } else {
-      sheet.classList.add('hidden');
-      document.body.classList.remove('sheet-open');
-    }
+    // Chatter is shown inline on mobile — just scroll to it
+    const section = document.getElementById('chatterSection');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ── Lightbox ───────────────────────────────────────────────────────────
