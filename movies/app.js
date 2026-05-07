@@ -1001,7 +1001,7 @@ const App = (() => {
 
     // Map sorted position (0-based) → image filename based on player count rules.
     // Positions that have no image get a plain number badge instead.
-    const IMG_BASE = '/movies/public/images/leaderboard/';
+    const IMG_BASE = '/movies/images/leaderboard/';
     function placeImage(pos) {
       // pos is 0-based rank in the sorted list
       if (n >= 8) {
