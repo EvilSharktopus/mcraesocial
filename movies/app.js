@@ -1748,14 +1748,8 @@ const App = (() => {
         counter.textContent = `${input.value.length} / 500`;
       });
     }
-    // Auto-select the most recent releasing movie if any this week
-    const weekMovies = getWeekMovies();
-    const autoMovie = weekMovies[0];
-    if (autoMovie) {
-      selectChatterMovie(autoMovie.id, autoMovie.title);
-    } else {
-      selectChatterMovie('general', '🎬 General');
-    }
+    // Default to General channel on load
+    selectChatterMovie('general', '🎬 General');
     // Check for unread in background after a short delay (index may need to be ready)
     setTimeout(checkUnreadChannels, 1500);
   }
