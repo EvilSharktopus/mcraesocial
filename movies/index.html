@@ -150,7 +150,7 @@
       <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:0.06em;color:var(--gold);">
         Build Your Top 10
       </h2>
-      <div style="display:flex;align-items:center;gap:0.6rem;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-top:4px;flex-wrap:wrap;">
         <div id="playerAvatarThumb" style="cursor:pointer;" onclick="document.getElementById('changeAvatarInput').click()" title="Click to change your avatar"></div>
         <span style="font-size:0.78rem;color:var(--text-dim);">
           Picking as: <strong id="currentPlayerName" style="color:var(--text);"></strong>
@@ -158,6 +158,20 @@
           · <button class="btn-ghost" style="color:var(--red);" onclick="App.deleteUser()">Delete user</button>
         </span>
         <input type="file" id="changeAvatarInput" accept="image/*" class="hidden" onchange="App.changeAvatar(this.files[0])">
+        <!-- Letterboxd link -->
+        <span class="lb-link-wrap" id="lbLinkWrap">
+          <span class="lb-link-label">🎞</span>
+          <input
+            type="text"
+            class="lb-username-input"
+            id="lbUsernameInput"
+            placeholder="Letterboxd username"
+            maxlength="40"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter'){App.saveLetterboxdUsername(this.value);this.blur();}"
+            onblur="App.saveLetterboxdUsername(this.value)"
+          >
+        </span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0.75rem;">
@@ -230,10 +244,25 @@
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.apifySync()">
       📡 Sync Box Office (BOM)
     </button>
+    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showLbEditor()">
+      🎞 Edit Letterboxd
+    </button>
     <div id="adminStatus" style="font-size:0.78rem;color:var(--text-dim);"></div>
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showPosterManager()">
       🖼 Upload Posters
     </button>
+  </div>
+
+  <!-- Letterboxd account editor (admin only) -->
+  <div id="lbEditor" class="hidden" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;letter-spacing:0.06em;color:var(--gold);">🎞 Letterboxd Accounts</div>
+      <button class="btn-ghost" onclick="App.hideLbEditor()">✕ Close</button>
+    </div>
+    <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:1rem;">
+      Enter each player's Letterboxd username. Saves automatically on blur or Enter.
+    </div>
+    <div id="lbEditorList"></div>
   </div>
 
   <!-- Box office editor (hidden by default) -->
@@ -287,6 +316,81 @@
       <div id="comparisonGrid"></div>
     </div>
 
+  </div>
+
+  <!-- ── Chatter section ── -->
+  <div class="chatter-section" id="chatterSection">
+
+    <!-- Movie-of-the-week chip selector -->
+    <div class="chatter-movie-selector" id="chatterMovieSelector"></div>
+
+    <div class="chatter-columns">
+
+      <!-- Local Chatter -->
+      <div class="chatter-local">
+        <div class="chatter-col-title">💬 Local Chatter</div>
+        <div class="chatter-feed" id="chatterFeed">
+          <div class="chatter-empty">Select a movie above to load the chat.</div>
+        </div>
+        <div class="chatter-composer" id="chatterComposer">
+          <!-- Identity row: shown when no name saved -->
+          <div class="chatter-identity-row" id="chatterIdentityRow">
+            <span style="font-size:0.78rem;color:var(--text-dim);">Who are you?</span>
+            <input
+              type="text"
+              class="chatter-input chatter-name-input"
+              id="chatterNameInput"
+              placeholder="Enter your name to chat…"
+              maxlength="30"
+              autocomplete="off"
+              onkeydown="if(event.key==='Enter'){App.setChatterIdentity(this.value);}"
+            >
+            <button class="chatter-send-btn" onclick="App.setChatterIdentity(document.getElementById('chatterNameInput').value)">Join</button>
+          </div>
+          <!-- Message row: shown when identity is saved -->
+          <div class="chatter-msg-row hidden" id="chatterMsgRow">
+            <div class="chatter-who" id="chatterWho">
+              <span id="chatterWhoName"></span>
+              <button class="btn-ghost" style="font-size:0.68rem;padding:0.1rem 0.3rem;" onclick="App.clearChatterIdentity()">change</button>
+            </div>
+            <div class="chatter-composer-inner">
+              <input
+                type="text"
+                class="chatter-input"
+                id="chatterInput"
+                placeholder="Say something about this movie…"
+                maxlength="500"
+                autocomplete="off"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.postChatter();}"
+              >
+              <button class="chatter-send-btn" onclick="App.postChatter()" title="Send">➤</button>
+            </div>
+            <div class="chatter-char-count" id="chatterCharCount">0 / 500</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Internet Chatter (Letterboxd) -->
+      <div class="chatter-internet">
+        <div class="chatter-col-title">🎞 Internet Chatter <span class="chatter-lb-badge">Letterboxd</span></div>
+        <div class="chatter-lb-cards" id="chatterLbCards">
+          <div class="chatter-empty">Select a movie to see what the group thought.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mobile chat FAB -->
+  <button class="chat-fab" id="chatFab" onclick="App.toggleChatterSheet()" title="Open Chatter" aria-label="Open Chatter">
+    <img src="/movies/public/images/muppets.png" alt="💬" class="chat-fab-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <span class="chat-fab-emoji" style="display:none">🎭</span>
+  </button>
+
+  <!-- Mobile bottom sheet -->
+  <div class="chatter-sheet hidden" id="chatterSheet">
+    <div class="chatter-sheet-handle" onclick="App.toggleChatterSheet()"></div>
+    <div class="chatter-sheet-inner" id="chatterSheetInner"><!-- cloned from chatter-section on mobile --></div>
   </div>
 
 </div>

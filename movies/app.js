@@ -21,52 +21,52 @@ const App = (() => {
 
   // ── Scoring constants ──────────────────────────────────────────────────
   const PTS_EXACT_BOOKEND = 13;
-  const PTS_EXACT         = 10;
-  const PTS_OFF1          = 7;
-  const PTS_OFF2          = 5;
-  const PTS_IN_TOP10      = 3;
-  const PTS_DARK_HORSE    = 1;
-  const BOOKEND_RANKS     = new Set([1, 10]);
+  const PTS_EXACT = 10;
+  const PTS_OFF1 = 7;
+  const PTS_OFF2 = 5;
+  const PTS_IN_TOP10 = 3;
+  const PTS_DARK_HORSE = 1;
+  const BOOKEND_RANKS = new Set([1, 10]);
 
   // ── Seed data (used on first run if Firestore movies collection is empty) ──
   const SEED_MOVIES = [
     { title: 'Billie Eilish: Hit Me Hard and Soft (Live in 3D)', releaseDate: '2026-05-08' },
-    { title: 'Mortal Kombat II',                                  releaseDate: '2026-05-08' },
-    { title: 'The Sheep Detectives',                              releaseDate: '2026-05-08' },
-    { title: 'In the Grey',                                       releaseDate: '2026-05-15' },
-    { title: 'I Love Boosters',                                   releaseDate: '2026-05-22' },
-    { title: 'Star Wars: The Mandalorian & Grogu',                releaseDate: '2026-05-22' },
-    { title: 'Backrooms',                                         releaseDate: '2026-05-29' },
-    { title: 'Pressure',                                          releaseDate: '2026-05-29' },
-    { title: 'The Breadwinner',                                   releaseDate: '2026-05-29' },
-    { title: 'Tuner',                                             releaseDate: '2026-05-29' },
-    { title: 'Masters of the Universe',                           releaseDate: '2026-06-05' },
-    { title: 'Power Ballad',                                      releaseDate: '2026-06-05' },
-    { title: 'Scary Movie',                                       releaseDate: '2026-06-05' },
-    { title: 'Disclosure Day',                                    releaseDate: '2026-06-12' },
-    { title: 'The Death of Robin Hood',                           releaseDate: '2026-06-19' },
-    { title: 'Toy Story 5',                                       releaseDate: '2026-06-19' },
-    { title: 'The Invite',                                        releaseDate: '2026-06-26' },
-    { title: 'Jackass: Best and Last',                            releaseDate: '2026-06-26' },
-    { title: 'Supergirl',                                         releaseDate: '2026-06-26' },
-    { title: 'Minions & Monsters',                                releaseDate: '2026-07-01' },
-    { title: 'Young Washington',                                  releaseDate: '2026-07-03' },
-    { title: 'Evil Dead Burn',                                    releaseDate: '2026-07-10' },
-    { title: 'Gail Daughtry and the Celebrity Sex Pass',          releaseDate: '2026-07-10' },
-    { title: 'Moana',                                             releaseDate: '2026-07-10' },
-    { title: 'The Odyssey',                                       releaseDate: '2026-07-17' },
-    { title: 'I Want Your Sex',                                   releaseDate: '2026-07-31' },
-    { title: 'Spider-Man: Brand New Day',                         releaseDate: '2026-07-31' },
-    { title: 'Ice Cream Man',                                     releaseDate: '2026-08-07' },
-    { title: 'Super Troopers 3',                                  releaseDate: '2026-08-07' },
-    { title: 'Teenage Sex and Death at Camp Miasma',              releaseDate: '2026-08-07' },
-    { title: 'The End of Oak Street',                             releaseDate: '2026-08-14' },
-    { title: 'PAW Patrol: The Dino Movie',                        releaseDate: '2026-08-14' },
-    { title: 'Insidious: Out of the Further',                     releaseDate: '2026-08-21' },
-    { title: 'Spa Weekend',                                       releaseDate: '2026-08-21' },
-    { title: 'Coyote vs. Acme',                                   releaseDate: '2026-08-28' },
-    { title: 'The Dog Stars',                                     releaseDate: '2026-08-28' },
-    { title: 'Idiots',                                            releaseDate: '2026-08-28' },
+    { title: 'Mortal Kombat II', releaseDate: '2026-05-08' },
+    { title: 'The Sheep Detectives', releaseDate: '2026-05-08' },
+    { title: 'In the Grey', releaseDate: '2026-05-15' },
+    { title: 'I Love Boosters', releaseDate: '2026-05-22' },
+    { title: 'Star Wars: The Mandalorian & Grogu', releaseDate: '2026-05-22' },
+    { title: 'Backrooms', releaseDate: '2026-05-29' },
+    { title: 'Pressure', releaseDate: '2026-05-29' },
+    { title: 'The Breadwinner', releaseDate: '2026-05-29' },
+    { title: 'Tuner', releaseDate: '2026-05-29' },
+    { title: 'Masters of the Universe', releaseDate: '2026-06-05' },
+    { title: 'Power Ballad', releaseDate: '2026-06-05' },
+    { title: 'Scary Movie', releaseDate: '2026-06-05' },
+    { title: 'Disclosure Day', releaseDate: '2026-06-12' },
+    { title: 'The Death of Robin Hood', releaseDate: '2026-06-19' },
+    { title: 'Toy Story 5', releaseDate: '2026-06-19' },
+    { title: 'The Invite', releaseDate: '2026-06-26' },
+    { title: 'Jackass: Best and Last', releaseDate: '2026-06-26' },
+    { title: 'Supergirl', releaseDate: '2026-06-26' },
+    { title: 'Minions & Monsters', releaseDate: '2026-07-01' },
+    { title: 'Young Washington', releaseDate: '2026-07-03' },
+    { title: 'Evil Dead Burn', releaseDate: '2026-07-10' },
+    { title: 'Gail Daughtry and the Celebrity Sex Pass', releaseDate: '2026-07-10' },
+    { title: 'Moana', releaseDate: '2026-07-10' },
+    { title: 'The Odyssey', releaseDate: '2026-07-17' },
+    { title: 'I Want Your Sex', releaseDate: '2026-07-31' },
+    { title: 'Spider-Man: Brand New Day', releaseDate: '2026-07-31' },
+    { title: 'Ice Cream Man', releaseDate: '2026-08-07' },
+    { title: 'Super Troopers 3', releaseDate: '2026-08-07' },
+    { title: 'Teenage Sex and Death at Camp Miasma', releaseDate: '2026-08-07' },
+    { title: 'The End of Oak Street', releaseDate: '2026-08-14' },
+    { title: 'PAW Patrol: The Dino Movie', releaseDate: '2026-08-14' },
+    { title: 'Insidious: Out of the Further', releaseDate: '2026-08-21' },
+    { title: 'Spa Weekend', releaseDate: '2026-08-21' },
+    { title: 'Coyote vs. Acme', releaseDate: '2026-08-28' },
+    { title: 'The Dog Stars', releaseDate: '2026-08-28' },
+    { title: 'Idiots', releaseDate: '2026-08-28' },
   ];
 
   // ── Init ───────────────────────────────────────────────────────────────
@@ -89,8 +89,12 @@ const App = (() => {
       storage = firebase.storage();
     }
 
-    state.phase = new Date() >= CONFIG.deadline ? 'post' : 'pre';
-    state.adminMode = new URLSearchParams(location.search).get('admin') === '1';
+    const _params = new URLSearchParams(location.search);
+    const _phaseOverride = _params.get('phase');
+    state.phase = _phaseOverride === 'post' ? 'post'
+      : _phaseOverride === 'pre' ? 'pre'
+        : new Date() >= CONFIG.deadline ? 'post' : 'pre';
+    state.adminMode = _params.get('admin') === '1';
 
     try {
       const timeout = new Promise((_, reject) =>
@@ -178,7 +182,7 @@ const App = (() => {
 
   // ── Screen navigation ──────────────────────────────────────────────────
   function showScreen(id) {
-    ['screenSetup','screenLoading','screenLanding','screenAvatar','screenPicks','screenResults']
+    ['screenSetup', 'screenLoading', 'screenLanding', 'screenAvatar', 'screenPicks', 'screenResults']
       .forEach(s => document.getElementById(s)?.classList.add('hidden'));
     document.getElementById(id)?.classList.remove('hidden');
   }
@@ -192,7 +196,7 @@ const App = (() => {
   }
 
   function renderPosterWall() {
-    const wall  = document.getElementById('posterWall');
+    const wall = document.getElementById('posterWall');
     const strip = document.getElementById('participantStrip');
 
     // ── Movie poster rows ──────────────────────────────────────────────
@@ -202,14 +206,13 @@ const App = (() => {
         wall.style.display = 'none';
       } else {
         const doubled = [...withPosters, ...withPosters];
-        const half    = Math.ceil(doubled.length / 2);
-        const row1    = doubled.slice(0, half);
-        const row2    = doubled.slice(half).reverse();
+        const half = Math.ceil(doubled.length / 2);
+        const row1 = doubled.slice(0, half);
+        const row2 = doubled.slice(half).reverse();
 
         function makeStrip(movies, cls) {
-          return `<div class="poster-strip ${cls}">${
-            movies.map(m => `<img src="${esc(m.posterPath)}" alt="${esc(m.title)}" class="poster-strip-img" loading="lazy" onerror="this.style.display='none'">`).join('')
-          }</div>`;
+          return `<div class="poster-strip ${cls}">${movies.map(m => `<img src="${esc(m.posterPath)}" alt="${esc(m.title)}" class="poster-strip-img" loading="lazy" onerror="this.style.display='none'">`).join('')
+            }</div>`;
         }
 
         wall.innerHTML = makeStrip(row1, 'strip-ltr') + makeStrip(row2, 'strip-rtl');
@@ -227,8 +230,8 @@ const App = (() => {
         strip.innerHTML = participants.map(p => `
           <div class="ps-card">
             ${p.avatarUrl
-              ? `<img src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" class="ps-poster">`
-              : `<div class="ps-poster ps-poster-ph">🎬</div>`}
+            ? `<img src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" class="ps-poster">`
+            : `<div class="ps-poster ps-poster-ph">🎬</div>`}
             <div class="ps-nameplate"><div class="ps-name">${esc(p.name)}</div></div>
             ${p.picksSubmitted ? '<div class="ps-check">✓</div>' : ''}
           </div>`).join('');
@@ -250,8 +253,8 @@ const App = (() => {
       <div class="participant-chip ${isPreDeadline ? 'no-click' : ''}"
         ${isPreDeadline ? '' : `onclick="App.selectExistingParticipant('${esc(p.id)}')" title="View ${esc(p.name)}'s picks"`}>
         ${p.avatarUrl
-          ? `<img class="chip-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
-          : `<div class="chip-avatar-placeholder">🎬</div>`}
+        ? `<img class="chip-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
+        : `<div class="chip-avatar-placeholder">🎬</div>`}
         <div class="chip-name">${esc(p.name)}</div>
         <div class="chip-status ${p.picksSubmitted ? 'submitted' : ''}">
           ${p.picksSubmitted ? '✓ Submitted' : 'In Progress'}
@@ -400,6 +403,11 @@ const App = (() => {
       document.getElementById('adminPosterBtn')?.classList.remove('hidden');
     } else {
       document.getElementById('adminPosterBtn')?.classList.add('hidden');
+    }
+    // Populate Letterboxd username field
+    const lbInput = document.getElementById('lbUsernameInput');
+    if (lbInput && state.participant?.letterboxdUsername) {
+      lbInput.value = state.participant.letterboxdUsername;
     }
     renderPlayerAvatarThumb();
     renderRankingSlots();
@@ -630,8 +638,8 @@ const App = (() => {
       if (p.rank === fromRank) {
         p.rank = toRank;
       } else if (
-        direction === 1  && p.rank > fromRank && p.rank <= toRank ||
-        direction === -1 && p.rank >= toRank  && p.rank < fromRank
+        direction === 1 && p.rank > fromRank && p.rank <= toRank ||
+        direction === -1 && p.rank >= toRank && p.rank < fromRank
       ) {
         p.rank -= direction;
       }
@@ -717,8 +725,8 @@ const App = (() => {
       return `
         <div class="pm-card" id="pm-${m.id}">
           ${posterUrl
-            ? `<img class="pm-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy">`
-            : `<div class="pm-poster-placeholder"><div class="pm-icon">🎬</div><span>No poster</span></div>`}
+          ? `<img class="pm-poster" src="${esc(posterUrl)}" alt="${esc(m.title)}" loading="lazy">`
+          : `<div class="pm-poster-placeholder"><div class="pm-icon">🎬</div><span>No poster</span></div>`}
           <div class="pm-title">${esc(m.title)}</div>
           <label class="pm-upload-label">
             ${posterUrl ? '↑ Replace file' : '+ Upload file'}
@@ -902,15 +910,32 @@ const App = (() => {
 
   // ── Results screen ─────────────────────────────────────────────────────
   const MOVIE_PALETTE = [
-    '#ef5350','#ec407a','#ab47bc','#7e57c2','#5c6bc0',
-    '#42a5f5','#00acc1','#26a69a','#66bb6a','#d4e157',
-    '#ffca28','#ffa726','#ff7043','#a1887f','#78909c',
-    '#29b6f6','#9ccc65','#fff176','#f06292','#ce93d8',
-    '#80cbc4','#aed581','#ffd54f','#ff8a65','#b0bec5',
-    '#e57373','#4dd0e1','#81c784','#ffb74d','#9575cd',
+    '#ef5350', '#ec407a', '#ab47bc', '#7e57c2', '#5c6bc0',
+    '#42a5f5', '#00acc1', '#26a69a', '#66bb6a', '#d4e157',
+    '#ffca28', '#ffa726', '#ff7043', '#a1887f', '#78909c',
+    '#29b6f6', '#9ccc65', '#fff176', '#f06292', '#ce93d8',
+    '#80cbc4', '#aed581', '#ffd54f', '#ff8a65', '#b0bec5',
+    '#e57373', '#4dd0e1', '#81c784', '#ffb74d', '#9575cd',
   ];
 
   function abbrev(title) {
+    const overrides = [
+      ['mortal kombat ii', 'MKII'],
+      ['he-man',           'HEMAN'],
+      ['he man',           'HEMAN'],
+      ['mandalorian',      'MANDO'],
+      ['spider-man',       'SPIDY'],
+      ['spider man',       'SPIDY'],
+      ['scary movie',      'SCARY'],
+    ];
+    // Normalise key: lowercase, strip leading "the ", collapse punctuation to spaces
+    const key = (title || '').toLowerCase().trim()
+      .replace(/^the\s+/, '')
+      .replace(/['':&]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const match = overrides.find(([prefix]) => key.startsWith(prefix));
+    if (match) return match[1];
     const stop = /^(the|and|of|&|in|a|an|to|at|by|for|from|with|on|vs|best|last|hit|me|hard|soft|live|3d)$/i;
     const words = title.split(/[\s:&\-–!]+/).filter(Boolean);
     const sig = words.filter(w => !stop.test(w));
@@ -967,37 +992,75 @@ const App = (() => {
     renderLeaderboard(withScores);
     renderQuickLookGrid(withScores, pbp);
     renderBoxOfficeTable(withScores, pbp);
+    initChatter();
   }
 
   function renderLeaderboard(participants) {
     const list = document.getElementById('leaderboardList');
     if (!list) return;
 
-    const topScore = participants.length ? participants[0].score : null;
+    const n = participants.length;
 
-    // Assign display medals by score tier (not position)
+    // Map sorted position (0-based) → image filename based on player count rules.
+    // Positions that have no image get a plain number badge instead.
+    const IMG_BASE = '/movies/public/images/leaderboard/';
+    function placeImage(pos) {
+      // pos is 0-based rank in the sorted list
+      if (n >= 8) {
+        // All 8 slots: 1st–7th + last
+        const names = ['1st place', '2nd place', '3rd place', '4th place', '5th place', '6th place', '7th place', 'last place'];
+        return names[pos] ? `${IMG_BASE}${encodeURIComponent(names[pos])}.jpg` : null;
+      }
+      if (n === 7) {
+        // 1st, 2nd, 3rd, 4th, 5th, 7th, last
+        const map = { 0: '1st place', 1: '2nd place', 2: '3rd place', 3: '4th place', 4: '5th place', 5: '7th place', 6: 'last place' };
+        return map[pos] ? `${IMG_BASE}${encodeURIComponent(map[pos])}.jpg` : null;
+      }
+      // 6 or fewer: 1st, 2nd, 3rd, 5th, 7th, last
+      const map6 = { 0: '1st place', 1: '2nd place', 2: '3rd place', 3: '5th place', 4: '7th place', 5: 'last place' };
+      return map6[pos] ? `${IMG_BASE}${encodeURIComponent(map6[pos])}.jpg` : null;
+    }
+
+    // Assign tiers by score (ties share same visual position)
     let tierIdx = -1;
     let lastScore = null;
-    const tierMedals = ['👑', '🥈', '🥉'];
-    const withTier = participants.map(p => {
+    const tierPositions = []; // canonical position per tier
+    const withTier = participants.map((p, i) => {
       if (p.score !== lastScore) { tierIdx++; lastScore = p.score; }
-      return { ...p, tier: tierIdx };
+      return { ...p, tier: tierIdx, pos: i };
     });
+
+    const topScore = participants.length ? participants[0].score : null;
 
     list.innerHTML = withTier.length ? withTier.map((p) => {
       const isFirst = p.score === topScore && topScore !== null;
-      const medal = tierMedals[p.tier] ?? (p.tier + 1);
-      return `
-      <div class="leaderboard-row${isFirst ? ' lb-first' : ''}">
-        <div class="lb-rank${isFirst ? ' lb-rank-first' : ''}">${medal}</div>
-        ${p.avatarUrl
-          ? `<img class="lb-avatar" src="${esc(p.avatarUrl)}" alt="${esc(p.name)}" loading="lazy">`
-          : `<div class="lb-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>`}
+      const imgSrc = placeImage(p.pos);
+
+      const badge = imgSrc
+        ? `<img class="lb-place-img" src="${imgSrc}" alt="${p.pos + 1} place" loading="lazy" onclick="event.stopPropagation();App.openLightbox('${imgSrc}')">`
+        : `<div class="lb-rank${isFirst ? ' lb-rank-first' : ''}">${p.pos + 1}</div>`;
+
+      // Avatar becomes faded background of the row tile
+      const bgStyle = p.avatarUrl
+        ? `style="background-image:url('${esc(p.avatarUrl)}');"`
+        : '';
+
+      const rowInner = `
+        <div class="lb-row-bg" ${bgStyle}></div>
+        ${badge}
         <div class="lb-name${isFirst ? ' lb-name-first' : ''}">${esc(p.name)}</div>
-        <div class="lb-score${isFirst ? ' lb-score-first' : ''}">${p.score}</div>
-      </div>`;
+        <div class="lb-score${isFirst ? ' lb-score-first' : ''}">${p.score}</div>`;
+
+      if (isFirst) {
+        return `<div class="leaderboard-row lb-first">${rowInner}</div>`;
+      }
+      return `
+        <details class="lb-details">
+          <summary class="leaderboard-row">${rowInner}</summary>
+        </details>`;
     }).join('') : '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">No picks submitted yet.</div>';
   }
+
 
   function renderQuickLookGrid(participants, pbp) {
     const grid = document.getElementById('comparisonGrid');
@@ -1009,8 +1072,8 @@ const App = (() => {
     const color = id => { if (!colorMap[id]) colorMap[id] = MOVIE_PALETTE[ci++ % MOVIE_PALETTE.length]; return colorMap[id]; };
     participants.forEach(p => {
       const picks = pbp[p.id] || [];
-      [...picks.filter(x=>!x.isDarkHorse).sort((a,b)=>a.rank-b.rank),
-       ...picks.filter(x=>x.isDarkHorse)].forEach(pk => color(pk.movieId));
+      [...picks.filter(x => !x.isDarkHorse).sort((a, b) => a.rank - b.rank),
+      ...picks.filter(x => x.isDarkHorse)].forEach(pk => color(pk.movieId));
     });
 
     const cell = (movieId) => {
@@ -1021,13 +1084,13 @@ const App = (() => {
 
     let html = `<div class="cg-scroll"><table class="cg-table"><thead><tr>
       <th class="cg-th cg-row-label"></th>
-      ${participants.map(p=>`<th class="cg-th">${esc(p.name)}</th>`).join('')}
+      ${participants.map(p => `<th class="cg-th">${esc(p.name)}</th>`).join('')}
     </tr></thead><tbody>`;
 
     for (let r = 1; r <= 10; r++) {
-      html += `<tr><td class="cg-row-label${r===1||r===10?' cg-bookend':''}">${r}</td>`;
+      html += `<tr><td class="cg-row-label${r === 1 || r === 10 ? ' cg-bookend' : ''}">${r}</td>`;
       participants.forEach(p => {
-        const pk = (pbp[p.id]||[]).filter(x=>!x.isDarkHorse).find(x=>x.rank===r);
+        const pk = (pbp[p.id] || []).filter(x => !x.isDarkHorse).find(x => x.rank === r);
         html += cell(pk?.movieId);
       });
       html += '</tr>';
@@ -1035,23 +1098,27 @@ const App = (() => {
     for (let dhi = 0; dhi < 3; dhi++) {
       html += `<tr><td class="cg-row-label cg-dh-label">🐴</td>`;
       participants.forEach(p => {
-        const dhs = (pbp[p.id]||[]).filter(x=>x.isDarkHorse);
+        const dhs = (pbp[p.id] || []).filter(x => x.isDarkHorse);
         html += cell(dhs[dhi]?.movieId);
       });
       html += '</tr>';
     }
     html += '</tbody></table></div>';
 
-    // Legend
+    // Legend (collapsible)
     const legendItems = Object.keys(colorMap)
-      .map(id => ({ id, bg: colorMap[id], m: state.movies.find(m=>m.id===id) }))
-      .filter(x=>x.m);
-    html += `<div class="cg-legend">${legendItems.map(x=>`
-      <div class="cg-legend-item">
-        <span class="cg-swatch" style="background:${x.bg};"></span>
-        <span class="cg-ab">${abbrev(x.m.title)}</span>
-        <span class="cg-legend-full">${esc(x.m.title)}</span>
-      </div>`).join('')}</div>`;
+      .map(id => ({ id, bg: colorMap[id], m: state.movies.find(m => m.id === id) }))
+      .filter(x => x.m);
+    html += `<details class="cg-legend-wrap">
+      <summary class="cg-legend-toggle">Legend (${legendItems.length} movies)</summary>
+      <div class="cg-legend">${legendItems.map(x => `
+        <div class="cg-legend-item">
+          <span class="cg-swatch" style="background:${x.bg};"></span>
+          <span class="cg-ab">${abbrev(x.m.title)}</span>
+          <span class="cg-legend-full">${esc(x.m.title)}</span>
+        </div>`).join('')}
+      </div>
+    </details>`;
 
     grid.innerHTML = html;
   }
@@ -1061,7 +1128,7 @@ const App = (() => {
     const updatedEl = document.getElementById('boUpdated');
     if (!wrap) return;
 
-    const hasGross = state.movies.filter(m => m.domesticGross > 0).sort((a,b) => b.domesticGross - a.domesticGross);
+    const hasGross = state.movies.filter(m => m.domesticGross > 0).sort((a, b) => b.domesticGross - a.domesticGross);
     if (!hasGross.length) {
       wrap.innerHTML = '<div class="text-dim" style="padding:1rem;font-size:0.8rem;">Box office data not yet available. Check back soon!</div>';
       return;
@@ -1078,17 +1145,17 @@ const App = (() => {
       <th class="bot-poster-h"></th>
       <th class="bot-title-h">Movie</th>
       <th class="bot-gross-h">Domestic Gross</th>
-      ${participants.map(p=>`<th class="bot-player-h">${esc(p.name)}</th>`).join('')}
+      ${participants.map(p => `<th class="bot-player-h">${esc(p.name)}</th>`).join('')}
     </tr></thead><tbody>`;
 
     hasGross.forEach((m, i) => {
       const posterUrl = getPosterUrl(m);
       const rank = m.boxOfficeRank || '—';
-      const gross = `$${(m.domesticGross/1_000_000).toFixed(1)}M`;
+      const gross = `$${(m.domesticGross / 1_000_000).toFixed(1)}M`;
       const inTop10 = m.boxOfficeRank && m.boxOfficeRank <= 10;
 
-      html += `<tr class="bot-row${i%2?' bot-odd':''}">
-        <td class="bot-rank-cell${inTop10?' bot-top10':''}">${rank}</td>
+      html += `<tr class="bot-row${i % 2 ? ' bot-odd' : ''}">
+        <td class="bot-rank-cell${inTop10 ? ' bot-top10' : ''}">${rank}</td>
         <td class="bot-poster-cell">${posterUrl
           ? `<img src="${esc(posterUrl)}" class="bot-poster-img" loading="lazy" onerror="this.style.display='none'">`
           : `<div class="bot-poster-ph">🎬</div>`}</td>
@@ -1098,11 +1165,11 @@ const App = (() => {
       participants.forEach(p => {
         const picks = pbp[p.id] || [];
         const pts = moviePtsForPlayer(m.id, picks, actualRankMap);
-        const isDH = picks.filter(x=>x.isDarkHorse).some(x=>x.movieId===m.id);
-        const isAny = picks.some(x=>x.movieId===m.id);
+        const isDH = picks.filter(x => x.isDarkHorse).some(x => x.movieId === m.id);
+        const isAny = picks.some(x => x.movieId === m.id);
         if (pts !== null && pts > 0) ptTotals[p.id] += pts;
-        const cls = pts===null ? 'bot-none' : pts>=13 ? 'bot-exact' : pts>=7 ? 'bot-close' : pts>0 ? 'bot-ok' : isAny ? 'bot-zero' : 'bot-none';
-        const disp = pts===null ? '' : isDH && pts>0 ? `🐴 +${pts}` : pts>0 ? pts : isAny ? (isDH?'🐴 0':'0') : '';
+        const cls = pts === null ? 'bot-none' : pts >= 13 ? 'bot-exact' : pts >= 7 ? 'bot-close' : pts > 0 ? 'bot-ok' : isAny ? 'bot-zero' : 'bot-none';
+        const disp = pts === null ? '' : isDH && pts > 0 ? `🐴 +${pts}` : pts > 0 ? pts : isAny ? (isDH ? '🐴 0' : '0') : '';
         html += `<td class="bot-pts-cell ${cls}">${disp}</td>`;
       });
       html += '</tr>';
@@ -1110,11 +1177,11 @@ const App = (() => {
 
     html += `<tr class="bot-totals-row">
       <td colspan="4">Total Points</td>
-      ${participants.map(p=>`<td class="bot-pts-cell bot-total">${ptTotals[p.id]}</td>`).join('')}
+      ${participants.map(p => `<td class="bot-pts-cell bot-total">${ptTotals[p.id]}</td>`).join('')}
     </tr></tbody></table>`;
 
     wrap.innerHTML = html;
-    if (updatedEl) updatedEl.textContent = `🎯 Box Office — Updated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`;
+    if (updatedEl) updatedEl.textContent = `🎯 Box Office — Updated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   }
 
 
@@ -1172,8 +1239,8 @@ const App = (() => {
       });
       const ws2 = state.participants
         .filter(p => p.picksSubmitted)
-        .map(p => { const {total} = scoreParticipantPicks(pbp2[p.id]||[]); return {...p,score:total}; })
-        .sort((a,b) => b.score - a.score);
+        .map(p => { const { total } = scoreParticipantPicks(pbp2[p.id] || []); return { ...p, score: total }; })
+        .sort((a, b) => b.score - a.score);
       renderLeaderboard(ws2);
       renderQuickLookGrid(ws2, pbp2);
       renderBoxOfficeTable(ws2, pbp2);
@@ -1242,7 +1309,7 @@ const App = (() => {
       const snap2 = await db.collection('picks').get();
       const pbp2 = {};
       snap2.docs.forEach(d => { const r = d.data(); if (!pbp2[r.participantId]) pbp2[r.participantId] = []; pbp2[r.participantId].push({ movieId: r.movieId, rank: r.rank, isDarkHorse: r.isDarkHorse }); });
-      const ws2 = state.participants.filter(p => p.picksSubmitted).map(p => { const {total} = scoreParticipantPicks(pbp2[p.id]||[]); return {...p,score:total}; }).sort((a,b) => b.score-a.score);
+      const ws2 = state.participants.filter(p => p.picksSubmitted).map(p => { const { total } = scoreParticipantPicks(pbp2[p.id] || []); return { ...p, score: total }; }).sort((a, b) => b.score - a.score);
       renderLeaderboard(ws2); renderQuickLookGrid(ws2, pbp2); renderBoxOfficeTable(ws2, pbp2);
     } catch (err) {
       toast('Sync failed: ' + err.message, 'error');
@@ -1294,6 +1361,442 @@ const App = (() => {
     setTimeout(() => el.remove(), 3500);
   }
 
+  // ── Letterboxd username ───────────────────────────────────────────────
+  async function saveLetterboxdUsername(raw) {
+    const username = (raw || '').trim().replace(/^@/, '');
+    if (!state.participant) return;
+    if (username === (state.participant.letterboxdUsername || '')) return; // no change
+    try {
+      await db.collection('participants').doc(state.participant.id).update({ letterboxdUsername: username || null });
+      state.participant.letterboxdUsername = username || null;
+      const idx = state.participants.findIndex(p => p.id === state.participant.id);
+      if (idx >= 0) state.participants[idx].letterboxdUsername = username || null;
+      if (username) toast(`Letterboxd linked: @${username} 🎞`, 'success');
+    } catch (err) {
+      toast('Could not save Letterboxd username: ' + err.message, 'error');
+    }
+  }
+
+  // ── Letterboxd admin editor ────────────────────────────────────────────
+  function showLbEditor() {
+    const list = document.getElementById('lbEditorList');
+    if (!list) return;
+    list.innerHTML = state.participants.map(p => `
+      <div class="lb-edit-row">
+        <div class="lb-edit-info">
+          ${p.avatarUrl ? `<img class="lb-edit-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-edit-avatar lb-edit-avatar-ph">🎬</div>`}
+          <span class="lb-edit-name">${esc(p.name)}</span>
+        </div>
+        <div class="lb-edit-field">
+          <span class="lb-link-label">🎞</span>
+          <input
+            type="text"
+            class="lb-username-input"
+            data-pid="${esc(p.id)}"
+            placeholder="letterboxd username"
+            value="${esc(p.letterboxdUsername || '')}"
+            maxlength="40"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter'){App.saveLbEditorRow('${esc(p.id)}',this.value);this.blur();}"
+            onblur="App.saveLbEditorRow('${esc(p.id)}',this.value)"
+          >
+        </div>
+      </div>`);
+    document.getElementById('lbEditor')?.classList.remove('hidden');
+  }
+
+  function hideLbEditor() {
+    document.getElementById('lbEditor')?.classList.add('hidden');
+  }
+
+  async function saveLbEditorRow(participantId, raw) {
+    const username = (raw || '').trim().replace(/^@/, '');
+    const p = state.participants.find(x => x.id === participantId);
+    if (!p) return;
+    if (username === (p.letterboxdUsername || '')) return;
+    try {
+      await db.collection('participants').doc(participantId).update({ letterboxdUsername: username || null });
+      p.letterboxdUsername = username || null;
+      toast(`${p.name}: Letterboxd ${username ? `→ @${username}` : 'cleared'} 🎞`, 'success');
+      // Refresh internet chatter if this movie is open
+      if (_chatterMovieId) renderLetterboxdCards(_chatterMovieId, _chatterMovieTitle);
+    } catch (err) {
+      toast('Save failed: ' + err.message, 'error');
+    }
+  }
+
+  function lbSlug(title) {
+    return title
+      .toLowerCase()
+      .replace(/['']/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  // ── Chatter identity (localStorage) ──────────────────────────────────────
+  const CHATTER_ID_KEY = 'mw_chatter_identity';
+  let _chatterIdentity = null; // { participantId, name, avatarUrl }
+
+  function loadChatterIdentity() {
+    try {
+      const raw = localStorage.getItem(CHATTER_ID_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      // Try to match against known participants so we get the latest avatar
+      const match = state.participants.find(p => p.id === parsed.participantId || p.name.toLowerCase() === parsed.name.toLowerCase());
+      _chatterIdentity = match
+        ? { participantId: match.id, name: match.name, avatarUrl: match.avatarUrl || null }
+        : parsed;
+    } catch (e) { /* ignore */ }
+  }
+
+  function setChatterIdentity(raw) {
+    const name = (raw || '').trim();
+    if (!name) return;
+    // Try to match a known participant for avatar
+    const match = state.participants.find(p => p.name.toLowerCase() === name.toLowerCase());
+    _chatterIdentity = match
+      ? { participantId: match.id, name: match.name, avatarUrl: match.avatarUrl || null }
+      : { participantId: 'guest_' + name.toLowerCase().replace(/\s+/g, '_'), name, avatarUrl: null };
+    try { localStorage.setItem(CHATTER_ID_KEY, JSON.stringify(_chatterIdentity)); } catch (e) { }
+    renderChatterComposerState();
+  }
+
+  function clearChatterIdentity() {
+    _chatterIdentity = null;
+    try { localStorage.removeItem(CHATTER_ID_KEY); } catch (e) { }
+    renderChatterComposerState();
+  }
+
+  function renderChatterComposerState() {
+    const identityRow = document.getElementById('chatterIdentityRow');
+    const msgRow = document.getElementById('chatterMsgRow');
+    const whoName = document.getElementById('chatterWhoName');
+    const identity = state.participant || _chatterIdentity;
+    if (identity) {
+      identityRow?.classList.add('hidden');
+      msgRow?.classList.remove('hidden');
+      if (whoName) whoName.textContent = `Chatting as ${identity.name}`;
+    } else {
+      identityRow?.classList.remove('hidden');
+      msgRow?.classList.add('hidden');
+    }
+  }
+
+  // ── Chatter ────────────────────────────────────────────────────────────
+  let _chatterUnsub = null;
+  let _chatterMovieId = null;
+  let _chatterMovieTitle = null;
+
+  function getWeekMovies() {
+    const now = new Date();
+    const msPerDay = 86400000;
+    // Show movies releasing within the last 10 days or next 7 days
+    return state.movies.filter(m => {
+      if (!m.releaseDate) return false;
+      const rel = new Date(m.releaseDate + 'T12:00:00');
+      const diff = (rel - now) / msPerDay;
+      return diff >= -10 && diff <= 7;
+    }).sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
+  }
+
+  // ── Chatter unread tracking ────────────────────────────────────────────
+  const CHATTER_SEEN_KEY = 'mw_chatter_seen'; // { channelId: epoch_ms }
+  let _chatterSeen = {};
+  let _unreadChannels = new Set();
+
+  function loadChatterSeen() {
+    try { _chatterSeen = JSON.parse(localStorage.getItem(CHATTER_SEEN_KEY) || '{}'); } catch (e) { }
+  }
+
+  function saveChatterSeen() {
+    try { localStorage.setItem(CHATTER_SEEN_KEY, JSON.stringify(_chatterSeen)); } catch (e) { }
+  }
+
+  function markChannelSeen(channelId) {
+    _chatterSeen[channelId] = Date.now();
+    saveChatterSeen();
+    if (_unreadChannels.delete(channelId)) {
+      renderChatterMovieSelector();
+    }
+  }
+
+  async function checkUnreadChannels() {
+    const channels = [{ id: 'general' }, ...getWeekMovies()];
+    let changed = false;
+    await Promise.all(channels.map(async ch => {
+      if (ch.id === _chatterMovieId) return; // active — always seen
+      const lastSeen = _chatterSeen[ch.id] || 0;
+      try {
+        const snap = await db.collection('chatter')
+          .where('movieId', '==', ch.id)
+          .orderBy('createdAt', 'desc')
+          .limit(1)
+          .get();
+        if (!snap.empty) {
+          const ts = snap.docs[0].data().createdAt?.toMillis?.() || 0;
+          if (ts > lastSeen) { _unreadChannels.add(ch.id); changed = true; }
+        }
+      } catch (e) { /* index not ready or empty */ }
+    }));
+    if (changed) renderChatterMovieSelector();
+  }
+
+  function renderChatterMovieSelector() {
+    const wrap = document.getElementById('chatterMovieSelector');
+    if (!wrap) return;
+    const movies = getWeekMovies();
+
+    // Always include a General channel first
+    const chips = [{ id: 'general', title: '🎬 General', posterPath: null }, ...movies];
+
+    wrap.innerHTML = chips.map(m => {
+      const poster = m.posterPath
+        ? (m.posterPath.startsWith('http') ? m.posterPath : `https://image.tmdb.org/t/p/w92${m.posterPath}`)
+        : null;
+      const isActive = m.id === _chatterMovieId;
+      const hasUnread = _unreadChannels.has(m.id);
+      return `
+        <button class="chatter-chip${isActive ? ' active' : ''}" onclick="App.selectChatterMovie('${m.id}','${esc(m.title)}')"
+          title="${esc(m.title)}">
+          ${poster ? `<img src="${esc(poster)}" alt="" class="chatter-chip-poster" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <span class="chatter-chip-title">${esc(m.title)}</span>
+          ${hasUnread ? '<span class="chatter-chip-dot"></span>' : ''}
+        </button>`;
+    }).join('');
+  }
+
+  function selectChatterMovie(movieId, movieTitle) {
+    _chatterMovieId = movieId;
+    _chatterMovieTitle = movieTitle;
+    markChannelSeen(movieId);   // clear unread dot for this channel
+    renderChatterMovieSelector();
+    loadChatter(movieId);
+    renderLetterboxdCards(movieId, movieTitle);
+    renderChatterComposerState();
+  }
+
+  function loadChatter(movieId) {
+    const feed = document.getElementById('chatterFeed');
+    if (!feed) return;
+    feed.innerHTML = '<div class="chatter-empty">Loading…</div>';
+
+    // Unsubscribe previous listener
+    if (_chatterUnsub) { _chatterUnsub(); _chatterUnsub = null; }
+
+    _chatterUnsub = db.collection('chatter')
+      .where('movieId', '==', movieId)
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snap => {
+        if (snap.empty) {
+          feed.innerHTML = '<div class="chatter-empty">No messages yet. Be the first to say something!</div>';
+          return;
+        }
+        feed.innerHTML = snap.docs.map(d => {
+          const m = { id: d.id, ...d.data() };
+          const ts = m.createdAt?.toDate ? m.createdAt.toDate() : new Date();
+          const timeStr = ts.toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+          const dateStr = ts.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+          const isMe = (_chatterIdentity && m.participantId === _chatterIdentity.participantId)
+            || (state.participant && m.participantId === state.participant.id);
+          const canDelete = isMe || state.adminMode;
+          return `
+            <div class="chatter-msg${isMe ? ' chatter-msg-me' : ''}" data-id="${m.id}">
+              ${m.avatarUrl ? `<img class="chatter-avatar" src="${esc(m.avatarUrl)}" alt="">` : `<div class="chatter-avatar chatter-avatar-ph">🎬</div>`}
+              <div class="chatter-msg-body">
+                <div class="chatter-msg-meta">
+                  <span class="chatter-msg-name">${esc(m.participantName)}</span>
+                  <span class="chatter-msg-time">${dateStr} ${timeStr}</span>
+                  ${canDelete ? `<button class="chatter-delete-btn" onclick="App.deleteChatter('${m.id}')" title="Delete">✕</button>` : ''}
+                </div>
+                <div class="chatter-msg-text">${esc(m.text)}</div>
+              </div>
+            </div>`;
+        }).join('');
+
+        // Smart scroll: auto-scroll if near bottom, else show notification pill
+        const isNearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+        if (isNearBottom) {
+          feed.scrollTop = feed.scrollHeight;
+          document.getElementById('chatterNewMsg')?.remove();
+        } else {
+          // Show / update the new-message pill
+          let pill = document.getElementById('chatterNewMsg');
+          if (!pill) {
+            pill = document.createElement('button');
+            pill.id = 'chatterNewMsg';
+            pill.className = 'chatter-new-msg-pill';
+            pill.onclick = () => { feed.scrollTop = feed.scrollHeight; pill.remove(); };
+            feed.parentElement.style.position = 'relative';
+            feed.parentElement.appendChild(pill);
+          }
+          pill.textContent = '↓ New message';
+        }
+      }, err => {
+        console.error('Chatter listener error:', err);
+        feed.innerHTML = '<div class="chatter-empty" style="color:var(--red);">Could not load chat. Make sure Firestore has an index on chatter(movieId + createdAt).</div>';
+      });
+  }
+
+  async function postChatter() {
+    const input = document.getElementById('chatterInput');
+    const text = (input?.value || '').trim();
+    // Resolve identity: prefer picks-screen participant, fall back to chatter identity
+    const identity = state.participant || _chatterIdentity;
+    if (!text || !identity || !_chatterMovieId) return;
+
+    const btn = document.querySelector('.chatter-send-btn');
+    if (btn) btn.disabled = true;
+
+    try {
+      await db.collection('chatter').add({
+        movieId: _chatterMovieId,
+        movieTitle: _chatterMovieTitle || '',
+        participantId: identity.id || identity.participantId,
+        participantName: identity.name,
+        avatarUrl: identity.avatarUrl || null,
+        text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      if (input) input.value = '';
+      const cc = document.getElementById('chatterCharCount');
+      if (cc) cc.textContent = '0 / 500';
+    } catch (err) {
+      toast('Failed to send: ' + err.message, 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+      input?.focus();
+    }
+  }
+
+  async function deleteChatter(msgId) {
+    try {
+      await db.collection('chatter').doc(msgId).delete();
+    } catch (err) {
+      toast('Delete failed: ' + err.message, 'error');
+    }
+  }
+
+  function starsHtml(rating) {
+    // rating is 0.5–5.0 in 0.5 steps → convert to filled/half/empty stars
+    const full = Math.floor(rating);
+    const half = (rating % 1) >= 0.5 ? 1 : 0;
+    const empty = 5 - full - half;
+    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+  }
+
+  async function renderLetterboxdCards(movieId, movieTitle) {
+    const wrap = document.getElementById('chatterLbCards');
+    if (!wrap) return;
+    if (movieId === 'general') {
+      wrap.innerHTML = '<div class="chatter-empty">Select a specific movie to see Letterboxd links.</div>';
+      return;
+    }
+    const slug = lbSlug(movieTitle || '');
+    const withLb = state.participants.filter(p => p.letterboxdUsername);
+    if (!withLb.length) {
+      wrap.innerHTML = '<div class="chatter-empty">No one has linked their Letterboxd yet.<br>Add yours in the picks screen!</div>';
+      return;
+    }
+
+    // Render skeleton cards immediately
+    wrap.innerHTML = withLb.map(p => `
+      <a class="lb-card" id="lbc-${esc(p.id)}" href="https://letterboxd.com/${encodeURIComponent(p.letterboxdUsername)}/film/${slug}/" target="_blank" rel="noopener">
+        ${p.avatarUrl ? `<img class="lb-card-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-card-avatar lb-card-avatar-ph">🎬</div>`}
+        <div class="lb-card-info">
+          <div class="lb-card-name">${esc(p.name)}</div>
+          <div class="lb-card-username">@${esc(p.letterboxdUsername)}</div>
+        </div>
+        <div class="lb-card-rating" id="lbr-${esc(p.id)}"><span class="lb-rating-loading">…</span></div>
+      </a>`).join('');
+
+    // Fetch ratings in parallel
+    await Promise.all(withLb.map(async p => {
+      const ratingEl = document.getElementById(`lbr-${p.id}`);
+      if (!ratingEl) return;
+      try {
+        const res = await fetch(`/api/letterboxd?username=${encodeURIComponent(p.letterboxdUsername)}&film=${encodeURIComponent(slug)}`);
+        const data = await res.json();
+        if (data.rating != null) {
+          ratingEl.innerHTML = `<span class="lb-stars">${starsHtml(data.rating)}</span><span class="lb-rating-num">${data.rating}</span>`;
+          // Update card href to the exact review URL if we got one
+          if (data.reviewUrl) document.getElementById(`lbc-${p.id}`)?.setAttribute('href', data.reviewUrl);
+        } else {
+          ratingEl.innerHTML = `<span class="lb-no-rating">not rated yet</span>`;
+        }
+      } catch {
+        ratingEl.innerHTML = `<span class="lb-no-rating">—</span>`;
+      }
+    }));
+  }
+
+
+  function initChatter() {
+    loadChatterIdentity(); // restore from localStorage
+    loadChatterSeen();     // restore seen timestamps
+    renderChatterMovieSelector();
+    renderChatterComposerState();
+    // Wire char counter
+    const input = document.getElementById('chatterInput');
+    const counter = document.getElementById('chatterCharCount');
+    if (input && counter) {
+      input.addEventListener('input', () => {
+        counter.textContent = `${input.value.length} / 500`;
+      });
+    }
+    // Auto-select the most recent releasing movie if any this week
+    const weekMovies = getWeekMovies();
+    const autoMovie = weekMovies[0];
+    if (autoMovie) {
+      selectChatterMovie(autoMovie.id, autoMovie.title);
+    } else {
+      selectChatterMovie('general', '🎬 General');
+    }
+    // Check for unread in background after a short delay (index may need to be ready)
+    setTimeout(checkUnreadChannels, 1500);
+  }
+
+  function toggleChatterSheet() {
+    const sheet = document.getElementById('chatterSheet');
+    if (!sheet) return;
+    const isHidden = sheet.classList.contains('hidden');
+    if (isHidden) {
+      // Populate the sheet with a copy of the chatter section contents
+      const inner = document.getElementById('chatterSheetInner');
+      if (inner && !inner.querySelector('.chatter-movie-selector')) {
+        const src = document.getElementById('chatterSection');
+        if (src) inner.innerHTML = src.innerHTML;
+        // Re-attach dynamic event for the input char counter inside sheet
+        const inp = inner.querySelector('.chatter-input');
+        const cc = inner.querySelector('.chatter-char-count');
+        if (inp && cc) inp.addEventListener('input', () => { cc.textContent = `${inp.value.length} / 500`; });
+      }
+      sheet.classList.remove('hidden');
+      document.body.classList.add('sheet-open');
+    } else {
+      sheet.classList.add('hidden');
+      document.body.classList.remove('sheet-open');
+    }
+  }
+
+  // ── Lightbox ───────────────────────────────────────────────────────────
+  function openLightbox(src) {
+    let overlay = document.getElementById('lbLightbox');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'lbLightbox';
+      overlay.className = 'lb-lightbox';
+      overlay.innerHTML = '<img class="lb-lightbox-img" alt="">';
+      overlay.addEventListener('click', () => overlay.classList.add('hidden'));
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') overlay.classList.add('hidden');
+      });
+      document.body.appendChild(overlay);
+    }
+    overlay.querySelector('img').src = src;
+    overlay.classList.remove('hidden');
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────
   return {
     init, handleNameSubmit, goToLanding, selectExistingParticipant,
@@ -1301,7 +1804,11 @@ const App = (() => {
     addToPicks, removeFromPicks, filterPool, submitPicks,
     showBoEditor, hideBoEditor, saveBoxOffice, apifySync,
     showPosterManager, hidePosterManager, handlePosterUpload, handlePosterUrlSet,
-    changeAvatar, removeDarkHorse, deleteUser,
+    changeAvatar, removeDarkHorse, deleteUser, openLightbox,
+    saveLetterboxdUsername,
+    showLbEditor, hideLbEditor, saveLbEditorRow,
+    selectChatterMovie, postChatter, deleteChatter, toggleChatterSheet,
+    setChatterIdentity, clearChatterIdentity,
   };
 
 })();
