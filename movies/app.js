@@ -91,7 +91,7 @@ const App = (() => {
 
     const _params = new URLSearchParams(location.search);
     const _phaseOverride = _params.get('phase');
-    const _deadline = new Date('2026-05-09T18:00:00Z'); // picks open until May 9 noon MDT
+    const _deadline = new Date('2026-05-08T00:00:00Z'); // picks closed — scoreboard mode
     state.phase = _phaseOverride === 'post' ? 'post'
       : _phaseOverride === 'pre' ? 'pre'
         : new Date() >= _deadline ? 'post' : 'pre';
