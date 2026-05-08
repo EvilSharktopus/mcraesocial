@@ -1325,11 +1325,6 @@ const App = (() => {
   }
 
   async function apifySync() {
-    const token = CONFIG.apify?.token;
-    if (!token || token === 'YOUR_APIFY_TOKEN') {
-      toast('Add your Apify token to config.js first. Free at console.apify.com/account/integrations', 'error');
-      return;
-    }
     const status = document.getElementById('adminStatus');
     if (status) status.textContent = 'Fetching from Box Office Mojo via Apify…';
 
@@ -1344,13 +1339,14 @@ const App = (() => {
 
     try {
       if (status) status.textContent = `Querying Box Office Mojo for ${movieList.length} movies… (~30s)`;
-      const res = await fetch(
-        `https://api.apify.com/v2/acts/trovevault~movie-box-office-tracker/run-sync-get-dataset-items?token=${token}&timeout=120`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ movies: movieList }) }
-      );
-      if (!res.ok) throw new Error(`Apify ${res.status}: ${await res.text()}`);
+      const res = await fetch('/api/bom-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ movies: movieList }),
+      });
+      if (!res.ok) throw new Error(`Server ${res.status}: ${await res.text()}`);
       const results = await res.json();
-      if (!results.length) { toast('Apify returned no results.', 'error'); return; }
+      if (!results.length) { toast('No box office data returned yet — try again later.', 'error'); return; }
 
       let updated = 0;
       const batch = db.batch();
@@ -1384,7 +1380,9 @@ const App = (() => {
       const pbp2 = {};
       snap2.docs.forEach(d => { const r = d.data(); if (!pbp2[r.participantId]) pbp2[r.participantId] = []; pbp2[r.participantId].push({ movieId: r.movieId, rank: r.rank, isDarkHorse: r.isDarkHorse }); });
       const ws2 = state.participants.filter(p => p.picksSubmitted).map(p => { const { total } = scoreParticipantPicks(pbp2[p.id] || []); return { ...p, score: total }; }).sort((a, b) => b.score - a.score);
-      renderLeaderboard(ws2); renderQuickLookGrid(ws2, pbp2); renderBoxOfficeTable(ws2, pbp2);
+      renderLeaderboard(ws2); renderMiniLeaderboard(ws2);
+      renderQuickLookGrid(ws2, pbp2);
+      renderBoxOfficeTable(ws2, pbp2); renderMiniBoxOffice();
     } catch (err) {
       toast('Sync failed: ' + err.message, 'error');
       if (status) status.textContent = 'Sync failed: ' + err.message;
