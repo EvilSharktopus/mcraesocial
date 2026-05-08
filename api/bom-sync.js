@@ -2,7 +2,7 @@
 // Calls the Apify BOM actor using the server-side APIFY_TOKEN env variable.
 // The client never sees the token.
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   const token = process.env.APIFY_TOKEN;
