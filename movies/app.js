@@ -1572,6 +1572,16 @@ const App = (() => {
     }).sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
   }
 
+  function getPickedMovies() {
+    // Only movies that at least one participant actually selected
+    const pickedIds = new Set(
+      Object.values(state._picksByParticipant).flat().map(p => p.movieId)
+    );
+    return state.movies
+      .filter(m => pickedIds.has(m.id))
+      .sort((a, b) => (a.releaseDate || '').localeCompare(b.releaseDate || ''));
+  }
+
   // ── Chatter unread tracking ────────────────────────────────────────────
   const CHATTER_SEEN_KEY = 'mw_chatter_seen'; // { channelId: epoch_ms }
   let _chatterSeen = {};
@@ -1594,7 +1604,7 @@ const App = (() => {
   }
 
   async function checkUnreadChannels() {
-    const channels = [{ id: 'general' }, ...getWeekMovies()];
+    const channels = [{ id: 'general' }, ...getPickedMovies()];
     let changed = false;
     await Promise.all(channels.map(async ch => {
       if (ch.id === _chatterMovieId) return; // active — always seen
@@ -1617,7 +1627,7 @@ const App = (() => {
   function renderChatterMovieSelector() {
     const wrap = document.getElementById('chatterMovieSelector');
     if (!wrap) return;
-    const movies = getWeekMovies();
+    const movies = getPickedMovies();
 
     // Always include a General channel first
     const chips = [{ id: 'general', title: '🎬 General', posterPath: null }, ...movies];
