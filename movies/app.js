@@ -1557,108 +1557,9 @@ const App = (() => {
 
   // ── Chatter ────────────────────────────────────────────────────────────
   let _chatterUnsub = null;
-  let _chatterMovieId = null;
-  let _chatterMovieTitle = null;
+  let _chatterMovieId = 'general';
 
-  function getWeekMovies() {
-    const now = new Date();
-    const msPerDay = 86400000;
-    // Show movies releasing within the last 10 days or next 7 days
-    return state.movies.filter(m => {
-      if (!m.releaseDate) return false;
-      const rel = new Date(m.releaseDate + 'T12:00:00');
-      const diff = (rel - now) / msPerDay;
-      return diff >= -10 && diff <= 7;
-    }).sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
-  }
-
-  function getPickedMovies() {
-    // Only movies that at least one participant actually selected
-    const pickedIds = new Set(
-      Object.values(state._picksByParticipant).flat().map(p => p.movieId)
-    );
-    return state.movies
-      .filter(m => pickedIds.has(m.id))
-      .sort((a, b) => (a.releaseDate || '').localeCompare(b.releaseDate || ''));
-  }
-
-  // ── Chatter unread tracking ────────────────────────────────────────────
-  const CHATTER_SEEN_KEY = 'mw_chatter_seen'; // { channelId: epoch_ms }
-  let _chatterSeen = {};
-  let _unreadChannels = new Set();
-
-  function loadChatterSeen() {
-    try { _chatterSeen = JSON.parse(localStorage.getItem(CHATTER_SEEN_KEY) || '{}'); } catch (e) { }
-  }
-
-  function saveChatterSeen() {
-    try { localStorage.setItem(CHATTER_SEEN_KEY, JSON.stringify(_chatterSeen)); } catch (e) { }
-  }
-
-  function markChannelSeen(channelId) {
-    _chatterSeen[channelId] = Date.now();
-    saveChatterSeen();
-    if (_unreadChannels.delete(channelId)) {
-      renderChatterMovieSelector();
-    }
-  }
-
-  async function checkUnreadChannels() {
-    const channels = [{ id: 'general' }, ...getPickedMovies()];
-    let changed = false;
-    await Promise.all(channels.map(async ch => {
-      if (ch.id === _chatterMovieId) return; // active — always seen
-      const lastSeen = _chatterSeen[ch.id] || 0;
-      try {
-        const snap = await db.collection('chatter')
-          .where('movieId', '==', ch.id)
-          .orderBy('createdAt', 'desc')
-          .limit(1)
-          .get();
-        if (!snap.empty) {
-          const ts = snap.docs[0].data().createdAt?.toMillis?.() || 0;
-          if (ts > lastSeen) { _unreadChannels.add(ch.id); changed = true; }
-        }
-      } catch (e) { /* index not ready or empty */ }
-    }));
-    if (changed) renderChatterMovieSelector();
-  }
-
-  function renderChatterMovieSelector() {
-    const wrap = document.getElementById('chatterMovieSelector');
-    if (!wrap) return;
-    const movies = getPickedMovies();
-
-    // Always include a General channel first
-    const chips = [{ id: 'general', title: '🎬 General', posterPath: null }, ...movies];
-
-    wrap.innerHTML = chips.map(m => {
-      const poster = m.posterPath
-        ? (m.posterPath.startsWith('http') ? m.posterPath : `https://image.tmdb.org/t/p/w92${m.posterPath}`)
-        : null;
-      const isActive = m.id === _chatterMovieId;
-      const hasUnread = _unreadChannels.has(m.id);
-      return `
-        <button class="chatter-chip${isActive ? ' active' : ''}" onclick="App.selectChatterMovie('${m.id}','${esc(m.title)}')"
-          title="${esc(m.title)}">
-          ${poster ? `<img src="${esc(poster)}" alt="" class="chatter-chip-poster" loading="lazy" onerror="this.style.display='none'">` : ''}
-          <span class="chatter-chip-title">${esc(m.title)}</span>
-          ${hasUnread ? '<span class="chatter-chip-dot"></span>' : ''}
-        </button>`;
-    }).join('');
-  }
-
-  function selectChatterMovie(movieId, movieTitle) {
-    _chatterMovieId = movieId;
-    _chatterMovieTitle = movieTitle;
-    markChannelSeen(movieId);   // clear unread dot for this channel
-    renderChatterMovieSelector();
-    loadChatter(movieId);
-    renderLetterboxdCards(movieId, movieTitle);
-    renderChatterComposerState();
-  }
-
-  function loadChatter(movieId) {
+  function loadChatter() {
     const feed = document.getElementById('chatterFeed');
     if (!feed) return;
     feed.innerHTML = '<div class="chatter-empty">Loading…</div>';
@@ -1667,7 +1568,7 @@ const App = (() => {
     if (_chatterUnsub) { _chatterUnsub(); _chatterUnsub = null; }
 
     _chatterUnsub = db.collection('chatter')
-      .where('movieId', '==', movieId)
+      .where('movieId', '==', 'general')
       .orderBy('createdAt', 'asc')
       .onSnapshot(snap => {
         if (snap.empty) {
@@ -1723,17 +1624,16 @@ const App = (() => {
   async function postChatter() {
     const input = document.getElementById('chatterInput');
     const text = (input?.value || '').trim();
-    // Resolve identity: prefer picks-screen participant, fall back to chatter identity
     const identity = state.participant || _chatterIdentity;
-    if (!text || !identity || !_chatterMovieId) return;
+    if (!text || !identity) return;
 
     const btn = document.querySelector('.chatter-send-btn');
     if (btn) btn.disabled = true;
 
     try {
       await db.collection('chatter').add({
-        movieId: _chatterMovieId,
-        movieTitle: _chatterMovieTitle || '',
+        movieId: 'general',
+        movieTitle: 'General',
         participantId: identity.id || identity.participantId,
         participantName: identity.name,
         avatarUrl: identity.avatarUrl || null,
@@ -1767,57 +1667,71 @@ const App = (() => {
     return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
   }
 
-  async function renderLetterboxdCards(movieId, movieTitle) {
+  async function loadGlobalLetterboxdFeed() {
     const wrap = document.getElementById('chatterLbCards');
     if (!wrap) return;
-    if (movieId === 'general') {
-      wrap.innerHTML = '<div class="chatter-empty">Select a specific movie to see Letterboxd links.</div>';
-      return;
-    }
-    const slug = lbSlug(movieTitle || '');
+
     const withLb = state.participants.filter(p => p.letterboxdUsername);
     if (!withLb.length) {
       wrap.innerHTML = '<div class="chatter-empty">No one has linked their Letterboxd yet.<br>Add yours in the picks screen!</div>';
       return;
     }
 
-    // Render skeleton cards immediately
-    wrap.innerHTML = withLb.map(p => `
-      <a class="lb-card" id="lbc-${esc(p.id)}" href="https://letterboxd.com/${encodeURIComponent(p.letterboxdUsername)}/film/${slug}/" target="_blank" rel="noopener">
-        ${p.avatarUrl ? `<img class="lb-card-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-card-avatar lb-card-avatar-ph">🎬</div>`}
-        <div class="lb-card-info">
-          <div class="lb-card-name">${esc(p.name)}</div>
-          <div class="lb-card-username">@${esc(p.letterboxdUsername)}</div>
-        </div>
-        <div class="lb-card-rating" id="lbr-${esc(p.id)}"><span class="lb-rating-loading">…</span></div>
-      </a>`).join('');
+    // Map all tracked movies by slug for easy lookup
+    const wagerMoviesBySlug = {};
+    state.movies.forEach(m => {
+      wagerMoviesBySlug[lbSlug(m.title)] = m;
+    });
 
-    // Fetch ratings in parallel
+    let allReviews = [];
+
+    // Fetch everyone's feed in parallel
     await Promise.all(withLb.map(async p => {
-      const ratingEl = document.getElementById(`lbr-${p.id}`);
-      if (!ratingEl) return;
       try {
-        const res = await fetch(`/api/letterboxd?username=${encodeURIComponent(p.letterboxdUsername)}&film=${encodeURIComponent(slug)}`);
+        const res = await fetch(`/api/letterboxd?username=${encodeURIComponent(p.letterboxdUsername)}`);
         const data = await res.json();
-        if (data.rating != null) {
-          ratingEl.innerHTML = `<span class="lb-stars">${starsHtml(data.rating)}</span><span class="lb-rating-num">${data.rating}</span>`;
-          // Update card href to the exact review URL if we got one
-          if (data.reviewUrl) document.getElementById(`lbc-${p.id}`)?.setAttribute('href', data.reviewUrl);
-        } else {
-          ratingEl.innerHTML = `<span class="lb-no-rating">not rated yet</span>`;
+        if (data.feed && Array.isArray(data.feed)) {
+          data.feed.forEach(item => {
+            // Only include if it matches a wager movie
+            if (item.slug && wagerMoviesBySlug[item.slug]) {
+              allReviews.push({ ...item, participant: p, wagerMovie: wagerMoviesBySlug[item.slug] });
+            }
+          });
         }
-      } catch {
-        ratingEl.innerHTML = `<span class="lb-no-rating">—</span>`;
+      } catch (err) {
+        console.warn('Failed to fetch LB feed for', p.letterboxdUsername, err);
       }
     }));
-  }
 
+    // Sort descending by date
+    allReviews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+    if (!allReviews.length) {
+      wrap.innerHTML = '<div class="chatter-empty">No recent reviews for wager movies.</div>';
+      return;
+    }
+
+    wrap.innerHTML = allReviews.map(rev => {
+      const p = rev.participant;
+      const ratingHtml = rev.rating != null ? `<span class="lb-stars">${starsHtml(rev.rating)}</span><span class="lb-rating-num">${rev.rating}</span>` : `<span class="lb-no-rating">Logged</span>`;
+      return `
+      <a class="lb-card" href="${esc(rev.reviewUrl)}" target="_blank" rel="noopener" style="display:flex; flex-direction:column; gap:0.5rem; padding: 1rem;">
+        <div style="display:flex; align-items:center; gap: 0.75rem;">
+          ${p.avatarUrl ? `<img class="lb-card-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-card-avatar lb-card-avatar-ph">🎬</div>`}
+          <div class="lb-card-info">
+            <div class="lb-card-name">${esc(p.name)} watched ${esc(rev.wagerMovie.title)}</div>
+            <div class="lb-card-username" style="font-size:0.7rem;">${formatDate(rev.pubDate.split('T')[0])}</div>
+          </div>
+        </div>
+        <div class="lb-card-rating" style="position:static; padding: 0.25rem 0 0 0;">${ratingHtml}</div>
+      </a>`;
+    }).join('');
+  }
 
   function initChatter() {
     loadChatterIdentity(); // restore from localStorage
-    loadChatterSeen();     // restore seen timestamps
-    renderChatterMovieSelector();
     renderChatterComposerState();
+    
     // Wire char counter
     const input = document.getElementById('chatterInput');
     const counter = document.getElementById('chatterCharCount');
@@ -1826,10 +1740,9 @@ const App = (() => {
         counter.textContent = `${input.value.length} / 500`;
       });
     }
-    // Default to General channel on load
-    selectChatterMovie('general', '🎬 General');
-    // Check for unread in background after a short delay (index may need to be ready)
-    setTimeout(checkUnreadChannels, 1500);
+
+    loadChatter();
+    loadGlobalLetterboxdFeed();
   }
 
   function toggleChatterSheet() {
@@ -1856,7 +1769,6 @@ const App = (() => {
     overlay.classList.remove('hidden');
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────
   return {
     init, handleNameSubmit, goToLanding, selectExistingParticipant,
     handleAvatarFile, submitAvatar, skipAvatar,
@@ -1866,7 +1778,7 @@ const App = (() => {
     changeAvatar, removeDarkHorse, deleteUser, openLightbox,
     saveLetterboxdUsername,
     showLbEditor, hideLbEditor, saveLbEditorRow,
-    selectChatterMovie, postChatter, deleteChatter, toggleChatterSheet,
+    postChatter, deleteChatter, toggleChatterSheet,
     setChatterIdentity, clearChatterIdentity,
     toggleSection,
   };

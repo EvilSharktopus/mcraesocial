@@ -353,12 +353,11 @@
   <!-- ── Chatter ── -->
   <div id="section-chatter" class="result-section hidden">
     <div class="chatter-section" id="chatterSection">
-      <div class="chatter-movie-selector" id="chatterMovieSelector"></div>
       <div class="chatter-columns">
         <div class="chatter-local">
-          <div class="chatter-col-title">💬 Local Chatter</div>
+          <div class="chatter-col-title">💬 Global Chatter</div>
           <div class="chatter-feed" id="chatterFeed">
-            <div class="chatter-empty">Select a movie above to load the chat.</div>
+            <div class="chatter-empty">Loading chat...</div>
           </div>
           <div class="chatter-composer" id="chatterComposer">
             <div class="chatter-identity-row" id="chatterIdentityRow">
@@ -375,7 +374,7 @@
               </div>
               <div class="chatter-composer-inner">
                 <input type="text" class="chatter-input" id="chatterInput"
-                  placeholder="Say something about this movie…" maxlength="500" autocomplete="off"
+                  placeholder="Say something to the group…" maxlength="500" autocomplete="off"
                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();App.postChatter();}">
                 <button class="chatter-send-btn" onclick="App.postChatter()" title="Send">➤</button>
               </div>
@@ -384,9 +383,9 @@
           </div>
         </div>
         <div class="chatter-internet">
-          <div class="chatter-col-title">🎞 Internet Chatter <span class="chatter-lb-badge">Letterboxd</span></div>
+          <div class="chatter-col-title">🎞 Letterboxd Feed</div>
           <div class="chatter-lb-cards" id="chatterLbCards">
-            <div class="chatter-empty">Select a movie to see what the group thought.</div>
+            <div class="chatter-empty">Loading Letterboxd activity...</div>
           </div>
         </div>
       </div>
