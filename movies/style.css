@@ -1695,17 +1695,17 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
   50%       { box-shadow: 0 0 0 4px rgba(231,76,60,0); }
 }
 
-/* Two-column layout */
+/* Stacked layout */
 .chatter-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 0;
-  min-height: 360px;
 }
 .chatter-local {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  min-height: 360px;
 }
 .chatter-internet {
   display: flex;
@@ -1880,6 +1880,8 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  max-height: 340px;
+  overflow-y: auto;
 }
 
 .lb-card {
@@ -1937,8 +1939,7 @@ details[open] .cg-legend-toggle::before { transform: rotate(90deg); }
 @media (max-width: 900px) {
   /* Chatter shows inline on mobile — single-column layout */
   .chatter-section { margin-top: 1rem; }
-  .chatter-columns { grid-template-columns: 1fr; }
-  .chatter-local { border-right: none; border-bottom: 1px solid var(--border); }
+  .chatter-local { border-bottom: 1px solid var(--border); }
 
   /* FAB scrolls to chatter section — keep it visible */
   .chat-fab {
