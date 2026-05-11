@@ -2,7 +2,7 @@ name: Daily Box Office Sync
 
 on:
   schedule:
-    - cron: '0 18 * * *'   # noon MDT (UTC-6) every day
+    - cron: '0 15 * * *'   # 9am MDT (UTC-6) every day
   workflow_dispatch:        # also allows manual "Run workflow" from GitHub Actions tab
 
 jobs:
