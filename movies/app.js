@@ -926,9 +926,10 @@ const App = (() => {
 
   function abbrev(title) {
     const overrides = [
-      ['mortal kombat ii', 'MKII'],
-      ['he-man',           'HEMAN'],
-      ['he man',           'HEMAN'],
+      ['mortal kombat ii',       'MKII'],
+      ['masters of the universe', 'HEMAN'],
+      ['he-man',                  'HEMAN'],
+      ['he man',                  'HEMAN'],
       ['mandalorian',      'MANDO'],
       ['spider-man',       'SPIDY'],
       ['spider man',       'SPIDY'],
