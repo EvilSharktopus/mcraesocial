@@ -72,11 +72,13 @@
 
           return {
             id,
-            name:   f.name?.stringValue   || 'Assignment',
-            docUrl: f.docUrl?.stringValue  || '',
+            name:       f.name?.stringValue   || 'Assignment',
+            docUrl:     f.docUrl?.stringValue  || '',
+            isArchived,
             isOpen,
           };
         })
+        .filter(a => !a.isArchived)
         .sort((a, b) => (b.isOpen ? 1 : 0) - (a.isOpen ? 1 : 0));
 
       if (!assignments.length) return;
