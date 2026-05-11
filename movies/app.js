@@ -1171,7 +1171,8 @@ const App = (() => {
       html += '</tr>';
     }
     for (let dhi = 0; dhi < 3; dhi++) {
-      html += `<tr><td class="cg-row-label cg-dh-label">🐴</td>`;
+      const dhDivider = dhi === 0 ? ' cg-dh-divider-row' : '';
+      html += `<tr class="${dhDivider}"><td class="cg-row-label cg-dh-label${dhi === 0 ? ' cg-dh-divider-row' : ''}">🐴</td>`;
       participants.forEach(p => {
         const dhs = (pbp[p.id] || []).filter(x => x.isDarkHorse);
         html += cell(dhs[dhi]?.movieId);
