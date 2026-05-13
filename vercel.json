@@ -1,20 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/minerals/dist/:path*",
-      "destination": "/minerals/dist/:path*"
-    },
-    {
-      "source": "/minerals",
-      "destination": "/minerals/dist/index.html"
-    },
-    {
-      "source": "/minerals/teacher",
-      "destination": "/minerals/dist/index.html"
-    },
-    {
       "source": "/minerals/:path*",
-      "destination": "/minerals/dist/index.html"
+      "destination": "/minerals/index.html"
     },
     {
       "source": "/workbooks/10-2/:path*",
