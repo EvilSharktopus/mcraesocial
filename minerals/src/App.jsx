@@ -14,6 +14,7 @@ import Phase4  from './pages/Phase4';
 import Phase5  from './pages/Phase5';
 import Done    from './pages/Done';
 import Teacher from './pages/Teacher';
+import Feed    from './pages/Feed';
 
 const LS_NAME_KEY = 'minerals_student_name';
 
@@ -58,6 +59,7 @@ export default function App() {
     <BrowserRouter basename="/minerals">
       <Routes>
         <Route path="/teacher" element={<Teacher />} />
+        <Route path="/feed" element={<Feed />} />
         <Route
           path="/*"
           element={
