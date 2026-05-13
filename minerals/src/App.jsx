@@ -45,13 +45,11 @@ function StudentApp({ studentName, onClearName }) {
     return sessionStorage.getItem('minerals_done') === 'true';
   });
 
-  // Cap to teacher's phase whenever it changes
-  const effectivePhase = Math.min(studentPhase, teacherPhase ?? 1);
-
+  // Advance student's local phase unconditionally — no cap.
+  // If they end up ahead of teacherPhase, the WaitingScreen below catches it.
   const advancePhase = (next) => {
-    const newPhase = Math.min(next, teacherPhase ?? 1);
-    setStudentPhase(newPhase);
-    sessionStorage.setItem('minerals_student_phase', String(newPhase));
+    setStudentPhase(next);
+    sessionStorage.setItem('minerals_student_phase', String(next));
   };
 
   const handlePhaseComplete = (completedPhase) => {
@@ -62,6 +60,9 @@ function StudentApp({ studentName, onClearName }) {
       advancePhase(completedPhase + 1);
     }
   };
+
+  // What phase to actually render — whichever is lower
+  const displayPhase = Math.min(studentPhase, teacherPhase ?? 1);
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
@@ -94,58 +95,30 @@ function StudentApp({ studentName, onClearName }) {
     return <Done studentName={studentName} />;
   }
 
-  // ── Waiting screen (teacher hasn't opened any phase yet edge-case) ────────
-  if (!teacherPhase) {
-    return <WaitingScreen />;
+  // ── Waiting screen: student is ahead of what teacher has opened ─────────
+  if (studentPhase > (teacherPhase ?? 1)) {
+    return <WaitingScreen nextPhase={studentPhase} />;
   }
 
-  // ── Phase gate: render the correct phase ──────────────────────────────────
-  // Show the phase the student is currently on, but never beyond teacher's open phase.
-  const displayPhase = effectivePhase;
-
+  // ── Phase gate: render the correct phase ─────────────────────────────────
   switch (displayPhase) {
     case 1:
-      return (
-        <Phase1
-          studentName={studentName}
-          onComplete={() => {
-            // Phase 1 "complete" just means they can proceed — teacher must open Phase 2
-            if ((teacherPhase ?? 1) >= 2) {
-              advancePhase(2);
-            } else {
-              advancePhase(2); // student advances locally; gate will block if teacher < 2
-            }
-          }}
-        />
-      );
-
+      return <Phase1 studentName={studentName} onComplete={() => advancePhase(2)} />;
     case 2:
-      return teacherPhase >= 2
-        ? <Phase2 studentName={studentName} onComplete={() => handlePhaseComplete(2)} />
-        : <WaitingScreen phase={1} teacherPhase={teacherPhase} />;
-
+      return <Phase2 studentName={studentName} onComplete={() => handlePhaseComplete(2)} />;
     case 3:
-      return teacherPhase >= 3
-        ? <Phase3 studentName={studentName} onComplete={() => handlePhaseComplete(3)} />
-        : <WaitingScreen phase={2} teacherPhase={teacherPhase} />;
-
+      return <Phase3 studentName={studentName} onComplete={() => handlePhaseComplete(3)} />;
     case 4:
-      return teacherPhase >= 4
-        ? <Phase4 studentName={studentName} onComplete={() => handlePhaseComplete(4)} />
-        : <WaitingScreen phase={3} teacherPhase={teacherPhase} />;
-
+      return <Phase4 studentName={studentName} onComplete={() => handlePhaseComplete(4)} />;
     case 5:
-      return teacherPhase >= 5
-        ? <Phase5 studentName={studentName} onComplete={() => handlePhaseComplete(5)} />
-        : <WaitingScreen phase={4} teacherPhase={teacherPhase} />;
-
+      return <Phase5 studentName={studentName} onComplete={() => handlePhaseComplete(5)} />;
     default:
-      return <WaitingScreen />;
+      return <WaitingScreen nextPhase={1} />;
   }
 }
 
 // ─── Waiting screen ───────────────────────────────────────────────────────────
-function WaitingScreen({ phase, teacherPhase } = {}) {
+function WaitingScreen({ nextPhase } = {}) {
   return (
     <div className="min-h-screen bg-[#0d0d0f] flex items-center justify-center px-4">
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_#1a1200_0%,_#0d0d0f_70%)] pointer-events-none" />
@@ -157,8 +130,8 @@ function WaitingScreen({ phase, teacherPhase } = {}) {
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Waiting for your teacher</h2>
         <p className="text-white/40 text-sm leading-relaxed">
-          {teacherPhase && phase
-            ? `Your teacher hasn't opened Phase ${phase + 1} yet. Sit tight — this page will update automatically.`
+          {nextPhase
+            ? `Your teacher hasn't opened Phase ${nextPhase} yet. This page will update automatically when they do.`
             : 'Your teacher will open the next phase shortly. This page will update automatically.'}
         </p>
         <div className="mt-6 flex justify-center gap-1.5">
