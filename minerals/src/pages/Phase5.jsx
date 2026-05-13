@@ -79,15 +79,15 @@ export default function Phase5({ studentName, onComplete }) {
 
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-[#0d0d0f] flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-teal-500/30 border-t-teal-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d0f] px-4 py-10">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_#001a12_0%,_#0d0d0f_70%)] pointer-events-none" />
+    <div className="min-h-screen bg-transparent px-4 py-10">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,26,18,0.5)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-3xl mx-auto">
 

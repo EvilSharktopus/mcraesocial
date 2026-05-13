@@ -78,7 +78,7 @@ export default function Phase1({ studentName, onComplete }) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0d0d0f] px-4 py-10">
+    <div className="min-h-screen bg-transparent px-4 py-10">
       <div className="max-w-3xl mx-auto">
 
         {/* Phase badge */}

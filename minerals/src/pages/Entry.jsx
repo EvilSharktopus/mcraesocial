@@ -30,9 +30,9 @@ export default function Entry({ onEnter }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0f] flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center px-4">
       {/* Background texture */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_#1a1200_0%,_#0d0d0f_70%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(26,18,0,0.5)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}

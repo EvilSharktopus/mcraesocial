@@ -38,7 +38,7 @@ function PasswordGate({ onUnlock }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d0f] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-transparent flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-white mb-1 text-center">Teacher Dashboard</h1>
         <p className="text-white/30 text-sm text-center mb-8">Blood Minerals — Take a Stand</p>
@@ -213,8 +213,8 @@ function Dashboard() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0d0d0f] px-4 py-8">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_#1a1200_0%,_#0d0d0f_65%)] pointer-events-none" />
+    <div className="min-h-screen bg-transparent px-4 py-8">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(26,18,0,0.5)_0%,transparent_65%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-6xl mx-auto">
 

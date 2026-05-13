@@ -161,8 +161,8 @@ export default function Phase4({ studentName, onComplete }) {
   const canSubmit = charCount >= MIN_CHARS && !submitted;
 
   return (
-    <div className="min-h-screen bg-[#0d0d0f] px-4 py-10">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_#0d001a_0%,_#0d0d0f_70%)] pointer-events-none" />
+    <div className="min-h-screen bg-transparent px-4 py-10">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(13,0,26,0.5)_0%,transparent_70%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-2xl mx-auto">
 

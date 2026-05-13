@@ -4,8 +4,8 @@
 
 export default function Done({ studentName }) {
   return (
-    <div className="min-h-screen bg-[#0d0d0f] flex flex-col items-center justify-center px-4">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,_#001a12_0%,_#0d0d0f_65%)] pointer-events-none" />
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center px-4">
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,26,18,0.5)_0%,transparent_65%)] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md text-center">
 

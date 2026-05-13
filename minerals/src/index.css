@@ -11,6 +11,10 @@ body,
 #root {
   min-height: 100vh;
   background-color: #0d0d0f;
+  background-image: url('/assets/images/minerals/bg-tech.webp');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: #ffffff;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
