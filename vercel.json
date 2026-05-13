@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/minerals/assets/:path*",
-      "destination": "/minerals/dist/assets/:path*"
-    },
-    {
       "source": "/minerals",
       "destination": "/minerals/dist/index.html"
     },
