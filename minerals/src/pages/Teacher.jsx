@@ -2,14 +2,14 @@
 // Teacher Dashboard — route: /minerals/teacher
 // Password gate: "teacher101" — stored in component state ONLY, never Firestore.
 // Features:
-//   - Phase control panel (5 buttons, live highlight, backwards warning)
 //   - Live student progress table (onSnapshot, flags column with modal)
 //   - Tabs: Gallery | Responses | Reflections
+//   - Wipe test data button
 
 import { useState, useEffect } from 'react';
 import {
-  doc, setDoc, collection,
-  onSnapshot, getDoc,
+  doc, collection, onSnapshot,
+  writeBatch, getDocs,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -137,73 +137,58 @@ function FlagModal({ student, data, onClose }) {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 function Dashboard() {
-  const [currentPhase, setCurrentPhase] = useState(null);
-  const [students, setStudents]         = useState({}); // { name: data }
-  const [gallery, setGallery]           = useState([]);
-  const [responses, setResponses]       = useState([]);
-  const [tab, setTab]                   = useState('progress'); // 'progress' | 'gallery' | 'responses' | 'reflections'
-  const [flagModal, setFlagModal]       = useState(null); // { student, data }
-  const [phaseWarning, setPhaseWarning] = useState(null);
-  const [settingPhase, setSettingPhase] = useState(false);
+  const [students, setStudents]     = useState({}); // { name: data }
+  const [gallery, setGallery]       = useState([]);
+  const [responses, setResponses]   = useState([]);
+  const [tab, setTab]               = useState('progress');
+  const [flagModal, setFlagModal]   = useState(null);
+  const [wiping, setWiping]         = useState(false);
+  const [wipeConfirm, setWipeConfirm] = useState(false);
 
-  const sessionRef  = doc(db, 'sessions', 'minerals');
-  const studentsCol = collection(db, 'sessions', 'minerals', 'students');
-  const galleryCol  = collection(db, 'sessions', 'minerals', 'gallery');
+  const studentsCol  = collection(db, 'sessions', 'minerals', 'students');
+  const galleryCol   = collection(db, 'sessions', 'minerals', 'gallery');
   const responsesCol = collection(db, 'sessions', 'minerals', 'responses');
 
   // ── Live listeners ──────────────────────────────────────────────────────
   useEffect(() => {
-    const unsubSession = onSnapshot(sessionRef, (snap) => {
-      if (snap.exists()) setCurrentPhase(snap.data().phase ?? 1);
-      else setCurrentPhase(1);
-    });
-
     const unsubStudents = onSnapshot(studentsCol, (snap) => {
       const map = {};
       snap.docs.forEach((d) => { map[d.id] = d.data(); });
       setStudents(map);
     });
-
     const unsubGallery = onSnapshot(galleryCol, (snap) => {
       const entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       entries.sort((a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0));
       setGallery(entries);
     });
-
     const unsubResponses = onSnapshot(responsesCol, (snap) => {
       const entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       entries.sort((a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0));
       setResponses(entries);
     });
-
-    return () => {
-      unsubSession();
-      unsubStudents();
-      unsubGallery();
-      unsubResponses();
-    };
+    return () => { unsubStudents(); unsubGallery(); unsubResponses(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Phase control ───────────────────────────────────────────────────────
-  const setPhase = async (n) => {
-    if (n < currentPhase) {
-      setPhaseWarning(n);
-      return;
+  // ── Wipe all test data ──────────────────────────────────────────────────
+  const wipeData = async () => {
+    setWiping(true);
+    try {
+      const cols = [studentsCol, galleryCol, responsesCol];
+      for (const col of cols) {
+        const snap = await getDocs(col);
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        if (snap.docs.length > 0) await batch.commit();
+      }
+    } catch (e) {
+      console.error('Wipe error:', e);
+    } finally {
+      setWiping(false);
+      setWipeConfirm(false);
     }
-    await commitPhase(n);
   };
 
-  const commitPhase = async (n) => {
-    setSettingPhase(true);
-    try {
-      await setDoc(sessionRef, { phase: n }, { merge: true });
-    } catch (e) {
-      console.error('Phase set error:', e);
-    } finally {
-      setSettingPhase(false);
-      setPhaseWarning(null);
-    }
-  };
+
 
   // ── Flag check helper ───────────────────────────────────────────────────
   const hasFlags = (data) => {
@@ -239,69 +224,42 @@ function Dashboard() {
             <h1 className="text-2xl font-bold text-white">Teacher Dashboard</h1>
             <p className="text-white/30 text-sm">Blood Minerals — Take a Stand</p>
           </div>
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-white/50 text-xs">Live</span>
-            <span className="text-white/30 text-xs mx-1">·</span>
-            <span className="text-white/50 text-xs">{studentNames.length} student{studentNames.length !== 1 ? 's' : ''}</span>
-          </div>
-        </div>
-
-        {/* ── Phase control panel ──────────────────────────────────────────── */}
-        <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-6 mb-6">
-          <p className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-4">
-            Active Phase
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                id={`set-phase-${n}`}
-                onClick={() => setPhase(n)}
-                disabled={settingPhase}
-                className={[
-                  'flex items-center gap-2 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all duration-200',
-                  currentPhase === n
-                    ? 'bg-amber-500 border-amber-500 text-black shadow-lg shadow-amber-500/30'
-                    : 'bg-white/5 border-white/10 text-white/50 hover:border-white/25 hover:text-white/80',
-                ].join(' ')}
-              >
-                Phase {n}
-                {currentPhase === n && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-black/40" />
-                )}
-              </button>
-            ))}
-          </div>
-          {currentPhase && (
-            <p className="mt-3 text-xs text-white/25">
-              Phase {currentPhase} is currently open for students
-            </p>
-          )}
-        </div>
-
-        {/* Backwards phase warning */}
-        {phaseWarning !== null && (
-          <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 mb-6">
-            <p className="text-orange-300 text-sm font-medium mb-3">
-              ⚠ You are about to go backwards to Phase {phaseWarning}. Students who have progressed further will be locked back. Are you sure?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => commitPhase(phaseWarning)}
-                className="px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-400 text-black text-sm font-semibold transition-colors"
-              >
-                Yes, set Phase {phaseWarning}
-              </button>
-              <button
-                onClick={() => setPhaseWarning(null)}
-                className="px-4 py-2 rounded-lg bg-white/8 hover:bg-white/12 text-white/60 text-sm transition-colors"
-              >
-                Cancel
-              </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-white/50 text-xs">Live</span>
+              <span className="text-white/30 text-xs mx-1">·</span>
+              <span className="text-white/50 text-xs">{studentNames.length} student{studentNames.length !== 1 ? 's' : ''}</span>
             </div>
+            {/* Wipe data */}
+            {!wipeConfirm ? (
+              <button
+                id="wipe-btn"
+                onClick={() => setWipeConfirm(true)}
+                className="px-3 py-2 rounded-xl border border-red-500/20 text-red-400/60 text-xs hover:border-red-500/40 hover:text-red-400 transition-colors"
+              >
+                Wipe data
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-red-400">Are you sure?</span>
+                <button
+                  onClick={wipeData}
+                  disabled={wiping}
+                  className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-400 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {wiping ? 'Wiping…' : 'Yes, wipe'}
+                </button>
+                <button
+                  onClick={() => setWipeConfirm(false)}
+                  className="px-3 py-1.5 rounded-lg bg-white/8 text-white/50 text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* ── Tabs ─────────────────────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-2 mb-6">
