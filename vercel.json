@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/minerals",
+      "destination": "/minerals/dist/index.html"
+    },
+    {
+      "source": "/minerals/:path*",
+      "destination": "/minerals/dist/index.html"
+    },
+    {
       "source": "/workbooks/10-2/:path*",
       "destination": "https://mcraesocial.vercel.app/:path*"
     },
