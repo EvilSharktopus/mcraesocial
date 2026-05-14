@@ -27,16 +27,20 @@ const POSITION_LABELS = {
   D: 'The system hurts more than it helps',
 };
 
-// Deterministically pick N random items from an array using a seed
-function seededSample(arr, n, seed) {
-  const shuffled = [...arr];
-  let s = seed;
-  for (let i = shuffled.length - 1; i > 0; i--) {
+// Pick one submission per position (A/B/C/D) deterministically by student name.
+// This guarantees students always see a mix of all available perspectives.
+function pickOnePerPosition(entries, studentName) {
+  const seed = studentName.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const result = [];
+  for (const pos of ['A', 'B', 'C', 'D']) {
+    const group = entries.filter((e) => e.position === pos);
+    if (group.length === 0) continue;
+    // Deterministic pick from this position's group
+    let s = (seed + pos.charCodeAt(0)) & 0xffffffff;
     s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const j = Math.abs(s) % (i + 1);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    result.push(group[Math.abs(s) % group.length]);
   }
-  return shuffled.slice(0, n);
+  return result;
 }
 
 // ── Collapsible position card ─────────────────────────────────────────────────
@@ -109,9 +113,8 @@ export default function Phase4({ studentName, onComplete }) {
         .filter((e) => e.id !== studentName && e.studentName !== studentName);
       entries.sort((a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0));
       setGallery(entries);
-      // Lock the 4 cards immediately — never changes after this
-      const seed = studentName.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-      setDisplayed(seededSample(entries, Math.min(4, entries.length), seed));
+      // Lock one card per position — guaranteed A/B/C/D mix, never reshuffles
+      setDisplayed(pickOnePerPosition(entries, studentName));
     });
   }, [studentName]); // eslint-disable-line react-hooks/exhaustive-deps
 
