@@ -4,9 +4,9 @@
 // Each card is collapsible — position badge visible, defence hidden until expanded.
 // One IntegrityTextbox at the bottom for a challenge/question (80-char min, one submission).
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  doc, setDoc, collection, onSnapshot,
+  doc, setDoc, collection, onSnapshot, getDocs,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import IntegrityTextbox from '../components/IntegrityTextbox';
@@ -89,6 +89,7 @@ function GalleryCard({ entry, index }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Phase4({ studentName, onComplete }) {
   const [gallery, setGallery]     = useState([]);
+  const [displayed, setDisplayed] = useState([]); // locked on first load
   const [response, setResponse]   = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -99,19 +100,20 @@ export default function Phase4({ studentName, onComplete }) {
   const responseRef  = useRef(response);
   responseRef.current = response;
 
-  // ── Live gallery listener ──────────────────────────────────────────────────
+  // ── Fetch gallery once on mount and lock the displayed cards ──────────────
   useEffect(() => {
     const galleryCol = collection(db, 'sessions', 'minerals', 'gallery');
-    const unsub = onSnapshot(galleryCol, (snap) => {
+    getDocs(galleryCol).then((snap) => {
       const entries = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        // Exclude the student's own submission
         .filter((e) => e.id !== studentName && e.studentName !== studentName);
       entries.sort((a, b) => (a.submittedAt ?? 0) - (b.submittedAt ?? 0));
       setGallery(entries);
+      // Lock the 4 cards immediately — never changes after this
+      const seed = studentName.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      setDisplayed(seededSample(entries, Math.min(4, entries.length), seed));
     });
-    return () => unsub();
-  }, [studentName]);
+  }, [studentName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load student's existing Phase 4 data ──────────────────────────────────
   useEffect(() => {
@@ -125,14 +127,6 @@ export default function Phase4({ studentName, onComplete }) {
     });
     return () => unsub();
   }, [studentName]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Pick 4 random entries, stable per student (seeded by name hash) ────────
-  const displayed = useMemo(() => {
-    if (gallery.length === 0) return [];
-    // Seed from student name so their 4 don't change on re-render
-    const seed = studentName.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return seededSample(gallery, Math.min(4, gallery.length), seed);
-  }, [gallery, studentName]);
 
   // ── Submit response ────────────────────────────────────────────────────────
   const handleSubmit = async () => {
