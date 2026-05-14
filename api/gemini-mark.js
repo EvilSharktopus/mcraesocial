@@ -5,11 +5,15 @@
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const key = process.env.GEMINI_KEY;
-  if (!key) return res.status(500).json({ error: 'GEMINI_KEY env var not set on Vercel' });
+  // Accept either name in case Vercel env var was saved under old VITE_ prefix
+  const key = process.env.GEMINI_KEY || process.env.VITE_GEMINI_KEY;
+  if (!key) return res.status(500).json({ error: 'GEMINI_KEY not found in Vercel environment variables. Add it under Settings → Environment Variables and redeploy.' });
 
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: 'prompt required' });
+  // Vercel parses JSON bodies automatically, but guard against edge cases
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) { body = {}; } }
+  const prompt = body?.prompt;
+  if (!prompt) return res.status(400).json({ error: 'prompt field required in request body' });
 
   try {
     const geminiRes = await fetch(

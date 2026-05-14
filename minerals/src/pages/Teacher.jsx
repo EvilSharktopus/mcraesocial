@@ -14,7 +14,6 @@ import {
 import { db } from '../firebase';
 
 const TEACHER_PASSWORD = 'teacher101';
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY ?? '';
 const RUBRIC_LS_KEY = 'minerals_teacher_rubric';
 
 const POSITION_LABELS = {
@@ -145,20 +144,19 @@ function FlagModal({ student, data, onClose }) {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-// ── Gemini AI marking helper ─────────────────────────────────────────────────
+// ── Gemini AI marking — calls server-side proxy so key never hits the client ─────
 async function callGemini(prompt) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    }
-  );
-  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  const res = await fetch('/api/gemini-mark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Gemini proxy error ${res.status}`);
+  }
   const json = await res.json();
   const raw = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
-  // Strip markdown fences if present
   const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
   return JSON.parse(clean);
 }
@@ -251,10 +249,6 @@ function Dashboard() {
 
   // ── Mark a single student ─────────────────────────────────────────────
   const markStudent = async (name) => {
-    if (!GEMINI_KEY || GEMINI_KEY === 'your_key_here') {
-      setAiError('No Gemini API key set. Add VITE_GEMINI_KEY to your .env file.');
-      return;
-    }
     if (!rubric.trim()) { setAiError('Paste your rubric first.'); return; }
     setAiError('');
     setMarking((prev) => new Set([...prev, name]));
@@ -278,10 +272,6 @@ function Dashboard() {
 
   // ── Mark all students who have completed phase 5 ──────────────────────
   const markAll = async () => {
-    if (!GEMINI_KEY || GEMINI_KEY === 'your_key_here') {
-      setAiError('No Gemini API key set. Add VITE_GEMINI_KEY to your .env file.');
-      return;
-    }
     if (!rubric.trim()) { setAiError('Paste your rubric first.'); return; }
     setAiError('');
     setMarkAllLoading(true);
