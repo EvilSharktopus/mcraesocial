@@ -2,7 +2,7 @@
 // Live, auto-scrolling anonymous feed of student positions.
 // Perfect for classroom projection.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -46,32 +46,42 @@ export default function Feed() {
     return () => unsub();
   }, []);
 
-  // Auto-scroll logic
+  // Auto-scroll logic — slow and looping
+  const isPausedRef = useRef(false);
+
   useEffect(() => {
     if (isHovered) return; // Pause on hover
-    
-    let animationFrameId;
-    
-    const scroll = () => {
-      // Scroll down by 1 pixel
-      window.scrollBy(0, 1);
-      
-      // If we've reached the bottom, smoothly jump to top
-      if (Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight) {
-        window.scrollTo(0, 0);
+
+    // Scroll 1px every 50ms → ~20px/second (very slow)
+    const SCROLL_PX = 1;
+    const INTERVAL_MS = 50;
+    const LOOP_PAUSE_MS = 1500; // pause at bottom before looping
+
+    const intervalId = setInterval(() => {
+      if (isPausedRef.current) return;
+
+      const atBottom =
+        Math.ceil(window.scrollY + window.innerHeight) >=
+        document.documentElement.scrollHeight;
+
+      if (atBottom) {
+        // Pause, then jump cleanly to top
+        isPausedRef.current = true;
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+          isPausedRef.current = false;
+        }, LOOP_PAUSE_MS);
+      } else {
+        window.scrollBy(0, SCROLL_PX);
       }
-      
-      animationFrameId = requestAnimationFrame(scroll);
-    };
-    
-    // Slight delay before starting scroll to allow rendering
-    const timeoutId = setTimeout(() => {
-      animationFrameId = requestAnimationFrame(scroll);
-    }, 2000);
-    
+    }, INTERVAL_MS);
+
+    // Initial delay before starting
+    const timeoutId = setTimeout(() => {}, 2000);
+
     return () => {
+      clearInterval(intervalId);
       clearTimeout(timeoutId);
-      cancelAnimationFrame(animationFrameId);
     };
   }, [isHovered, gallery.length]);
 

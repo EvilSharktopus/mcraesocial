@@ -9,11 +9,20 @@
 import { useState, useEffect } from 'react';
 import {
   doc, collection, onSnapshot,
-  writeBatch, getDocs,
+  writeBatch, getDocs, setDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const TEACHER_PASSWORD = 'teacher101';
+const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY ?? '';
+const RUBRIC_LS_KEY = 'minerals_teacher_rubric';
+
+const POSITION_LABELS = {
+  A: 'Corporations are most responsible',
+  B: 'Governments / International Law',
+  C: 'Consumers have more power than they think',
+  D: 'The system hurts more than it helps',
+};
 
 // ─── Position colours (shared) ────────────────────────────────────────────────
 const BADGE = {
@@ -136,6 +145,64 @@ function FlagModal({ student, data, onClose }) {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ── Gemini AI marking helper ─────────────────────────────────────────────────
+async function callGemini(prompt) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  const json = await res.json();
+  const raw = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}';
+  // Strip markdown fences if present
+  const clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+  return JSON.parse(clean);
+}
+
+function buildPrompt(rubric, name, data) {
+  const p3 = data.phase3 ?? {};
+  const p4 = data.phase4 ?? {};
+  const p5 = data.phase5 ?? {};
+  const pos = p3.position ? `${p3.position} — ${POSITION_LABELS[p3.position] ?? ''}` : 'Not submitted';
+  return `You are a teacher's assistant grading a high school inquiry assignment about blood minerals.
+
+RUBRIC:
+${rubric}
+
+STUDENT: ${name}
+
+PHASE 3 — Take a Stand
+Position chosen: ${pos}
+Defence (written argument):
+${p3.defence ?? '(not submitted)'}
+
+PHASE 4 — Gallery Walk Challenge
+${p4.response ?? '(not submitted)'}
+
+PHASE 5 — Reflection
+Q1: Which position surprised you most in the gallery, and why?
+${p5.answers?.q1 ?? '(not submitted)'}
+
+Q2: Did reading other students' posts change your thinking at all? Explain.
+${p5.answers?.q2 ?? '(not submitted)'}
+
+Q3: Name one concrete thing corporations, governments, or consumers could do tomorrow to make a difference. Be specific.
+${p5.answers?.q3 ?? '(not submitted)'}
+
+Using the rubric above, assess this student's work. Return ONLY valid JSON — no extra text, no markdown fences:
+{
+  "overall": "e.g. 18 / 24",
+  "comment": "2-3 sentence overall summary for the teacher",
+  "phase3": "brief comment on their position and defence",
+  "phase4": "brief comment on their challenge/counterargument",
+  "phase5": "brief comment on the quality of their reflections"
+}`;
+}
+
 function Dashboard() {
   const [students, setStudents]     = useState({}); // { name: data }
   const [gallery, setGallery]       = useState([]);
@@ -144,6 +211,13 @@ function Dashboard() {
   const [flagModal, setFlagModal]   = useState(null);
   const [wiping, setWiping]         = useState(false);
   const [wipeConfirm, setWipeConfirm] = useState(false);
+
+  // AI marking state
+  const [rubric, setRubric]         = useState(() => localStorage.getItem(RUBRIC_LS_KEY) ?? '');
+  const [aiResults, setAiResults]   = useState({});  // { name: { overall, comment, phase3, phase4, phase5 } }
+  const [marking, setMarking]       = useState(new Set()); // names currently being graded
+  const [markAllLoading, setMarkAllLoading] = useState(false);
+  const [aiError, setAiError]       = useState('');
 
   const studentsCol  = collection(db, 'sessions', 'minerals', 'students');
   const galleryCol   = collection(db, 'sessions', 'minerals', 'gallery');
@@ -168,6 +242,55 @@ function Dashboard() {
     });
     return () => { unsubStudents(); unsubGallery(); unsubResponses(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Save rubric to localStorage whenever it changes ────────────────────
+  const saveRubric = (val) => {
+    setRubric(val);
+    localStorage.setItem(RUBRIC_LS_KEY, val);
+  };
+
+  // ── Mark a single student ─────────────────────────────────────────────
+  const markStudent = async (name) => {
+    if (!GEMINI_KEY || GEMINI_KEY === 'your_key_here') {
+      setAiError('No Gemini API key set. Add VITE_GEMINI_KEY to your .env file.');
+      return;
+    }
+    if (!rubric.trim()) { setAiError('Paste your rubric first.'); return; }
+    setAiError('');
+    setMarking((prev) => new Set([...prev, name]));
+    try {
+      const data = students[name] ?? {};
+      const result = await callGemini(buildPrompt(rubric, name, data));
+      // Save to Firestore
+      await setDoc(
+        doc(db, 'sessions', 'minerals', 'students', name),
+        { aiMark: { ...result, markedAt: Date.now() } },
+        { merge: true }
+      );
+      setAiResults((prev) => ({ ...prev, [name]: result }));
+    } catch (e) {
+      console.error('AI mark error:', e);
+      setAiError(`Error marking ${name}: ${e.message}`);
+    } finally {
+      setMarking((prev) => { const s = new Set(prev); s.delete(name); return s; });
+    }
+  };
+
+  // ── Mark all students who have completed phase 5 ──────────────────────
+  const markAll = async () => {
+    if (!GEMINI_KEY || GEMINI_KEY === 'your_key_here') {
+      setAiError('No Gemini API key set. Add VITE_GEMINI_KEY to your .env file.');
+      return;
+    }
+    if (!rubric.trim()) { setAiError('Paste your rubric first.'); return; }
+    setAiError('');
+    setMarkAllLoading(true);
+    const targets = Object.keys(students).filter((n) => students[n]?.phase5?.submitted);
+    for (const name of targets) {
+      await markStudent(name);
+    }
+    setMarkAllLoading(false);
+  };
 
   // ── Wipe all test data ──────────────────────────────────────────────────
   const wipeData = async () => {
@@ -267,6 +390,9 @@ function Dashboard() {
           <button id="tab-gallery"     className={tabClass('gallery')}     onClick={() => setTab('gallery')}>Gallery ({gallery.length})</button>
           <button id="tab-responses"   className={tabClass('responses')}   onClick={() => setTab('responses')}>Responses ({responses.length})</button>
           <button id="tab-reflections" className={tabClass('reflections')} onClick={() => setTab('reflections')}>Reflections</button>
+          <button id="tab-ai-mark"     className={tabClass('ai-mark')}     onClick={() => setTab('ai-mark')}>
+            ✦ AI Mark
+          </button>
         </div>
 
         {/* ── Student Progress Table ───────────────────────────────────────── */}
@@ -438,6 +564,139 @@ function Dashboard() {
                   );
                 })
             )}
+          </div>
+        )}
+
+        {/* ── AI Mark Tab ──────────────────────────────────────────────────── */}
+        {tab === 'ai-mark' && (
+          <div className="space-y-6">
+
+            {/* Rubric editor */}
+            <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-white/80">Rubric</p>
+                <span className="text-xs text-white/25">Saved automatically to this browser</span>
+              </div>
+              <textarea
+                id="ai-rubric-input"
+                value={rubric}
+                onChange={(e) => saveRubric(e.target.value)}
+                rows={8}
+                placeholder="Paste your rubric here in plain text — e.g. criteria names, point values, and what each level looks like. The AI will interpret it."
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white/80 text-sm leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-amber-500/40 placeholder:text-white/20"
+              />
+            </div>
+
+            {/* Error banner */}
+            {aiError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-300 text-sm">
+                {aiError}
+              </div>
+            )}
+
+            {/* Mark All button */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-white/30">
+                {Object.keys(students).filter((n) => students[n]?.phase5?.submitted).length} student{Object.keys(students).filter((n) => students[n]?.phase5?.submitted).length !== 1 ? 's' : ''} with Phase 5 complete
+              </p>
+              <button
+                id="ai-mark-all-btn"
+                onClick={markAll}
+                disabled={markAllLoading || !rubric.trim()}
+                className={[
+                  'flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200',
+                  markAllLoading || !rubric.trim()
+                    ? 'bg-white/5 text-white/25 cursor-not-allowed'
+                    : 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/20 hover:-translate-y-0.5',
+                ].join(' ')}
+              >
+                {markAllLoading ? (
+                  <><span className="w-4 h-4 rounded-full border-2 border-black/30 border-t-black animate-spin" /> Marking all…</>
+                ) : (
+                  <>✦ Mark All Students</>
+                )}
+              </button>
+            </div>
+
+            {/* Results table */}
+            {Object.keys(students).length === 0 ? (
+              <div className="py-16 text-center text-white/25 text-sm bg-white/[0.02] border border-white/8 rounded-2xl">
+                No students yet.
+              </div>
+            ) : (
+              <div className="bg-white/[0.03] border border-white/8 rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/8">
+                        {['Student', 'Overall', 'P3 — Stand', 'P4 — Challenge', 'P5 — Reflection', 'Comment', ''].map((h) => (
+                          <th key={h} className="text-left text-xs text-white/30 font-semibold uppercase tracking-wider px-4 py-4 whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.keys(students).sort().map((name, i) => {
+                        const d = students[name] ?? {};
+                        const res = aiResults[name] ?? d.aiMark ?? null;
+                        const isMarking = marking.has(name);
+                        const canMark = !!d.phase3?.submitted;
+                        return (
+                          <tr
+                            key={name}
+                            className={[
+                              'border-b border-white/5 last:border-0 align-top',
+                              i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]',
+                            ].join(' ')}
+                          >
+                            <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{name}</td>
+                            <td className="px-4 py-3">
+                              {res ? (
+                                <span className="text-amber-400 font-mono font-bold text-xs">{res.overall}</span>
+                              ) : <span className="text-white/20">—</span>}
+                            </td>
+                            <td className="px-4 py-3 max-w-[180px]">
+                              <p className="text-white/55 text-xs leading-relaxed">{res?.phase3 ?? <span className="text-white/20">—</span>}</p>
+                            </td>
+                            <td className="px-4 py-3 max-w-[180px]">
+                              <p className="text-white/55 text-xs leading-relaxed">{res?.phase4 ?? <span className="text-white/20">—</span>}</p>
+                            </td>
+                            <td className="px-4 py-3 max-w-[180px]">
+                              <p className="text-white/55 text-xs leading-relaxed">{res?.phase5 ?? <span className="text-white/20">—</span>}</p>
+                            </td>
+                            <td className="px-4 py-3 max-w-[220px]">
+                              <p className="text-white/65 text-xs leading-relaxed italic">{res?.comment ?? <span className="text-white/20">—</span>}</p>
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                id={`ai-mark-btn-${name.replace(/\s/g, '-')}`}
+                                onClick={() => markStudent(name)}
+                                disabled={isMarking || !canMark || !rubric.trim()}
+                                className={[
+                                  'px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all',
+                                  isMarking
+                                    ? 'bg-amber-500/10 text-amber-400/50'
+                                    : canMark && rubric.trim()
+                                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                                      : 'bg-white/5 text-white/20 cursor-not-allowed',
+                                ].join(' ')}
+                              >
+                                {isMarking ? (
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-3 h-3 rounded-full border border-amber-400/40 border-t-amber-400 animate-spin" />
+                                    Marking…
+                                  </span>
+                                ) : res ? '↺ Re-mark' : '✦ Mark'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
