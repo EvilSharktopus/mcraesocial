@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useNgoSettings } from '../hooks/useNgoSettings';
 import TopNav from '../components/TopNav';
 import DashboardContributors from '../components/DashboardContributors';
+import { Link } from 'react-router-dom';
 
 const PHASE_LABELS = ['Setup', 'Phase 1 · Research', 'Phase 2 · Pitch Day', 'Phase 3 · Funding', 'Complete'];
 const STAGE_LABELS = {
@@ -64,23 +65,38 @@ export default function TeacherDashboard() {
 
   const approveGroup = async (groupId, stage) => {
     const isStage1 = stage === 2;
-    await updateDoc(doc(db, 'ngo_groups', groupId), {
-      phase1Stage:    isStage1 ? 3 : 5,
-      stage1Approved: isStage1 ? true : undefined,
-      stage2Approved: !isStage1 ? true : undefined,
-      teacherNote:    '',
-    });
+    try {
+      await updateDoc(doc(db, 'ngo_groups', groupId), {
+        phase1Stage:    isStage1 ? 3 : 5,
+        stage1Approved: isStage1 ? true : undefined,
+        stage2Approved: !isStage1 ? true : undefined,
+        teacherNote:    '',
+      });
+      alert('Approved successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to approve: ' + e.message);
+    }
   };
 
   const sendBack = async (groupId, stage) => {
     const note = sendBackNote[groupId] || '';
-    if (!note.trim()) return;
+    if (!note.trim()) {
+      alert('Please enter a feedback note.');
+      return;
+    }
     const isStage1 = stage === 2;
-    await updateDoc(doc(db, 'ngo_groups', groupId), {
-      phase1Stage: isStage1 ? 1 : 3,
-      teacherNote: note,
-    });
-    setSendBackNote((p) => ({ ...p, [groupId]: '' }));
+    try {
+      await updateDoc(doc(db, 'ngo_groups', groupId), {
+        phase1Stage: isStage1 ? 1 : 3,
+        teacherNote: note,
+      });
+      setSendBackNote((p) => ({ ...p, [groupId]: '' }));
+      alert('Sent back successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to send back: ' + e.message);
+    }
   };
 
   // ── Phase 3 controls ──────────────────────────────────────────────────────
@@ -225,7 +241,8 @@ export default function TeacherDashboard() {
                     <p style={{ fontSize: '0.8rem' }}>{g.memberNames.join(', ')}</p>
                     <DashboardContributors groupId={g.id} />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, alignItems: 'center' }}>
+                    <Link to={`/group/${g.id}`} className="btn btn-sm btn-ghost" target="_blank" rel="noopener noreferrer">🔍 View Details</Link>
                     <button className="btn btn-sm btn-primary" id={`approve-${g.id}`} onClick={() => approveGroup(g.id, g.phase1Stage)}>✓ Approve</button>
                     <button className="btn btn-sm btn-ghost" id={`sendback-toggle-${g.id}`} onClick={() => setExpandedGroup(expandedGroup === g.id ? null : g.id)}>↩ Send Back</button>
                   </div>
