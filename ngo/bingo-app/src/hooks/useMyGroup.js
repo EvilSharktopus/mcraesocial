@@ -22,15 +22,23 @@ export function useMyGroup() {
       where('members', 'array-contains', user.uid)
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      if (snap.empty) {
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        if (snap.empty) {
+          setGroup(null);
+        } else {
+          const doc = snap.docs[0];
+          setGroup({ id: doc.id, ...doc.data() });
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.error('useMyGroup onSnapshot error:', err);
         setGroup(null);
-      } else {
-        const doc = snap.docs[0];
-        setGroup({ id: doc.id, ...doc.data() });
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
     return unsub;
   }, [user]);

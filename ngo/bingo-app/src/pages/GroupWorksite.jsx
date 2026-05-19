@@ -28,18 +28,34 @@ export default function GroupWorksite() {
   const [loading, setLoading] = useState(true);
   const [notMember, setNotMember] = useState(false);
 
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'ngo_groups', groupId), (snap) => {
-      if (!snap.exists()) { setLoading(false); return; }
-      const data = { id: snap.id, ...snap.data() };
-      setGroup(data);
-      setNotMember(!data.members.includes(user?.uid));
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      doc(db, 'ngo_groups', groupId),
+      (snap) => {
+        if (!snap.exists()) { setLoading(false); return; }
+        const data = { id: snap.id, ...snap.data() };
+        setGroup(data);
+        setNotMember(!data.members.includes(user?.uid));
+        setLoading(false);
+      },
+      (err) => {
+        console.error('GroupWorksite onSnapshot error:', err);
+        setError(err.message || 'Permission denied reading ngo_groups');
+        setLoading(false);
+      }
+    );
     return unsub;
   }, [groupId, user]);
 
   if (loading) return <div className="loading-screen"><span className="spinner" /></div>;
+
+  if (error) return (
+    <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
+      <p style={{ color: 'var(--error)' }}>Error: {error}</p>
+    </div>
+  );
 
   if (!group) return (
     <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
