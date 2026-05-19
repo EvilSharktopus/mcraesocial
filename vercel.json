@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "ngo.mcraesocial.com" }],
+      "destination": "https://mcraesocial.com/ngo/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/ngo/:path*",
