@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useStageSync } from '../hooks/useStageSync';
+import ContributorTags from './ContributorTags';
 import '../styles/worksite.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -114,7 +115,25 @@ export default function Stage1Form({ groupId }) {
     { label: 'Location justification', ok: !!(v.locationJustification?.trim()) },
     { label: 'Rough solution',       ok: !!(v.roughSolution?.trim()) },
   ];
-  const allGood = checks.every((c) => c.ok);
+
+  // Helper to check if a field has at least one contributor
+  const hasContributor = (fieldId) => (v.contributors?.[fieldId]?.length || 0) > 0;
+  
+  const tagChecks = [
+    { label: 'Contributors: Why this issue?', ok: hasContributor('whyThisIssue') },
+    { label: 'Contributors: Global context', ok: hasContributor('globalContext') },
+    { label: 'Contributors: Location chosen', ok: hasContributor('locationChosen') },
+    { label: 'Contributors: Location justification', ok: hasContributor('locationJustification') },
+    { label: 'Contributors: Rough solution', ok: hasContributor('roughSolution') },
+  ];
+  
+  // Also check each AI Prompt pair
+  prompts.forEach((p, i) => {
+    tagChecks.push({ label: `Contributors: AI Prompt ${i + 1}`, ok: hasContributor(`prompt-${i}`) });
+  });
+
+  const allChecks = [...checks, ...tagChecks];
+  const allGood = allChecks.every((c) => c.ok);
 
   // ── Submit ───────────────────────────────────────────────────────────────
 
@@ -228,6 +247,7 @@ export default function Stage1Form({ groupId }) {
         <SectionHeader num="3" title="Why This Matters" subtitle="In your own words — no AI, no copy-paste." />
         <div className="form-group">
           <label htmlFor="why-issue">Why did your group choose this issue?</label>
+          <ContributorTags syncObj={s1} fieldId="whyThisIssue" memberNames={g.memberNames || []} />
           <textarea
             id="why-issue"
             rows={4}
@@ -240,6 +260,7 @@ export default function Stage1Form({ groupId }) {
         </div>
         <div className="form-group">
           <label htmlFor="global-context">Why does this issue matter globally?</label>
+          <ContributorTags syncObj={s1} fieldId="globalContext" memberNames={g.memberNames || []} />
           <textarea
             id="global-context"
             rows={4}
@@ -283,6 +304,7 @@ export default function Stage1Form({ groupId }) {
               <div className="ai-prompt-label">
                 <span>✦</span> Prompt {i + 1}
               </div>
+              <ContributorTags syncObj={s1} fieldId={`prompt-${i}`} memberNames={g.memberNames || []} />
               <div className="form-group">
                 <label htmlFor={`prompt-${i}`}>My prompt to the AI</label>
                 <textarea
@@ -314,6 +336,7 @@ export default function Stage1Form({ groupId }) {
         {/* Location fields */}
         <div className="form-group">
           <label htmlFor="location-chosen">Location Chosen</label>
+          <ContributorTags syncObj={s1} fieldId="locationChosen" memberNames={g.memberNames || []} />
           <input
             id="location-chosen"
             type="text"
@@ -327,6 +350,7 @@ export default function Stage1Form({ groupId }) {
         </div>
         <div className="form-group">
           <label htmlFor="location-just">Why did you choose this location?</label>
+          <ContributorTags syncObj={s1} fieldId="locationJustification" memberNames={g.memberNames || []} />
           <textarea
             id="location-just"
             rows={3}
@@ -348,6 +372,7 @@ export default function Stage1Form({ groupId }) {
         />
         <div className="form-group">
           <label htmlFor="rough-solution">Your rough solution idea</label>
+          <ContributorTags syncObj={s1} fieldId="roughSolution" memberNames={g.memberNames || []} />
           <textarea
             id="rough-solution"
             rows={5}
@@ -366,8 +391,8 @@ export default function Stage1Form({ groupId }) {
         <p>Your teacher will review and either approve or send it back with feedback.</p>
 
         {/* Checklist */}
-        <ul className="validation-list">
-          {checks.map((c) => (
+        <ul className="validation-list" style={{ columns: 2, columnGap: '2rem' }}>
+          {allChecks.map((c) => (
             <li key={c.label} className={c.ok ? 'ok' : 'todo'}>
               <span>{c.ok ? '✓' : '○'}</span> {c.label}
             </li>

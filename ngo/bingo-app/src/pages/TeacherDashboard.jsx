@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../auth/AuthContext';
 import { useNgoSettings } from '../hooks/useNgoSettings';
 import TopNav from '../components/TopNav';
+import DashboardContributors from '../components/DashboardContributors';
 
 const PHASE_LABELS = ['Setup', 'Phase 1 · Research', 'Phase 2 · Pitch Day', 'Phase 3 · Funding', 'Complete'];
 const STAGE_LABELS = {
@@ -222,6 +223,7 @@ export default function TeacherDashboard() {
                       <span className="badge badge-yellow" style={{ fontSize: '0.65rem' }}>{g.phase1Stage === 2 ? 'Stage 1' : 'Stage 2'}</span>
                     </div>
                     <p style={{ fontSize: '0.8rem' }}>{g.memberNames.join(', ')}</p>
+                    <DashboardContributors groupId={g.id} />
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                     <button className="btn btn-sm btn-primary" id={`approve-${g.id}`} onClick={() => approveGroup(g.id, g.phase1Stage)}>✓ Approve</button>
@@ -299,6 +301,7 @@ export default function TeacherDashboard() {
                     <div>
                       <strong>{g.ngoName || '(unnamed)'}</strong>
                       <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginLeft: '0.5rem' }}>{gScores.length} scorer{gScores.length !== 1 ? 's' : ''}</span>
+                      <DashboardContributors groupId={g.id} />
                     </div>
                     <span className="badge badge-teal" style={{ fontSize: '0.65rem' }}>
                       Avg total: {gScores.length > 0 ? (CRITERIA.reduce((s, k) => s + parseFloat(avg(gScores, k)), 0) / CRITERIA.length).toFixed(1) : '—'}/10

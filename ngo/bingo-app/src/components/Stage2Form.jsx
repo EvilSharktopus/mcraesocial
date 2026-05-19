@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useStageSync } from '../hooks/useStageSync';
+import ContributorTags from './ContributorTags';
 import '../styles/worksite.css';
 
 const noPaste = (e) => e.preventDefault();
@@ -242,7 +243,23 @@ export default function Stage2Form({ groupId }) {
     { label: '4–6 timeline milestones', ok: timeline.filter(r => r.month && r.milestone).length >= 4 },
     { label: 'Budget totals exactly $500,000', ok: budgetExact },
   ];
-  const allGood = checks.every((c) => c.ok);
+
+  // Helper to check if a field has at least one contributor
+  const hasContributor = (fieldId) => (v.contributors?.[fieldId]?.length || 0) > 0;
+
+  const tagChecks = [
+    { label: 'Contributors: Specific problem', ok: hasContributor('specificProblem') },
+    { label: 'Contributors: Root causes', ok: hasContributor('rootCauses') },
+    { label: 'Contributors: Who is affected', ok: hasContributor('whoAffected') },
+    { label: 'Contributors: Statistic 1', ok: hasContributor('stat1') },
+    { label: 'Contributors: Statistic 2', ok: hasContributor('stat2') },
+    { label: 'Contributors: Intervention', ok: hasContributor('intervention') },
+    { label: 'Contributors: Timeline', ok: hasContributor('timeline') },
+    { label: 'Contributors: Budget', ok: hasContributor('budget') },
+  ];
+
+  const allChecks = [...checks, ...tagChecks];
+  const allGood = allChecks.every((c) => c.ok);
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -287,18 +304,21 @@ export default function Stage2Form({ groupId }) {
         <SectionHeader num="1" title="The Problem in Your Location" subtitle="Zoom in from your Stage 1 research to the specific community you chose." />
         <div className="form-group">
           <label htmlFor="s2-specific-problem">What is the specific problem in this community?</label>
+          <ContributorTags syncObj={s2} fieldId="specificProblem" memberNames={grp.values.memberNames || []} />
           <textarea id="s2-specific-problem" rows={4} placeholder="Describe the exact problem as it manifests in your chosen location…"
             value={v.specificProblem ?? ''} onChange={(e) => s2.set('specificProblem', e.target.value)}
             onBlur={blurSave} onPaste={noPaste} />
         </div>
         <div className="form-group">
           <label htmlFor="s2-root-causes">What are the root causes?</label>
+          <ContributorTags syncObj={s2} fieldId="rootCauses" memberNames={grp.values.memberNames || []} />
           <textarea id="s2-root-causes" rows={4} placeholder="Why does this problem exist? What systemic or structural factors drive it?"
             value={v.rootCauses ?? ''} onChange={(e) => s2.set('rootCauses', e.target.value)}
             onBlur={blurSave} onPaste={noPaste} />
         </div>
         <div className="form-group">
           <label htmlFor="s2-who-affected">Who is most affected?</label>
+          <ContributorTags syncObj={s2} fieldId="whoAffected" memberNames={grp.values.memberNames || []} />
           <textarea id="s2-who-affected" rows={3} placeholder="Describe the specific population — age, gender, economic status, location…"
             value={v.whoAffected ?? ''} onChange={(e) => s2.set('whoAffected', e.target.value)}
             onBlur={blurSave} onPaste={noPaste} />
@@ -313,6 +333,7 @@ export default function Stage2Form({ groupId }) {
             <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--yellow)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Statistic {n}
             </p>
+            <ContributorTags syncObj={s2} fieldId={`stat${n}`} memberNames={grp.values.memberNames || []} />
             <div className="form-group">
               <label htmlFor={`stat${n}`}>The statistic</label>
               <input id={`stat${n}`} type="text" placeholder='e.g. "3.6 billion people lack access to safe sanitation"'
@@ -334,6 +355,7 @@ export default function Stage2Form({ groupId }) {
         <SectionHeader num="3" title="Our Intervention" subtitle="What will your NGO actually do with the $500,000?" />
         <div className="form-group">
           <label htmlFor="s2-intervention">Proposed intervention</label>
+          <ContributorTags syncObj={s2} fieldId="intervention" memberNames={grp.values.memberNames || []} />
           <textarea id="s2-intervention" rows={5}
             placeholder="Be specific: what programs, infrastructure, services, or campaigns will you run? Who delivers them? How are people reached?"
             value={v.intervention ?? ''} onChange={(e) => s2.set('intervention', e.target.value)}
@@ -344,6 +366,7 @@ export default function Stage2Form({ groupId }) {
       {/* ── Section 4: Timeline ─────────────────────────────────────────── */}
       <div className="card worksite-section">
         <SectionHeader num="4" title="Implementation Timeline" subtitle="4 to 6 milestones showing how your intervention rolls out over time." />
+        <ContributorTags syncObj={s2} fieldId="timeline" memberNames={grp.values.memberNames || []} />
         <div style={{ marginBottom: '0.75rem' }}>
           <TimelineEditor
             rows={timeline}
@@ -357,6 +380,7 @@ export default function Stage2Form({ groupId }) {
       {/* ── Section 5: Budget ───────────────────────────────────────────── */}
       <div className="card worksite-section">
         <SectionHeader num="5" title="Budget Breakdown" subtitle="Itemize your $500,000. Total must equal exactly $500,000 to submit." />
+        <ContributorTags syncObj={s2} fieldId="budget" memberNames={grp.values.memberNames || []} />
         <BudgetEditor
           rows={budget}
           onChange={(rows) => { setBudget(rows); }}
@@ -368,8 +392,8 @@ export default function Stage2Form({ groupId }) {
       <div className="submit-panel">
         <h3>Ready to submit Stage 2?</h3>
         <p>Your teacher will review your evidence, intervention, and budget before approving.</p>
-        <ul className="validation-list">
-          {checks.map((c) => (
+        <ul className="validation-list" style={{ columns: 2, columnGap: '2rem' }}>
+          {allChecks.map((c) => (
             <li key={c.label} className={c.ok ? 'ok' : 'todo'}>
               <span>{c.ok ? '✓' : '○'}</span> {c.label}
             </li>
