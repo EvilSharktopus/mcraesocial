@@ -1,0 +1,324 @@
+
+bi NGO
+And Saving the World Was Its Name-o
+Antigravity Build Brief  —  Social Studies 10-1
+Prepared for Antigravity agentic coding session
+Read in full before writing a single line of code.
+
+
+1. Project Overview
+bi NGO is a classroom simulation app for Social Studies 10-1 in which student groups form fictional Non-Governmental Organizations, research a real global issue, design a targeted $500K intervention, pitch their NGO to classmates, and compete for funding in a live allocation round.
+
+??  The Teaching Goal
+Students move from vague issue awareness to a specific, costed, evidence-based intervention proposal.
+The platform scaffolds that thinking across two class periods, then culminates in a live pitch and funding session.
+Integrity is paramount: no copy-paste, teacher-gated progression, and all work done inside the app.
+Infrastructure
+?  Standalone React app — separate from the Nationalism Game entirely. Do not touch that codebase.
+?  Shares Firebase project with McRae Submit: same Google Auth, same Firestore instance, separate collections.
+?  Deployed to Vercel. Separate repo from Submit.
+?  All Firestore collections prefixed ngo_ to ensure zero bleed with Submit data.
+?  Students authenticate with the same Google school accounts they use for Submit.
+
+?  Hard Infrastructure Constraints
+Never touch the Nationalism Game repo or its Firestore collections.
+Never modify Submit's Cloud Functions, Firestore rules, or existing collections.
+All new collections use ngo_ prefix exclusively.
+No shared state between this app and any other app in the Firebase project.
+2. Firestore Data Model
+Build these collections exactly. Field names are authoritative — do not rename or restructure without explicit instruction.
+
+ngo_groups
+One document per NGO group. Created when the first member creates the group.
+Field / KeyTypeNotes / ConstraintsgroupIdstringAuto-generated doc IDjoinCodestring4-character uppercase code, unique, generated on creationmembersstring[]Array of Google UIDs, max 4memberNamesstring[]Display names matching members array indexcreatedBystringUID of student who created the groupcreatedAttimestampngoNamestringSet in Stage 1. Used on funding board.taglinestringSet in Stage 1. Used on funding board.phase1Stagenumber0 = not started, 1 = Stage 1 in progress, 2 = Stage 1 awaiting approval, 3 = Stage 2 in progress, 4 = Stage 2 awaiting approval, 5 = Phase 1 completestage1ApprovedbooleanSet by teacherstage2ApprovedbooleanSet by teacher. Unlocks pitch deck brief + PDF generation.teacherNotestringTeacher's send-back note, shown to group on rejectionfundingReceivednumberRunning total in dollars. Max $500,000. Default 0.fundedbooleanTrue when fundingReceived >= 500000. Locks further contributions.
+ngo_stage1  /  ngo_stage2
+One document per group, keyed by groupId. Stored in separate collections to keep reads lean.
+ngo_stage1 fields:
+Field / KeyTypeNotes / ConstraintsgroupIdstringForeign key to ngo_groupsissuestringSelected from dropdown of 24 issueswhyThisIssuestringPersonal connection. No paste. Auto-saves.globalContextstringWhy it matters globally. No paste. Auto-saves.aiPromptsobject[]Array of 5 objects: { prompt: string, hoping: string }locationChosenstringSpecific community/region after research. No paste.locationJustificationstringWhy this place. No paste. Auto-saves.roughSolutionstringFree-form brainstorm. No paste. Auto-saves.lastUpdatedtimestampUpdated on every auto-save
+ngo_stage2 fields:
+Field / KeyTypeNotes / ConstraintsgroupIdstringForeign key to ngo_groupsspecificProblemstringNo paste. Auto-saves.rootCausesstringNo paste. Auto-saves.whoAffectedstringNo paste. Auto-saves.stat1stringStatistic text. No paste.stat1SourcestringSource URL or citation.stat2stringStatistic text. No paste.stat2SourcestringSource URL or citation.interventionstringWhat they will actually do. No paste. Auto-saves.timelineobject[]Array of { month: number, milestone: string }. 4–6 entries.budgetobject[]Array of { category: string, amount: number }. Must total $500,000.lastUpdatedtimestampUpdated on every auto-save
+ngo_scorecards
+One document per student per NGO they score. Written during Phase 2 pitch day.
+Field / KeyTypeNotes / ConstraintsscorerIdstringUID of student scoringtargetGroupIdstringGroup being scoredimpactnumberSlider 1–10: How many people does this actually help?feasibilitynumberSlider 1–10: Could this realistically work?urgencynumberSlider 1–10: Does this need solving now?creativitynumberSlider 1–10: Is this a fresh approach?persuasivenessnumberSlider 1–10: Did they sell it?notesstringQuick freeform notes. No paste. Optional.submittedAttimestamp
+ngo_funding
+One document per student's funding submission. Written during Phase 3.
+Field / KeyTypeNotes / ConstraintsstudentIdstringUID of allocating studentallocationsobject[]Array of { groupId: string, amount: number }. Must not include own group. Sum must equal perStudentAmount.submittedAttimestamplockedbooleanTrue after submission. Cannot resubmit.
+ngo_settings
+Single document (id: 'global') holding teacher-controlled app-wide settings.
+Field / KeyTypeNotes / ConstraintscurrentPhasenumber0 = setup, 1 = Phase 1, 2 = Phase 2, 3 = Phase 3, 4 = completeperStudentAmountnumberDollar amount each student allocates. Teacher sets before opening Phase 3. Locks when Phase 3 opens.phase3OpenbooleanTrue when teacher opens funding round. Setting perStudentAmount after this point has no effect.phase3LockedbooleanTrue when teacher closes the round. No further allocations accepted.suggestedAmountnumberAuto-calculated: (activeNGOs * 500000 * 0.6) / studentCount. Display only — teacher overrides perStudentAmount manually.
+3. Phase Architecture
+The app has four phases controlled exclusively by the teacher dashboard. Students cannot advance phases. Phase state lives in ngo_settings.currentPhase.
+
+Phase 0
+Setup
+Teacher only — students see a holding screen
+?  Teacher views registered students and current group status.
+?  Teacher sets perStudentAmount (with suggested calculation displayed).
+?  Teacher advances to Phase 1 when ready.
+?  Prohibited
+Students cannot form groups until Phase 1 is open.
+perStudentAmount cannot be changed after Phase 3 opens.
+Phase 1
+Research & Planning
+Two class periods — group worksite with teacher gates
+Group Formation
+?  Any student can create a group ? receives a 4-character join code.
+?  Other students enter the code to join. Hard cap: 4 members per group.
+?  Teacher dashboard shows all groups and ungrouped students.
+?  A student can only be in one group.
+
+Stage 1 — Issue, Geography & Rough Solution
+All group members share one Stage 1 document. Any member can edit any field. Changes auto-save every 30 seconds and on blur. No copy-paste on any text field.
+
+?  Issue dropdown (24 options — list provided separately).
+?  Why this issue (personal connection).
+?  Global context (why it matters worldwide).
+?  Two scaffold geography questions displayed as read-only reference text (not editable).
+?  5 AI prompt fields: each has a 'My prompt' textarea and a 'What I want to learn' textarea.
+?  Location chosen after research (specific community/region).
+?  Location justification (why this place).
+?  Rough solution brainstorm (free-form, longer text).
+
+When group submits Stage 1: phase1Stage ? 2 (awaiting approval). Teacher sees a notification. Teacher approves ? phase1Stage ? 3, stage1Approved ? true. Teacher sends back ? teacherNote populated, phase1Stage ? 1, note displayed to group.
+
+Stage 2 — Problem, Evidence & Intervention
+Unlocks only after stage1Approved is true. Same auto-save and no-paste rules apply.
+
+?  Specific problem in this community.
+?  Root causes.
+?  Who is most affected.
+?  Statistic 1 + source.
+?  Statistic 2 + source.
+?  Proposed intervention (what they will actually do).
+?  Timeline: 4–6 milestones. Each entry: month number + milestone description. Rendered as a simple horizontal timeline UI component.
+?  Budget: itemized table. Category (text) + Amount (number). Running total displayed. Submit blocked unless total equals exactly $500,000.
+
+When group submits Stage 2: phase1Stage ? 4 (awaiting approval). Teacher approves ? phase1Stage ? 5, stage2Approved ? true. Unlocks pitch deck brief + PDF generation. Teacher sends back with note ? phase1Stage ? 3.
+?  Stage 2 Prohibited
+Stage 2 must not be accessible until stage1Approved is true.
+Budget submission must be blocked if total does not equal exactly $500,000.
+Do not allow decimal values in budget amounts.
+Phase 2
+Pitch Day
+Teacher opens — read-only NGO cards + live scorecard
+?  All approved NGO cards become visible to all students. Card shows: NGO name, tagline, issue, location, group members.
+?  Students score each NGO as it pitches using 5 sliders (1–10): Impact, Feasibility, Urgency, Creativity, Persuasiveness.
+?  Optional freeform notes field per NGO (no paste).
+?  Students can update their scorecard for any NGO until Phase 3 opens.
+?  Teacher dashboard shows aggregate scores per NGO in real time.
+?  Phase 2 Prohibited
+Students cannot score their own group.
+Funding allocation UI must not be visible during Phase 2.
+Scorecard data is private to each student until after Phase 3 closes.
+Phase 3
+Funding Round
+Teacher opens — live allocation board
+Allocation UI (Student)
+?  Each student sees all NGO names and taglines.
+?  Their own group's NGO is greyed out and cannot receive an allocation.
+?  Already-funded NGOs (fundingReceived >= 500000) are locked — greyed out with FUNDED stamp.
+?  Student enters dollar amounts per NGO. Running total displayed. Submit blocked unless total equals exactly perStudentAmount.
+?  On submit: allocations written to ngo_funding, ngo_groups.fundingReceived updated atomically for each target group, locked ? true after submission.
+?  No resubmission after locking.
+
+Funding Board (Projector View)
+?  Separate fullscreen route: /funding-board — designed to be displayed on a projector.
+?  One card per NGO showing: name, tagline, funding bar ($0–$500K), dollar amount received.
+?  Bar fills in real time via Firestore onSnapshot listener.
+?  At $500K: bar turns green, FUNDED stamp appears, card locks visually.
+?  Teacher controls when to open and close the round from the dashboard.
+?  On round close: unfunded NGOs shown in amber/red. Final state frozen on screen.
+?  Phase 3 Prohibited
+Students cannot allocate to their own group — enforce server-side in Firestore rules.
+fundingReceived must never exceed $500,000 — use a Firestore transaction to check before writing.
+Allocation amounts must be whole dollars only (no decimals).
+perStudentAmount must not be changeable after phase3Open is true.
+Students cannot resubmit after locking.
+Funding board route must not show individual student allocations — totals only.
+4. Generated Outputs
+Both outputs generate automatically when stage2Approved becomes true. They pull exclusively from ngo_stage1, ngo_stage2, and ngo_groups for that groupId.
+
+4a. Pitch Deck Brief
+A structured slide-by-slide content guide — not a finished deck. Students take this into Canva or Google Slides.
+
+?  Slide 1 — Hook: NGO name, tagline, and issue.
+?  Slide 2 — The Problem: specificProblem + rootCauses + whoAffected.
+?  Slide 3 — The Evidence: stat1 + stat1Source + stat2 + stat2Source.
+?  Slide 4 — Our Solution: intervention.
+?  Slide 5 — Timeline: milestones from timeline array.
+?  Slide 6 — Budget: budget line items.
+?  Slide 7 — The Ask: ngoName + tagline + $500,000 + location.
+
+Rendered as a clean in-app view with a 'Copy to clipboard' button per slide. Students paste into their own deck.
+
+4b. Auto-Generated PDF Info Package
+A one-page formatted PDF generated client-side using a PDF library (e.g. jsPDF or react-pdf). Downloadable by the group.
+
+PDF Layout:
+?  Header: ngoName (large) + tagline + group members (small).
+?  Section 1 — The Problem: prose summary drawing from specificProblem, rootCauses, whoAffected.
+?  Section 2 — The Evidence: stat1 + source, stat2 + source, formatted as pull-quotes.
+?  Section 3 — Our Intervention: intervention field.
+?  Section 4 — Timeline: auto-rendered horizontal timeline graphic from timeline array.
+?  Section 5 — Budget: auto-rendered bar chart from budget array.
+
+Styled with the app's teal/yellow colour palette. NGO name and tagline used as document branding throughout.
+?  PDF Prohibited
+Do not allow PDF generation before stage2Approved is true.
+Do not include any fields that were not teacher-approved (i.e. only pull from approved stage data).
+PDF must not be editable — render only, no form fields.
+5. Post-Round Results
+Triggered when teacher sets phase3Locked ? true. Results visible to all students immediately.
+
+Group Results View
+?  Each group sees their final funding total and whether they were funded.
+?  Scorecard breakdown: average score per criterion across all scorers (Impact, Feasibility, Urgency, Creativity, Persuasiveness).
+?  Individual scorer data remains anonymous — show averages only.
+?  Any written notes from scorecards displayed as anonymous quotes.
+
+Class Results View
+?  Leaderboard of all NGOs by funding received.
+?  Visual: funded NGOs in green, unfunded in amber.
+?  Funding board remains visible on /funding-board route in its final frozen state.
+
+6. Teacher Dashboard
+Accessible only to authenticated users whose UID is in a hardcoded teacher allowlist in Firestore (ngo_settings document, teachers array). Route: /teacher.
+
+Phase 1 Controls
+?  View all groups: name, members, current stage, last updated.
+?  For groups awaiting approval (phase1Stage 2 or 4): Approve button + Send Back button with note field.
+?  Visual indicator for groups that haven't started, in progress, awaiting approval, approved.
+?  View any group's Stage 1 or Stage 2 content in read-only mode.
+
+Phase 2 Controls
+?  Open Phase 2 button.
+?  View aggregate scorecard results per NGO in real time.
+
+Phase 3 Controls
+?  Phase 3 setup widget: shows registered student count, active NGO count, suggested perStudentAmount, editable override field.
+?  Open Funding Round button — locks perStudentAmount on click.
+?  Live view of allocation progress: how many students have submitted.
+?  Close Round button ? sets phase3Locked ? true.
+?  Dashboard Prohibited
+Do not expose individual student funding allocations anywhere on the public-facing app.
+Teacher dashboard must not be accessible to non-teacher UIDs — enforce in Firestore rules.
+Do not allow phase to go backwards (e.g. from Phase 2 back to Phase 1).
+7. UX & Integrity Rules
+Copy-Paste Prevention
+Apply to ALL student text input fields throughout the app. No exceptions.
+onPaste={(e) => e.preventDefault()}
+This is the primary academic integrity mechanism. It is non-negotiable.
+
+Auto-Save
+All text fields auto-save to Firestore on blur and every 30 seconds while focused. No manual save button. Show a subtle 'Saved' indicator after each write.
+
+Group Collaboration
+?  All group members see the same document in real time via Firestore onSnapshot.
+?  Any member can edit any field — no field-level ownership.
+?  Show which members are currently online (green dot next to name) using Firestore presence or a simple heartbeat.
+
+Phase Gating
+?  Students see only the content relevant to the current phase.
+?  Phase 1 students in Stage 1 cannot see Stage 2 fields at all — not greyed out, simply not rendered.
+?  Pitch deck brief and PDF not rendered until stage2Approved is true.
+?  Funding allocation UI not rendered until phase3Open is true.
+
+Budget Validation
+?  Budget total displayed in real time as amounts are entered.
+?  Submit button disabled and a clear error shown if total ? $500,000.
+?  Funding allocation submit disabled if total ? perStudentAmount.
+?  All monetary inputs accept whole numbers only.
+?  Global Prohibited Patterns
+No copy-paste on any student text input. Ever.
+No phase can be accessed before its gate condition is met — never rely on UI hiding alone; enforce in Firestore rules.
+No student can see another student's scorecard scores or notes.
+No student can allocate funds to their own group — enforce in Firestore security rules, not just UI.
+No over-funding: fundingReceived must never exceed $500,000 — use atomic Firestore transactions.
+Do not use localStorage or sessionStorage anywhere in the app.
+Do not hardcode perStudentAmount — always read from ngo_settings.
+8. Recommended Build Sequence
+Build page by page. Do not start the next page until the current one is complete and tested. Provide a summary of what was built at the end of each page before moving on.
+
+Page 1 — Firebase & Auth Foundation
+?  Firebase project connection, Google Auth, Firestore rules scaffold.
+?  Teacher allowlist in ngo_settings.teachers.
+?  ngo_settings document initialised with defaults.
+?  Route structure: /, /teacher, /funding-board, /group/:groupId.
+
+Page 2 — Group Formation
+?  Group creation flow: generates join code, creates ngo_groups document.
+?  Join flow: enter code ? added to members array if under cap.
+?  Student landing page: shows group status or prompts to create/join.
+?  Teacher dashboard: group list view.
+
+Page 3 — Stage 1 Worksite
+?  All Stage 1 fields with no-paste enforcement and auto-save.
+?  Issue dropdown with 24 options.
+?  5 AI prompt pairs.
+?  Submit for approval flow ? phase1Stage transitions.
+?  Teacher approve/send-back with note.
+
+Page 4 — Stage 2 Worksite
+?  All Stage 2 fields with no-paste and auto-save.
+?  Timeline UI: add/remove milestone rows, month + description.
+?  Budget table: add/remove rows, real-time total, $500K validation.
+?  Submit for approval flow ? phase1Stage transitions.
+?  Teacher approve/send-back.
+
+Page 5 — Pitch Deck Brief & PDF
+?  Pitch deck brief view: slide-by-slide content cards with copy buttons.
+?  PDF generation from approved Stage 1 + Stage 2 data.
+?  Timeline rendered as horizontal graphic.
+?  Budget rendered as bar chart.
+
+Page 6 — Phase 2 Scorecard
+?  NGO cards (read-only) visible to all students.
+?  Scorecard UI: 5 sliders per NGO, notes field, auto-save.
+?  Students cannot score own group.
+?  Teacher dashboard: aggregate scores view.
+
+Page 7 — Phase 3 Funding Allocation
+?  Student allocation UI: amounts per NGO, own group locked, real-time total, $500K validation.
+?  Atomic Firestore transaction on submit.
+?  Teacher Phase 3 setup widget: suggested amount, override, open round.
+
+Page 8 — Funding Board
+?  Fullscreen /funding-board route.
+?  Real-time cards with funding bars via onSnapshot.
+?  FUNDED stamp at $500K, locked visual state.
+?  Teacher close round ? frozen final state.
+
+Page 9 — Results & Polish
+?  Post-round results: group view (funding total + scorecard breakdown) and class leaderboard.
+?  Anonymous scorecard notes display.
+?  Final QA pass: all Firestore rules, no-paste enforcement, phase gating, mobile responsiveness.
+
+Appendix — Global Issue Dropdown Options
+These 24 options populate the Stage 1 issue dropdown in the order shown.
+
+01.  Women's Rights & Gender Equality
+02.  Climate Change & Environmental Justice
+03.  Children in Armed Conflict
+04.  Refugee & Displacement Crises
+05.  Arms Trade & Disarmament
+06.  Endangered Species & Biodiversity Loss
+07.  Child Labour & Sweatshop Economy
+08.  Water Pollution & Access to Clean Water
+09.  Fair Trade & Economic Inequality
+10.  Human Rights & Political Prisoners
+11.  Overpopulation & Urbanization
+12.  Pandemics, Disease & Global Health
+13.  Food Insecurity & World Hunger
+14.  LGBTQ+ Rights & Persecution
+15.  Indigenous Rights & Land Sovereignty
+16.  Racial Justice & Systemic Racism
+17.  Digital Divide & Technology Access
+18.  Modern Slavery & Human Trafficking
+19.  Mental Health & Global Access to Care
+20.  Nuclear Proliferation & WMD Risk
+21.  Ocean Pollution & Marine Ecosystems
+22.  Deforestation & Habitat Destruction
+23.  Access to Education in Conflict Zones
+24.  Disability Rights & Inclusion
+bi NGO App  —  Antigravity Build Brief    CONFIDENTIAL / INTERNAL
+
