@@ -6,6 +6,7 @@ import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 
 export function useStageSync(collectionName, docId) {
   const [serverData, setServerData] = useState(null);
+  const [error, setError] = useState(null);
   const localRef = useRef({});            // pending edits (not yet saved)
   const [localSnap, setLocalSnap] = useState({}); // mirror for renders
   const [saving, setSaving]   = useState(false);
@@ -15,9 +16,21 @@ export function useStageSync(collectionName, docId) {
   // Live listener — remote wins only for fields NOT pending locally
   useEffect(() => {
     if (!docId) return;
-    const unsub = onSnapshot(doc(db, collectionName, docId), (snap) => {
-      if (snap.exists()) setServerData(snap.data());
-    });
+    const unsub = onSnapshot(
+      doc(db, collectionName, docId),
+      (snap) => {
+        setError(null);
+        // If doc exists, use its data. If it doesn't exist yet, treat as empty object
+        // so loaded becomes true and we don't spin forever.
+        setServerData(snap.exists() ? snap.data() : {});
+      },
+      (err) => {
+        console.error(`useStageSync(${collectionName}/${docId}) error:`, err);
+        setError(err.message || 'Firestore read error');
+        // Set serverData to {} so loaded = true and the UI can show an error
+        setServerData((prev) => prev ?? {});
+      }
+    );
     return unsub;
   }, [collectionName, docId]);
 
@@ -62,5 +75,5 @@ export function useStageSync(collectionName, docId) {
   }, [save]);
 
   const loaded = serverData !== null;
-  return { values, set, save, saving, showSaved, loaded };
+  return { values, set, save, saving, showSaved, loaded, error };
 }

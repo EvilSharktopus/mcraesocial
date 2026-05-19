@@ -142,6 +142,18 @@ export default function Stage1Form({ groupId }) {
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (!s1.loaded || !grp.loaded) {
+    // Show error if Firestore denied access or doc missing
+    const err = s1.error || grp.error;
+    if (err) {
+      return (
+        <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ color: 'var(--error)', textAlign: 'center' }}>
+            ⚠️ Could not load worksite data.<br />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{err}</span>
+          </p>
+        </div>
+      );
+    }
     return <div className="loading-screen"><span className="spinner" /></div>;
   }
 
