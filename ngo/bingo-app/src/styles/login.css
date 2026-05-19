@@ -102,3 +102,29 @@
   color: var(--text-dim);
 }
 .login-hint strong { color: var(--text-muted); }
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--navy-4, rgba(0,0,0,0.3));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.login-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px var(--teal-glow);
+}
+.login-input::placeholder { color: var(--text-dim); }
