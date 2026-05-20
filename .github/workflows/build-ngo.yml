@@ -1,0 +1,39 @@
+name: Build and Deploy NGO App
+
+on:
+  push:
+    paths:
+      - 'ngo/bingo-app/**'
+    branches:
+      - main
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies and build
+        working-directory: ./ngo/bingo-app
+        run: |
+          npm ci
+          npm run build
+          cp -r dist/* ../
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add ngo/index.html ngo/assets/
+          git commit -m "build: compile latest React app into static folder" || echo "No changes to commit"
+          git push
