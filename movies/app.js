@@ -1294,8 +1294,8 @@ const App = (() => {
       const batch = db.batch();
       sorted.forEach(u => {
         batch.update(db.collection('movies').doc(u.id), {
-          domesticGross: u.domesticGross,
-          boxOfficeRank: u.boxOfficeRank,
+          domesticGross: u.domesticGross || 0,
+          boxOfficeRank: u.boxOfficeRank || null,
         });
         const movie = state.movies.find(m => m.id === u.id);
         if (movie) { movie.domesticGross = u.domesticGross; movie.boxOfficeRank = u.boxOfficeRank; }
@@ -1351,7 +1351,6 @@ const App = (() => {
       if (!results.length) { toast('No box office data returned yet — try again later.', 'error'); return; }
 
       let updated = 0;
-      const batch = db.batch();
       for (const row of results) {
         if (!row.domesticGross) continue;
         const gross = typeof row.domesticGross === 'number'
@@ -1364,15 +1363,24 @@ const App = (() => {
           return t === rowTitle || t.includes(rowTitle) || rowTitle.includes(t);
         });
         if (!match) { console.warn('No BOM match for:', row.title); continue; }
-        batch.update(db.collection('movies').doc(match.id), { domesticGross: gross });
+        
         match.domesticGross = gross;
         updated++;
       }
 
-      // Recalculate all ranks
+      // Recalculate all ranks in memory first
       const withGross = state.movies.filter(m => m.domesticGross > 0).sort((a, b) => b.domesticGross - a.domesticGross);
-      withGross.forEach((m, i) => { m.boxOfficeRank = i + 1; batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: i + 1 }); });
-      state.movies.filter(m => !m.domesticGross && m.boxOfficeRank).forEach(m => { m.boxOfficeRank = null; batch.update(db.collection('movies').doc(m.id), { boxOfficeRank: null }); });
+      withGross.forEach((m, i) => { m.boxOfficeRank = i + 1; });
+      state.movies.filter(m => !m.domesticGross && m.boxOfficeRank).forEach(m => { m.boxOfficeRank = null; });
+
+      // Apply to database with one update per movie to prevent batch overwrites
+      const batch = db.batch();
+      state.movies.forEach(m => {
+        batch.update(db.collection('movies').doc(m.id), {
+          domesticGross: m.domesticGross || 0,
+          boxOfficeRank: m.boxOfficeRank || null,
+        });
+      });
       await batch.commit();
 
       toast(`✅ Synced ${updated} movies from Box Office Mojo!`, 'success');
