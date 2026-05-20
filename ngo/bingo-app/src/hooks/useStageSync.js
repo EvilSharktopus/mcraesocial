@@ -63,6 +63,7 @@ export function useStageSync(collectionName, docId) {
       savedTimer.current = setTimeout(() => setShowSaved(false), 2500);
     } catch (e) {
       console.error('Auto-save error:', e);
+      throw e; // Bubble up so handleSubmit can catch it and prevent stage advancement if save fails
     } finally {
       setSaving(false);
     }

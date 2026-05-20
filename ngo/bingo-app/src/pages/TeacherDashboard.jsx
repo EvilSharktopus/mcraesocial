@@ -66,12 +66,14 @@ export default function TeacherDashboard() {
   const approveGroup = async (groupId, stage) => {
     const isStage1 = stage === 2;
     try {
-      await updateDoc(doc(db, 'ngo_groups', groupId), {
-        phase1Stage:    isStage1 ? 3 : 5,
-        stage1Approved: isStage1 ? true : undefined,
-        stage2Approved: !isStage1 ? true : undefined,
-        teacherNote:    '',
-      });
+      const updateData = {
+        phase1Stage: isStage1 ? 3 : 5,
+        teacherNote: '',
+      };
+      if (isStage1) updateData.stage1Approved = true;
+      else updateData.stage2Approved = true;
+
+      await updateDoc(doc(db, 'ngo_groups', groupId), updateData);
       alert('Approved successfully!');
     } catch (e) {
       console.error(e);
