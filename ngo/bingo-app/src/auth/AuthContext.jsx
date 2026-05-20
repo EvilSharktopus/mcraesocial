@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-const TEACHER_EMAIL = import.meta.env.VITE_TEACHER_EMAIL;
+const TEACHER_EMAIL = "amcrae@rvschools.ab.ca";
 
 const AuthContext = createContext(null);
 

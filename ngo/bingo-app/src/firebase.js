@@ -4,12 +4,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey:            "AIzaSyB4Yc51IzKEcBzDPqy3B8fA9QSrnhIAzr4",
+  authDomain:        "mcrae-assignments-ca.firebaseapp.com",
+  projectId:         "mcrae-assignments-ca",
+  storageBucket:     "mcrae-assignments-ca.firebasestorage.app",
+  messagingSenderId: "770513837101",
+  appId:             "1:770513837101:web:6614415cf1e9fcd5afaca4",
 };
 
 const app = initializeApp(firebaseConfig);
