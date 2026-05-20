@@ -28,7 +28,11 @@ jobs:
         run: |
           npm ci
           npm run build
-          cp -r dist/* ../
+
+      - name: Clear old assets and copy fresh build
+        run: |
+          rm -rf ngo/assets ngo/index.html
+          cp -r ngo/bingo-app/dist/. ngo/
 
       - name: Commit and push changes
         run: |
