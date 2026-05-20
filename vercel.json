@@ -28,6 +28,15 @@
       ]
     },
     {
+      "source": "/ngo/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/movies/index.html",
       "headers": [
         {
