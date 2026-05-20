@@ -4,6 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { generatePdf } from '../utils/pdfGenerator';
+import { generatePptx } from '../utils/pptxExport';
+
+const PALETTES = [
+  { name: 'Ocean (Default)', accent: [0, 194, 179], secondary: [245, 200, 66] },
+  { name: 'Ember', accent: [255, 107, 53], secondary: [255, 209, 102] },
+  { name: 'Forest', accent: [45, 155, 111], secondary: [168, 224, 99] },
+  { name: 'Royal', accent: [107, 92, 231], secondary: [249, 168, 212] },
+  { name: 'Crimson', accent: [230, 57, 70], secondary: [241, 250, 238] },
+];
 
 const SLIDE_DEFS = [
   {
@@ -102,6 +111,8 @@ export default function PitchDeck({ groupId }) {
   const [s1, setS1]       = useState(null);
   const [s2, setS2]       = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pptxLoading, setPptxLoading] = useState(false);
+  const [selectedPalette, setSelectedPalette] = useState(PALETTES[0]);
 
   useEffect(() => {
     const u1 = onSnapshot(doc(db, 'ngo_groups', groupId),  (s) => s.exists() && setGroup(s.data()));
@@ -117,11 +128,22 @@ export default function PitchDeck({ groupId }) {
   const handlePdf = async () => {
     setPdfLoading(true);
     try {
-      await generatePdf({ group, s1, s2 });
+      await generatePdf({ group, s1, s2, palette: selectedPalette });
     } finally {
       setPdfLoading(false);
     }
   };
+
+  const handlePptx = async () => {
+    setPptxLoading(true);
+    try {
+      await generatePptx({ group, s1, s2, palette: selectedPalette });
+    } finally {
+      setPptxLoading(false);
+    }
+  };
+
+  const accentHex = `rgb(${selectedPalette.accent.join(',')})`;
 
   return (
     <div>
@@ -132,19 +154,50 @@ export default function PitchDeck({ groupId }) {
         <p>Use this to build your slides in Canva or Google Slides. Copy each slide's content, paste into your deck, and make it look great.</p>
       </div>
 
+      {/* Color Picker */}
+      <div className="card" style={{ marginBottom: '2rem', textAlign: 'center' }}>
+        <h4 style={{ marginBottom: '1rem' }}>Choose a Color Theme</h4>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {PALETTES.map((p) => {
+            const isSelected = selectedPalette.name === p.name;
+            return (
+              <button
+                key={p.name}
+                onClick={() => setSelectedPalette(p)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '2rem',
+                  border: isSelected ? `2px solid rgb(${p.accent.join(',')})` : '2px solid transparent',
+                  background: 'var(--navy-2)',
+                  cursor: 'pointer',
+                  color: 'var(--text)',
+                }}
+              >
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: `rgb(${p.accent.join(',')})` }} />
+                <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: `rgb(${p.secondary.join(',')})`, marginLeft: '-12px' }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: isSelected ? 'bold' : 'normal' }}>{p.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Slide cards */}
       {SLIDE_DEFS.map((def, i) => (
         <div
           key={def.num}
           className="card"
-          style={{ marginBottom: '1rem', borderLeft: '3px solid var(--teal)' }}
+          style={{ marginBottom: '1rem', borderLeft: `3px solid ${accentHex}` }}
           id={`pitch-slide-${def.num}`}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1.1rem' }}>{def.icon}</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--teal)' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: accentHex }}>
                   Slide {def.num}
                 </span>
               </div>
@@ -171,21 +224,31 @@ export default function PitchDeck({ groupId }) {
         </div>
       ))}
 
-      {/* PDF Download */}
+      {/* Downloads */}
       <div className="submit-panel" style={{ marginTop: '2rem' }}>
-        <h3>📄 Download Your Info Package</h3>
+        <h3>📄 Download Your Info Package & Slides</h3>
         <p>
-          A formatted one-page PDF with your problem summary, evidence, intervention,
-          timeline, and budget chart — ready to share with your teacher.
+          Download a formatted one-page PDF to share with your teacher, or export your data directly to a PowerPoint file. Both use your chosen color theme above.
         </p>
-        <button
-          id="download-pdf-btn"
-          className="btn btn-yellow btn-lg"
-          onClick={handlePdf}
-          disabled={pdfLoading}
-        >
-          {pdfLoading ? '⟳ Generating PDF…' : '⬇ Download PDF Info Package'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1.5rem' }}>
+          <button
+            id="download-pdf-btn"
+            className="btn btn-ghost btn-lg"
+            onClick={handlePdf}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? '⟳ Generating PDF…' : '⬇ Download PDF Info Package'}
+          </button>
+          
+          <button
+            id="download-pptx-btn"
+            className="btn btn-yellow btn-lg"
+            onClick={handlePptx}
+            disabled={pptxLoading}
+          >
+            {pptxLoading ? '⟳ Generating PPTX…' : '📊 Export to PowerPoint (.pptx)'}
+          </button>
+        </div>
       </div>
     </div>
   );

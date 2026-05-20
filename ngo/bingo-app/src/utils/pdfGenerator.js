@@ -1,9 +1,7 @@
 // src/utils/pdfGenerator.js
-// Client-side PDF using jsPDF — teal/yellow branding
+// Client-side PDF using jsPDF — with customizable branding
 import jsPDF from 'jspdf';
 
-const TEAL   = [0,   194, 179];
-const YELLOW = [245, 200,  66];
 const NAVY   = [11,   15,  26];
 const WHITE  = [240, 244, 255];
 const GRAY   = [136, 150, 168];
@@ -14,8 +12,8 @@ function addWrappedText(pdf, text, x, y, maxWidth, lineHeight = 6) {
   return y + lines.length * lineHeight;
 }
 
-function sectionTitle(pdf, text, y) {
-  pdf.setFillColor(...TEAL);
+function sectionTitle(pdf, text, y, accentColor) {
+  pdf.setFillColor(...accentColor);
   pdf.rect(14, y - 4, 182, 7, 'F');
   pdf.setTextColor(...WHITE);
   pdf.setFontSize(9);
@@ -25,7 +23,10 @@ function sectionTitle(pdf, text, y) {
   return y + 9;
 }
 
-export async function generatePdf({ group, s1, s2 }) {
+export async function generatePdf({ group, s1, s2, palette }) {
+  const accent = palette?.accent || [0, 194, 179];
+  const secondary = palette?.secondary || [245, 200, 66];
+
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = pdf.internal.pageSize.getWidth();
   const margin = 14;
@@ -35,12 +36,12 @@ export async function generatePdf({ group, s1, s2 }) {
   pdf.setFillColor(...NAVY);
   pdf.rect(0, 0, W, 28, 'F');
 
-  pdf.setTextColor(...TEAL);
+  pdf.setTextColor(...accent);
   pdf.setFontSize(20);
   pdf.setFont('helvetica', 'bold');
   pdf.text(group.ngoName || 'NGO Info Package', margin, 12);
 
-  pdf.setTextColor(...YELLOW);
+  pdf.setTextColor(...secondary);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'italic');
   pdf.text(`"${group.tagline || ''}"`, margin, 18);
@@ -55,7 +56,7 @@ export async function generatePdf({ group, s1, s2 }) {
   let y = 36;
 
   // ── Section 1: The Problem ───────────────────────────────────────────────
-  y = sectionTitle(pdf, '1. The Problem', y);
+  y = sectionTitle(pdf, '1. The Problem', y, accent);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Specific Problem:', margin, y + 2);
@@ -74,13 +75,13 @@ export async function generatePdf({ group, s1, s2 }) {
   y += 6;
 
   // ── Section 2: The Evidence ──────────────────────────────────────────────
-  y = sectionTitle(pdf, '2. The Evidence', y);
+  y = sectionTitle(pdf, '2. The Evidence', y, accent);
   pdf.setFontSize(8);
   [[s2.stat1, s2.stat1Source], [s2.stat2, s2.stat2Source]].forEach(([stat, src]) => {
     pdf.setFillColor(240, 250, 249);
     const statLines = pdf.splitTextToSize(`"${stat || '—'}"`, contentW - 8);
     pdf.rect(margin, y, contentW, statLines.length * 5 + 8, 'F');
-    pdf.setTextColor(...TEAL);
+    pdf.setTextColor(...accent);
     pdf.setFont('helvetica', 'italic');
     pdf.text(statLines, margin + 4, y + 5);
     y += statLines.length * 5 + 10;
@@ -94,7 +95,7 @@ export async function generatePdf({ group, s1, s2 }) {
   y += 4;
 
   // ── Section 3: Our Intervention ─────────────────────────────────────────
-  y = sectionTitle(pdf, '3. Our Intervention', y);
+  y = sectionTitle(pdf, '3. Our Intervention', y, accent);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(30, 30, 30);
@@ -102,7 +103,7 @@ export async function generatePdf({ group, s1, s2 }) {
   y += 6;
 
   // ── Section 4: Timeline ──────────────────────────────────────────────────
-  y = sectionTitle(pdf, '4. Implementation Timeline', y);
+  y = sectionTitle(pdf, '4. Implementation Timeline', y, accent);
   const timeline = (s2.timeline ?? [])
     .filter((r) => r.month && r.milestone)
     .sort((a, b) => a.month - b.month);
@@ -112,14 +113,14 @@ export async function generatePdf({ group, s1, s2 }) {
     const lineY = y + 10;
 
     // Connector line
-    pdf.setDrawColor(...TEAL);
+    pdf.setDrawColor(...accent);
     pdf.setLineWidth(0.5);
     pdf.line(margin + nodeW / 2, lineY, margin + contentW - nodeW / 2, lineY);
 
     timeline.forEach((item, i) => {
       const cx = margin + nodeW * i + nodeW / 2;
       // Circle
-      pdf.setFillColor(...TEAL);
+      pdf.setFillColor(...accent);
       pdf.circle(cx, lineY, 3, 'F');
       // Month label
       pdf.setTextColor(...WHITE);
@@ -140,7 +141,7 @@ export async function generatePdf({ group, s1, s2 }) {
   y += 4;
 
   // ── Section 5: Budget ────────────────────────────────────────────────────
-  y = sectionTitle(pdf, '5. Budget Breakdown', y);
+  y = sectionTitle(pdf, '5. Budget Breakdown', y, accent);
   const budget = (s2.budget ?? []).filter((r) => r.category && r.amount);
   if (budget.length > 0) {
     const total = budget.reduce((s, r) => s + (parseInt(r.amount, 10) || 0), 0);
@@ -159,13 +160,13 @@ export async function generatePdf({ group, s1, s2 }) {
       pdf.setFillColor(220, 240, 238);
       pdf.rect(margin, y + 6, barW, 3, 'F');
       // Filled bar
-      pdf.setFillColor(...TEAL);
+      pdf.setFillColor(...accent);
       pdf.rect(margin, y + 6, barW * pct, 3, 'F');
       y += 12;
     });
 
     // Total row
-    pdf.setFillColor(...YELLOW);
+    pdf.setFillColor(...secondary);
     pdf.rect(margin, y, contentW, 7, 'F');
     pdf.setTextColor(...NAVY);
     pdf.setFont('helvetica', 'bold');
