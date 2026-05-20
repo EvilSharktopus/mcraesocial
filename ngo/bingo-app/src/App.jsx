@@ -10,6 +10,7 @@ import TeacherDashboard               from './pages/TeacherDashboard';
 import FundingBoard                   from './pages/FundingBoard';
 import Phase2Scorecard                from './pages/Phase2Scorecard';
 import Phase3Funding                  from './pages/Phase3Funding';
+import PhaseReflection                from './pages/PhaseReflection';
 
 // ── Inner router — needs auth + settings context ───────────────────────────
 function AppRoutes() {
@@ -46,6 +47,7 @@ function AppRoutes() {
     if (phase === 2) return <Phase2Scorecard />;
     if (phase === 3) return <Phase3Funding />;
     if (phase === 4) return <Phase3Funding />; // results shown in Phase3Funding post-lock
+    if (phase >= 5) return <PhaseReflection />;
     return <PhaseGate />;
   };
 

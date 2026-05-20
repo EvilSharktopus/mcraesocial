@@ -10,7 +10,7 @@ import TopNav from '../components/TopNav';
 import DashboardContributors from '../components/DashboardContributors';
 import { Link } from 'react-router-dom';
 
-const PHASE_LABELS = ['Setup', 'Phase 1 · Research', 'Phase 2 · Pitch Day', 'Phase 3 · Funding', 'Complete'];
+const PHASE_LABELS = ['Setup', 'Phase 1 · Research', 'Phase 2 · Pitch Day', 'Phase 3 · Funding', 'Phase 4 · Results', 'Phase 5 · Reflection'];
 const STAGE_LABELS = {
   0: { label: 'Not started',         badge: 'badge-gray' },
   1: { label: 'Stage 1 in progress', badge: 'badge-teal' },
@@ -27,6 +27,9 @@ export default function TeacherDashboard() {
   const [groups, setGroups]         = useState([]);
   const [scorecards, setScorecards] = useState([]);
   const [allocations, setAllocations] = useState(0);
+  const [reflections, setReflections] = useState([]);
+  const [stage1All, setStage1All]   = useState({});
+  const [stage2All, setStage2All]   = useState({});
   const [advancingPhase, setAdvancingPhase] = useState(false);
   const [p3Amount, setP3Amount]     = useState('');
   const [savingAmount, setSavingAmount] = useState(false);
@@ -46,7 +49,20 @@ export default function TeacherDashboard() {
     const u3 = onSnapshot(collection(db, 'ngo_funding'),
       (snap) => setAllocations(snap.size)
     );
-    return () => { u1(); u2(); u3(); };
+    const u4 = onSnapshot(collection(db, 'ngo_stage1'), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data(); });
+      setStage1All(data);
+    });
+    const u5 = onSnapshot(collection(db, 'ngo_stage2'), (snap) => {
+      const data = {};
+      snap.forEach(d => { data[d.id] = d.data(); });
+      setStage2All(data);
+    });
+    const u6 = onSnapshot(collection(db, 'ngo_reflections'), (snap) => {
+      setReflections(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
   }, []);
 
   if (!isTeacher) return <div className="loading-screen"><p style={{ color: 'var(--error)' }}>Access denied.</p></div>;
@@ -58,7 +74,7 @@ export default function TeacherDashboard() {
 
   // ── Phase actions ─────────────────────────────────────────────────────────
   const advancePhase = async () => {
-    if (currentPhase >= 4) return;
+    if (currentPhase >= 5) return;
     setAdvancingPhase(true);
     await updateDoc(doc(db, 'ngo_settings', 'global'), { currentPhase: currentPhase + 1 });
     setAdvancingPhase(false);
@@ -174,6 +190,41 @@ export default function TeacherDashboard() {
 
   const awaitingApproval = groups.filter((g) => g.phase1Stage === 2 || g.phase1Stage === 4);
 
+  // ── Grading aggregate ─────────────────────────────────────────────────────
+  const studentList = [];
+  groups.forEach(g => {
+    (g.members || []).forEach((uid, idx) => {
+      const name = (g.memberNames && g.memberNames[idx]) || 'Unknown';
+      
+      let s1Count = 0;
+      let s2Count = 0;
+      const s1Tags = stage1All[g.id]?.contributors || {};
+      const s2Tags = stage2All[g.id]?.contributors || {};
+      
+      Object.entries(s1Tags).forEach(([k, arr]) => { if (arr.includes(name)) s1Count++; });
+      Object.entries(s2Tags).forEach(([k, arr]) => { if (arr.includes(name)) s2Count++; });
+      
+      const reflection = reflections.find(r => r.studentId === uid);
+      
+      const groupReflections = reflections.filter(r => r.groupId === g.id && r.studentId !== uid);
+      let peerScoreTotal = 0;
+      let peerScoreCount = 0;
+      groupReflections.forEach(r => {
+        if (r.peerScores && r.peerScores[uid] !== undefined) {
+          peerScoreTotal += r.peerScores[uid];
+          peerScoreCount++;
+        }
+      });
+      const peerScoreAvg = peerScoreCount > 0 ? (peerScoreTotal / peerScoreCount).toFixed(1) : '—';
+      
+      studentList.push({
+        uid, name, groupId: g.id, ngoName: g.ngoName,
+        totalContributions: s1Count + s2Count, s1Count, s2Count, s1Tags, s2Tags,
+        selfScore: reflection?.selfScore || '—', peerScoreAvg, reflection
+      });
+    });
+  });
+
   return (
     <>
       <TopNav />
@@ -203,10 +254,11 @@ export default function TeacherDashboard() {
                 {currentPhase === 1 && 'Phase 1 is open. Students are forming groups and researching.'}
                 {currentPhase === 2 && 'Phase 2 is open. Students are scoring each other\'s pitches.'}
                 {currentPhase === 3 && 'Phase 3 is open. Students are allocating funding.'}
-                {currentPhase === 4 && 'The simulation is complete. Results are visible.'}
+                {currentPhase === 4 && 'Phase 4 is open. The simulation results are visible.'}
+                {currentPhase === 5 && 'Phase 5 is open. Students are completing their reflections.'}
               </p>
             </div>
-            {currentPhase < 4 && (
+            {currentPhase < 5 && (
               <button id="advance-phase-btn" className="btn btn-primary" onClick={advancePhase} disabled={advancingPhase}>
                 {advancingPhase ? 'Advancing…' : `Open ${PHASE_LABELS[currentPhase + 1]} →`}
               </button>
@@ -334,8 +386,8 @@ export default function TeacherDashboard() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {[['groups', 'Groups'], ['scores', 'Scorecard Results'], ['funding', 'Funding']].map(([key, label]) => (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {[['groups', 'Groups'], ['scores', 'Scorecard Results'], ['funding', 'Funding'], ['grading', 'Grading']].map(([key, label]) => (
               <button key={key} className={`btn btn-sm ${activeTab === key ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => setActiveTab(key)} id={`tab-${key}`}>{label}</button>
             ))}
@@ -446,6 +498,101 @@ export default function TeacherDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Grading Tab */}
+        {activeTab === 'grading' && (
+          <div style={{ display: 'grid', gap: '0.75rem' }}>
+            {studentList.length === 0 && (
+              <div className="card" style={{ textAlign: 'center', padding: '2.5rem' }}>
+                <p>No students have joined groups yet.</p>
+              </div>
+            )}
+            {studentList.map((st) => (
+              <div className="card" key={st.uid}>
+                <div 
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', cursor: 'pointer' }}
+                  onClick={() => setExpandedGroup(expandedGroup === `grading-${st.uid}` ? null : `grading-${st.uid}`)}
+                >
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {st.name} 
+                      <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-dim)' }}>
+                        ({st.ngoName || 'Unnamed NGO'})
+                      </span>
+                    </h3>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Contributions</p>
+                      <strong style={{ color: 'var(--teal)' }}>{st.totalContributions}</strong>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Self Score</p>
+                      <strong style={{ color: st.selfScore === '—' ? 'var(--text-dim)' : 'var(--success)' }}>{st.selfScore}</strong>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Peer Avg</p>
+                      <strong style={{ color: st.peerScoreAvg === '—' ? 'var(--text-dim)' : 'var(--success)' }}>{st.peerScoreAvg}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {expandedGroup === `grading-${st.uid}` && (
+                  <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                    {/* Contributions Details */}
+                    <div>
+                      <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--teal)' }}>Exact Contributions</h4>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Stage 1 ({st.s1Count})</p>
+                      <ul style={{ margin: '0 0 1rem 0', paddingLeft: '1.25rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                        {Object.entries(st.s1Tags).filter(([k, arr]) => arr.includes(st.name)).map(([k]) => (
+                          <li key={`s1-${k}`}>{k}</li>
+                        ))}
+                        {st.s1Count === 0 && <li>None recorded</li>}
+                      </ul>
+                      <p style={{ fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Stage 2 ({st.s2Count})</p>
+                      <ul style={{ margin: '0 0 0 0', paddingLeft: '1.25rem', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                        {Object.entries(st.s2Tags).filter(([k, arr]) => arr.includes(st.name)).map(([k]) => (
+                          <li key={`s2-${k}`}>{k}</li>
+                        ))}
+                        {st.s2Count === 0 && <li>None recorded</li>}
+                      </ul>
+                    </div>
+
+                    {/* Reflection Details */}
+                    <div>
+                      <h4 style={{ marginBottom: '0.75rem', fontSize: '0.9rem', color: 'var(--yellow)' }}>Reflection Data</h4>
+                      {st.reflection ? (
+                        <>
+                          <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-muted)' }}>Putting it all together</span>
+                              <strong>{st.reflection.projectScores?.puttingItTogether ?? '—'}/10</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-muted)' }}>Changes from AI</span>
+                              <strong>{st.reflection.projectScores?.changesFromAI ?? '—'}/10</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-muted)' }}>Delivery</span>
+                              <strong>{st.reflection.projectScores?.delivery ?? '—'}/10</strong>
+                            </div>
+                          </div>
+                          {st.reflection.comments && (
+                            <div style={{ background: 'var(--navy-3)', padding: '0.75rem', borderRadius: 'var(--radius)', fontSize: '0.8rem' }}>
+                              <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-dim)' }}>"{st.reflection.comments}"</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>Student has not submitted their reflection yet.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
