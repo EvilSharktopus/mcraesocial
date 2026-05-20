@@ -9,6 +9,10 @@
   ],
   "rewrites": [
     {
+      "source": "/ngo/assets/:path*",
+      "destination": "/ngo/assets/:path*"
+    },
+    {
       "source": "/ngo/:path*",
       "destination": "/ngo/index.html"
     },
