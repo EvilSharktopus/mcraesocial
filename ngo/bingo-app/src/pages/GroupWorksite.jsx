@@ -23,7 +23,7 @@ const STAGE_LABELS = {
 
 export default function GroupWorksite() {
   const { groupId } = useParams();
-  const { user }    = useAuth();
+  const { user, isTeacher } = useAuth();
   const [group, setGroup]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [notMember, setNotMember] = useState(false);
@@ -37,7 +37,7 @@ export default function GroupWorksite() {
         if (!snap.exists()) { setLoading(false); return; }
         const data = { id: snap.id, ...snap.data() };
         setGroup(data);
-        setNotMember(!data.members.includes(user?.uid));
+        setNotMember(!data.members.includes(user?.uid) && !isTeacher);
         setLoading(false);
       },
       (err) => {
@@ -47,7 +47,7 @@ export default function GroupWorksite() {
       }
     );
     return unsub;
-  }, [groupId, user]);
+  }, [groupId, user, isTeacher]);
 
   if (loading) return <div className="loading-screen"><span className="spinner" /></div>;
 
