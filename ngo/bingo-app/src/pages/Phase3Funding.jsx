@@ -19,6 +19,8 @@ export default function Phase3Funding() {
 
   const [myGroupId, setMyGroupId]        = useState(null);
   const [allGroups, setAllGroups]        = useState([]);
+  const [myScores, setMyScores]          = useState({});
+  const [expandedScore, setExpandedScore]= useState(null);
   const [amounts, setAmounts]            = useState({});    // groupId → string
   const [submitting, setSubmitting]      = useState(false);
   const [submitted, setSubmitted]        = useState(false);
@@ -35,11 +37,21 @@ export default function Phase3Funding() {
     const u2  = onSnapshot(q2, (snap) => {
       setAllGroups(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
+    // My scorecards
+    const q3 = query(collection(db, 'ngo_scorecards'), where('scorerId', '==', user.uid));
+    const u3 = onSnapshot(q3, (snap) => {
+      const scores = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        scores[data.targetGroupId] = data;
+      });
+      setMyScores(scores);
+    });
     // Check if already submitted
     getDoc(doc(db, 'ngo_funding', user.uid)).then((snap) => {
       if (snap.exists() && snap.data().locked) setSubmitted(true);
     });
-    return () => { u1(); u2(); };
+    return () => { u1(); u2(); u3(); };
   }, [user.uid]);
 
   const total  = Object.values(amounts).reduce((s, v) => s + (parseInt(v, 10) || 0), 0);
@@ -136,6 +148,12 @@ export default function Phase3Funding() {
           const disabled = isOwn || isFunded;
           const pct      = Math.min(((g.fundingReceived ?? 0) / BUDGET_MAX) * 100, 100);
 
+          const sc = myScores[g.id];
+          let avgScore = null;
+          if (sc) {
+            avgScore = (sc.impact + sc.feasibility + sc.urgency + sc.creativity + sc.persuasiveness) / 5;
+          }
+
           return (
             <div
               key={g.id}
@@ -149,8 +167,33 @@ export default function Phase3Funding() {
                     <strong>{g.ngoName || '(unnamed)'}</strong>
                     {isOwn   && <span className="badge badge-yellow" style={{ fontSize: '0.62rem' }}>Your NGO</span>}
                     {isFunded && <span className="badge badge-green" style={{ fontSize: '0.62rem' }}>FUNDED</span>}
+                    {!isOwn && sc && (
+                      <span
+                        className="badge badge-teal"
+                        style={{ fontSize: '0.65rem', cursor: 'pointer' }}
+                        onClick={() => setExpandedScore(expandedScore === g.id ? null : g.id)}
+                      >
+                        Your Score: {avgScore.toFixed(1)}/10 {expandedScore === g.id ? '▲' : '▼'}
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>"{g.tagline || '—'}"</p>
+
+                  {expandedScore === g.id && sc && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--navy-3)', borderRadius: 'var(--radius)', fontSize: '0.75rem' }}>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                        <div><strong style={{ color: 'var(--teal)' }}>Impact:</strong> {sc.impact}</div>
+                        <div><strong style={{ color: 'var(--teal)' }}>Feasibility:</strong> {sc.feasibility}</div>
+                        <div><strong style={{ color: 'var(--teal)' }}>Urgency:</strong> {sc.urgency}</div>
+                        <div><strong style={{ color: 'var(--teal)' }}>Creativity:</strong> {sc.creativity}</div>
+                        <div><strong style={{ color: 'var(--teal)' }}>Persuasiveness:</strong> {sc.persuasiveness}</div>
+                      </div>
+                      {sc.notes && (
+                        <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>"{sc.notes}"</div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Funding progress bar */}
                   <div style={{ marginTop: '0.5rem', height: 5, borderRadius: 99, background: 'var(--navy-4)', overflow: 'hidden' }}>
                     <div style={{ width: `${pct}%`, height: '100%', background: isFunded ? 'var(--success)' : 'var(--teal)', transition: 'width 0.5s' }} />

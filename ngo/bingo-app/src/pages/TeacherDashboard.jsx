@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import {
-  collection, onSnapshot, doc, updateDoc, orderBy, query, where,
+  collection, onSnapshot, doc, updateDoc, orderBy, query, where, getDocs, deleteDoc, setDoc
 } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthContext';
 import { useNgoSettings } from '../hooks/useNgoSettings';
@@ -33,6 +33,7 @@ export default function TeacherDashboard() {
   const [sendBackNote, setSendBackNote] = useState({});
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [activeTab, setActiveTab]   = useState('groups'); // 'groups' | 'scores' | 'funding'
+  const [projectorMode, setProjectorMode] = useState(false);
 
   useEffect(() => {
     const u1 = onSnapshot(
@@ -101,6 +102,42 @@ export default function TeacherDashboard() {
     }
   };
 
+  const setPresentingGroup = async (groupId) => {
+    await updateDoc(doc(db, 'ngo_settings', 'global'), { presentingGroupId: groupId });
+  };
+
+  const restartProject = async () => {
+    if (!window.confirm("Are you absolutely sure you want to delete all groups, scores, and funding data? This cannot be undone.")) return;
+    
+    try {
+      // Clear groups
+      const groupsSnap = await getDocs(collection(db, 'ngo_groups'));
+      groupsSnap.forEach(d => deleteDoc(d.ref));
+      
+      // Clear scorecards
+      const scoresSnap = await getDocs(collection(db, 'ngo_scorecards'));
+      scoresSnap.forEach(d => deleteDoc(d.ref));
+      
+      // Clear funding
+      const fundingSnap = await getDocs(collection(db, 'ngo_funding'));
+      fundingSnap.forEach(d => deleteDoc(d.ref));
+      
+      // Reset settings
+      await setDoc(doc(db, 'ngo_settings', 'global'), {
+        currentPhase: 0,
+        perStudentAmount: 0,
+        phase3Open: false,
+        phase3Locked: false,
+        presentingGroupId: null
+      });
+      
+      alert("Project restarted successfully.");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to restart project: " + e.message);
+    }
+  };
+
   // ── Phase 3 controls ──────────────────────────────────────────────────────
   const approvedGroups = groups.filter((g) => g.stage2Approved);
   const studentCount   = [...new Set(groups.flatMap((g) => g.members ?? []))].length;
@@ -147,9 +184,12 @@ export default function TeacherDashboard() {
             <div className="phase-badge" style={{ marginBottom: '0.5rem' }}>Teacher Dashboard</div>
             <h1>bi<span style={{ color: 'var(--teal)' }}>NGO</span> Controls</h1>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Current phase</p>
-            <h2 style={{ color: 'var(--teal)', margin: 0 }}>{PHASE_LABELS[currentPhase]}</h2>
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+            <button className="btn btn-sm btn-danger" onClick={restartProject}>Restart Project (Clear Data)</button>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>Current phase</p>
+              <h2 style={{ color: 'var(--teal)', margin: 0 }}>{PHASE_LABELS[currentPhase]}</h2>
+            </div>
           </div>
         </div>
 
@@ -178,6 +218,36 @@ export default function TeacherDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Phase 2 Setup Widget */}
+        {currentPhase === 2 && (
+          <div className="card" style={{ marginBottom: '1.5rem', border: '1px solid rgba(0,194,179,0.3)' }}>
+            <h3 style={{ marginBottom: '0.75rem' }}>🎤 Pitch Day Controls</h3>
+            <p style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>Select which NGO is currently presenting. Students will only be able to score the active group.</p>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: (settings?.presentingGroupId == null) ? 'var(--navy-3)' : 'transparent', borderRadius: 'var(--radius)', border: (settings?.presentingGroupId == null) ? '1px solid var(--teal)' : '1px solid var(--glass-border)' }}>
+                <button className={`btn btn-sm ${(settings?.presentingGroupId == null) ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPresentingGroup(null)}>
+                  {(settings?.presentingGroupId == null) ? 'Active' : 'Set Active'}
+                </button>
+                <div>
+                  <strong>Waiting Screen</strong>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Students wait for the next pitch.</p>
+                </div>
+              </div>
+              {approvedGroups.map((g) => (
+                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: settings?.presentingGroupId === g.id ? 'var(--navy-3)' : 'transparent', borderRadius: 'var(--radius)', border: settings?.presentingGroupId === g.id ? '1px solid var(--teal)' : '1px solid var(--glass-border)' }}>
+                  <button className={`btn btn-sm ${settings?.presentingGroupId === g.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPresentingGroup(g.id)}>
+                    {settings?.presentingGroupId === g.id ? 'Presenting' : 'Set Presenting'}
+                  </button>
+                  <div>
+                    <strong>{g.ngoName || '(unnamed)'}</strong>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{g.memberNames.join(', ')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Phase 3 Setup Widget */}
         {currentPhase === 3 && (
@@ -263,11 +333,18 @@ export default function TeacherDashboard() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-          {[['groups', 'Groups'], ['scores', 'Scorecard Results'], ['funding', 'Funding']].map(([key, label]) => (
-            <button key={key} className={`btn btn-sm ${activeTab === key ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setActiveTab(key)} id={`tab-${key}`}>{label}</button>
-          ))}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {[['groups', 'Groups'], ['scores', 'Scorecard Results'], ['funding', 'Funding']].map(([key, label]) => (
+              <button key={key} className={`btn btn-sm ${activeTab === key ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setActiveTab(key)} id={`tab-${key}`}>{label}</button>
+            ))}
+          </div>
+          {activeTab === 'funding' && currentPhase >= 3 && (
+            <button className="btn btn-sm btn-ghost" onClick={() => setProjectorMode(true)}>
+              📺 Projector Mode
+            </button>
+          )}
         </div>
 
         {/* Groups Tab */}
@@ -372,6 +449,47 @@ export default function TeacherDashboard() {
           </div>
         )}
       </div>
+
+      {projectorMode && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'var(--navy-1)', zIndex: 9999,
+          padding: '3rem', overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
+            <div>
+              <h1 style={{ fontSize: '3rem', margin: 0 }}>Live Funding</h1>
+              <p style={{ fontSize: '1.2rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>
+                Total Allocated: ${(approvedGroups.reduce((s, g) => s + (g.fundingReceived ?? 0), 0)).toLocaleString()}
+              </p>
+            </div>
+            <button className="btn btn-ghost" onClick={() => setProjectorMode(false)}>Exit Projector</button>
+          </div>
+          <div style={{ display: 'grid', gap: '1.5rem' }}>
+            {approvedGroups.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0)).map((g) => {
+              const pct = Math.min(((g.fundingReceived ?? 0) / 500000) * 100, 100);
+              return (
+                <div key={g.id} style={{ background: 'var(--navy-2)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'flex-end' }}>
+                    <div>
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <h2 style={{ fontSize: '2rem', margin: 0 }}>{g.ngoName || '(unnamed)'}</h2>
+                        {g.funded && <span className="badge badge-green" style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>FUNDED</span>}
+                      </div>
+                      <p style={{ fontSize: '1.2rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>"{g.tagline || '—'}"</p>
+                    </div>
+                    <strong style={{ fontSize: '2.5rem', color: g.funded ? 'var(--success)' : 'var(--teal)', lineHeight: 1 }}>
+                      ${(g.fundingReceived ?? 0).toLocaleString()}
+                    </strong>
+                  </div>
+                  <div style={{ height: 24, borderRadius: 99, background: 'var(--navy-4)', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: g.funded ? 'var(--success)' : 'var(--teal)', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)', borderRadius: 99 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }

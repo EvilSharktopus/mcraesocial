@@ -7,6 +7,7 @@ import {
   doc, setDoc, updateDoc, serverTimestamp, getDoc,
 } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthContext';
+import { useNgoSettings } from '../hooks/useNgoSettings';
 import TopNav from '../components/TopNav';
 
 const CRITERIA = [
@@ -166,6 +167,7 @@ function NgoCard({ group, myGroupId, scorerId }) {
 
 export default function Phase2Scorecard() {
   const { user } = useAuth();
+  const { settings } = useNgoSettings();
   const [myGroup, setMyGroup]   = useState(null);
   const [allGroups, setAllGroups] = useState([]);
 
@@ -199,14 +201,22 @@ export default function Phase2Scorecard() {
           </div>
         )}
 
-        {allGroups.map((group) => (
+        {allGroups.length > 0 && !settings?.presentingGroupId && (
+          <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem', border: '1px dashed var(--teal)' }}>
+            <div className="spinner" style={{ margin: '0 auto 1.5rem auto' }} />
+            <h2 style={{ marginBottom: '0.5rem' }}>Waiting...</h2>
+            <p style={{ color: 'var(--text-dim)' }}>Waiting for the teacher to start the next pitch.</p>
+          </div>
+        )}
+
+        {settings?.presentingGroupId && allGroups.some(g => g.id === settings.presentingGroupId) && (
           <NgoCard
-            key={group.id}
-            group={group}
+            key={settings.presentingGroupId}
+            group={allGroups.find(g => g.id === settings.presentingGroupId)}
             myGroupId={myGroup?.id}
             scorerId={user.uid}
           />
-        ))}
+        )}
       </div>
     </>
   );
