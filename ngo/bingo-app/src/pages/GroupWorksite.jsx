@@ -104,7 +104,7 @@ export default function GroupWorksite() {
         </div>
 
         {/* Awaiting approval screens */}
-        {(stage === 2 || stage === 4) && (
+        {(stage === 2 || stage === 4) && !isTeacher && (
           <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
             <h2>Awaiting teacher approval</h2>
@@ -116,8 +116,8 @@ export default function GroupWorksite() {
         )}
 
         {/* Active stages */}
-        {(stage === 1) && <Stage1Form groupId={groupId} />}
-        {(stage === 3) && <Stage2Form groupId={groupId} />}
+        {(stage === 1 || (stage === 2 && isTeacher)) && <Stage1Form groupId={groupId} />}
+        {(stage === 3 || (stage === 4 && isTeacher)) && <Stage2Form groupId={groupId} />}
         {(stage === 5) && <PitchDeck groupId={groupId} />}
       </div>
     </>
