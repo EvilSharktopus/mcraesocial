@@ -1,7 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/ngo/(.*)",
+      "source": "/ngo/assets/(.*)",
+      "destination": "/ngo/assets/$1"
+    },
+    {
+      "source": "/ngo/((?!assets/).*)",
       "destination": "/ngo/index.html"
     },
     {
