@@ -1681,23 +1681,17 @@ const App = (() => {
     const wrap = document.getElementById('chatterLbCards');
     if (!wrap) return;
 
-    const withLb = state.participants.filter(p => p.letterboxdUsername);
-
-    // ── Temporary diagnostic banner ──────────────────────────────────────
+    // Hide diagnostic banner
     const diagEl = document.getElementById('lbDiag');
-    if (diagEl) {
-      const all = state.participants.map(p => `${p.name}: ${p.letterboxdUsername || '(none)'}`);
-      diagEl.textContent = `[DEBUG] ${state.participants.length} participants → ` + all.join(' | ');
-      diagEl.style.display = 'block';
-    }
-    // ────────────────────────────────────────────────────────────────────
+    if (diagEl) diagEl.style.display = 'none';
 
+    const withLb = state.participants.filter(p => p.letterboxdUsername);
     if (!withLb.length) {
       wrap.innerHTML = '<div class="chatter-empty">No one has linked their Letterboxd yet.<br>Add yours in the picks screen!</div>';
       return;
     }
 
-    // Map all tracked movies by slug for easy lookup (for badge highlighting)
+    // Map all tracked movies by slug for easy lookup
     const wagerMoviesBySlug = {};
     state.movies.forEach(m => {
       wagerMoviesBySlug[lbSlug(m.title)] = m;
@@ -1705,44 +1699,44 @@ const App = (() => {
 
     let allReviews = [];
 
-    // Fetch everyone's feed in parallel
-    await Promise.all(withLb.map(async p => {
+    // Fetch feeds SEQUENTIALLY to avoid Letterboxd rate-limiting parallel requests
+    for (const p of withLb) {
       try {
         const res = await fetch(`/api/letterboxd?username=${encodeURIComponent(p.letterboxdUsername)}`);
         const data = await res.json();
         if (data.feed && Array.isArray(data.feed)) {
           data.feed.forEach(item => {
-            // Include all logged films; note if it's a wager movie
-            const wagerMovie = item.slug ? wagerMoviesBySlug[item.slug] : null;
-            allReviews.push({ ...item, participant: p, wagerMovie: wagerMovie || null });
+            if (item.slug && wagerMoviesBySlug[item.slug]) {
+              allReviews.push({ ...item, participant: p, wagerMovie: wagerMoviesBySlug[item.slug] });
+            }
           });
         }
       } catch (err) {
         console.warn('Failed to fetch LB feed for', p.letterboxdUsername, err);
       }
-    }));
+      // Small delay between requests to avoid rate limiting
+      await new Promise(r => setTimeout(r, 300));
+    }
 
     // Sort descending by date
     allReviews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
     if (!allReviews.length) {
-      wrap.innerHTML = '<div class="chatter-empty">No recent Letterboxd activity yet.</div>';
+      wrap.innerHTML = '<div class="chatter-empty">No recent wager movie reviews yet.<br>Log a wager movie on Letterboxd and it\'ll show up here!</div>';
       return;
     }
 
     wrap.innerHTML = allReviews.map(rev => {
       const p = rev.participant;
-      const movieTitle = rev.wagerMovie ? rev.wagerMovie.title : (rev.filmTitle || rev.slug || 'a film');
-      const isWager = !!rev.wagerMovie;
       const ratingHtml = rev.rating != null
         ? `<span class="lb-stars">${starsHtml(rev.rating)}</span><span class="lb-rating-num">${rev.rating}</span>`
         : `<span class="lb-no-rating">Logged</span>`;
       return `
-      <a class="lb-card${isWager ? ' lb-card-wager' : ''}" href="${esc(rev.reviewUrl)}" target="_blank" rel="noopener" style="display:flex; flex-direction:column; gap:0.5rem; padding: 1rem;">
+      <a class="lb-card" href="${esc(rev.reviewUrl)}" target="_blank" rel="noopener" style="display:flex; flex-direction:column; gap:0.5rem; padding: 1rem;">
         <div style="display:flex; align-items:center; gap: 0.75rem;">
           ${p.avatarUrl ? `<img class="lb-card-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-card-avatar lb-card-avatar-ph">🎬</div>`}
           <div class="lb-card-info">
-            <div class="lb-card-name">${esc(p.name)} watched ${esc(movieTitle)}${isWager ? ' <span class="lb-wager-badge">🏆 Wager</span>' : ''}</div>
+            <div class="lb-card-name">${esc(p.name)} watched ${esc(rev.wagerMovie.title)}</div>
             <div class="lb-card-username" style="font-size:0.7rem;">${formatDate(rev.pubDate.split('T')[0])}</div>
           </div>
         </div>
@@ -1750,6 +1744,7 @@ const App = (() => {
       </a>`;
     }).join('');
   }
+
 
   function initChatter() {
     loadChatterIdentity(); // restore from localStorage
