@@ -55,7 +55,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/funding-board"  element={<FundingBoard />} />
       <Route path="/group/:groupId" element={
-        phase >= 1 ? <GroupWorksite /> : <Navigate to="/" replace />
+        phase === 1 ? <GroupWorksite /> : <Navigate to="/" replace />
       } />
       <Route path="/"               element={studentLanding()} />
       <Route path="*"               element={<Navigate to="/" replace />} />
