@@ -76,19 +76,23 @@ export default function Phase3Funding() {
         .filter((a) => a.amount > 0);
 
       await runTransaction(db, async (tx) => {
-        // Verify perStudentAmount hasn't changed
+        // ── ALL READS FIRST ──────────────────────────────────────────────
         const settingsDoc = await tx.get(doc(db, 'ngo_settings', 'global'));
         if (settingsDoc.data().phase3Locked) throw new Error('The funding round is now closed.');
 
-        // Verify each target won't exceed $500K
-        for (const alloc of allocations) {
-          const gDoc = await tx.get(doc(db, 'ngo_groups', alloc.groupId));
-          const current = gDoc.data().fundingReceived ?? 0;
-          const newTotal = current + alloc.amount;
-          if (newTotal > BUDGET_MAX) throw new Error(`${gDoc.data().ngoName} would exceed $500K. Reduce your allocation.`);
+        const groupDocs = await Promise.all(
+          allocations.map((a) => tx.get(doc(db, 'ngo_groups', a.groupId)))
+        );
+
+        // Validate none exceed $500K
+        for (let i = 0; i < allocations.length; i++) {
+          const current  = groupDocs[i].data().fundingReceived ?? 0;
+          const newTotal = current + allocations[i].amount;
+          if (newTotal > BUDGET_MAX)
+            throw new Error(`${groupDocs[i].data().ngoName} would exceed $500K. Reduce your allocation.`);
         }
 
-        // Write ngo_funding doc
+        // ── ALL WRITES AFTER ─────────────────────────────────────────────
         tx.set(doc(db, 'ngo_funding', user.uid), {
           studentId:   user.uid,
           allocations,
@@ -96,12 +100,10 @@ export default function Phase3Funding() {
           locked:      true,
         });
 
-        // Increment fundingReceived + set funded flag
-        for (const alloc of allocations) {
-          const gRef = doc(db, 'ngo_groups', alloc.groupId);
-          const gDoc = await tx.get(gRef);
-          const newTotal = (gDoc.data().fundingReceived ?? 0) + alloc.amount;
-          tx.update(gRef, {
+        for (let i = 0; i < allocations.length; i++) {
+          const current  = groupDocs[i].data().fundingReceived ?? 0;
+          const newTotal = current + allocations[i].amount;
+          tx.update(doc(db, 'ngo_groups', allocations[i].groupId), {
             fundingReceived: newTotal,
             funded:          newTotal >= BUDGET_MAX,
           });
