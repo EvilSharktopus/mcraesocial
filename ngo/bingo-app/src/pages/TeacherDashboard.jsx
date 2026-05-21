@@ -22,7 +22,7 @@ const STAGE_LABELS = {
 const CRITERIA = ['impact','feasibility','urgency','creativity','persuasiveness'];
 
 export default function TeacherDashboard() {
-  const { isTeacher } = useAuth();
+  const { isTeacher, user } = useAuth();
   const { settings, loading: settingsLoading } = useNgoSettings();
   const [groups, setGroups]         = useState([]);
   const [scorecards, setScorecards] = useState([]);
@@ -162,7 +162,7 @@ export default function TeacherDashboard() {
     if (!window.confirm('This will add fake scores, funding, and a reflection entry. OK?')) return;
 
     try {
-      const FAKE_ID = 'test_student_seed';
+      const FAKE_ID = user?.uid ?? 'test_seed'; // real UID so auth rules pass
       const perGroup = Math.floor(500000 / groups.length);
 
       // Fake scorecard for each group from the test student
