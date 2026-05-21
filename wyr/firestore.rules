@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Session doc — everyone can read; anyone can create or update scenarios array
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true; // lock down further once in prod (e.g. require auth)
+    }
+
+    // Rankings — anyone can write their own, anyone can read (needed for bracket avg calc)
+    match /rankings/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Brackets — anyone can write their own, anyone can read
+    match /brackets/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Reflections — anyone can write their own, teacher reads all
+    match /reflections/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
