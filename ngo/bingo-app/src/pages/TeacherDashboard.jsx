@@ -80,6 +80,12 @@ export default function TeacherDashboard() {
     setAdvancingPhase(false);
   };
 
+  const goBackPhase = async () => {
+    if (currentPhase <= 0) return;
+    if (!window.confirm(`Go back to ${PHASE_LABELS[currentPhase - 1]}? Students will be redirected to that phase.`)) return;
+    await updateDoc(doc(db, 'ngo_settings', 'global'), { currentPhase: currentPhase - 1 });
+  };
+
   const approveGroup = async (groupId, stage) => {
     const isStage1 = stage === 2;
     try {
@@ -367,11 +373,18 @@ export default function TeacherDashboard() {
                 {currentPhase === 5 && 'Phase 5 is open. Students are completing their reflections.'}
               </p>
             </div>
-            {currentPhase < 5 && (
-              <button id="advance-phase-btn" className="btn btn-primary" onClick={advancePhase} disabled={advancingPhase}>
-                {advancingPhase ? 'Advancing…' : `Open ${PHASE_LABELS[currentPhase + 1]} →`}
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {currentPhase > 0 && (
+                <button className="btn btn-sm btn-ghost" onClick={goBackPhase} style={{ opacity: 0.7 }}>
+                  ← Back to {PHASE_LABELS[currentPhase - 1]}
+                </button>
+              )}
+              {currentPhase < 5 && (
+                <button id="advance-phase-btn" className="btn btn-primary" onClick={advancePhase} disabled={advancingPhase}>
+                  {advancingPhase ? 'Advancing…' : `Open ${PHASE_LABELS[currentPhase + 1]} →`}
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
             {PHASE_LABELS.map((_, i) => (
