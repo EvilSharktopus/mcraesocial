@@ -22,7 +22,7 @@ const STAGE_LABELS = {
 const CRITERIA = ['impact','feasibility','urgency','creativity','persuasiveness'];
 
 export default function TeacherDashboard() {
-  const { isTeacher } = useAuth();
+  const { isTeacher, user } = useAuth();
   const { settings, loading: settingsLoading } = useNgoSettings();
   const [groups, setGroups]         = useState([]);
   const [scorecards, setScorecards] = useState([]);
@@ -162,7 +162,8 @@ export default function TeacherDashboard() {
     if (!window.confirm('This will add fake scores, funding, and a reflection entry. OK?')) return;
 
     try {
-      const FAKE_ID = 'test_student_seed';
+      const FAKE_ID = user.uid;  // use real teacher UID so Firestore rules pass
+      const FAKE_NAME = user.displayName || user.email || 'Teacher (test)';
       const perGroup = Math.floor(500000 / groups.length);
 
       // Fake scorecard for each group from the test student
@@ -195,7 +196,7 @@ export default function TeacherDashboard() {
       groups.forEach(g => { (g.members || []).forEach(uid => { peerScores[uid] = 8; }); });
       await setDoc(doc(db, 'ngo_reflections', FAKE_ID), {
         studentId: FAKE_ID,
-        studentName: 'Test Student',
+        studentName: FAKE_NAME,
         groupId: groups[0]?.id ?? 'none',
         selfScore: 9,
         peerScores,
