@@ -298,8 +298,12 @@
       <span class="lb-shelf-title">🎞 Recently Watched</span>
       <span class="lb-shelf-sub">from Letterboxd</span>
     </div>
-    <div class="lb-shelf-track" id="lbShelfTrack">
-      <div class="chatter-empty" style="padding: 1rem 0;">Loading Letterboxd activity…</div>
+    <div class="lb-shelf-row">
+      <button class="lb-shelf-arrow lb-shelf-arrow-prev" id="lbShelfPrev" onclick="App.shelfScroll(-1)" aria-label="Scroll left">&#8249;</button>
+      <div class="lb-shelf-track" id="lbShelfTrack">
+        <div class="chatter-empty" style="padding: 1rem 0;">Loading Letterboxd activity…</div>
+      </div>
+      <button class="lb-shelf-arrow lb-shelf-arrow-next" id="lbShelfNext" onclick="App.shelfScroll(1)" aria-label="Scroll right">&#8250;</button>
     </div>
   </div>
 

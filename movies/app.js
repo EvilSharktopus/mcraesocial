@@ -1744,8 +1744,9 @@ const App = (() => {
     allReviews = results.flat();
 
 
-    // Sort descending by date
+    // Sort descending by date, cap at 24 most recent
     allReviews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    allReviews = allReviews.slice(0, 24);
 
     if (!allReviews.length) {
       wrap.innerHTML = '<div class="chatter-empty" style="padding:1.5rem 0;">No wager movies logged on Letterboxd yet — watch one and it\'ll appear here!</div>';
@@ -1791,6 +1792,31 @@ const App = (() => {
         </div>
       </a>`;
     }).join('');
+    updateShelfArrows();
+  }
+
+  function updateShelfArrows() {
+    const track = document.getElementById('lbShelfTrack');
+    const prev  = document.getElementById('lbShelfPrev');
+    const next  = document.getElementById('lbShelfNext');
+    if (!track || !prev || !next) return;
+    const update = () => {
+      prev.style.opacity = track.scrollLeft > 8 ? '1' : '0.2';
+      prev.style.pointerEvents = track.scrollLeft > 8 ? 'auto' : 'none';
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 8;
+      next.style.opacity = atEnd ? '0.2' : '1';
+      next.style.pointerEvents = atEnd ? 'none' : 'auto';
+    };
+    update();
+    track.removeEventListener('scroll', update);
+    track.addEventListener('scroll', update, { passive: true });
+  }
+
+  function shelfScroll(dir) {
+    const track = document.getElementById('lbShelfTrack');
+    if (!track) return;
+    // Scroll by ~4 card widths (120px card + 12px gap = 132px)
+    track.scrollBy({ left: dir * 132 * 4, behavior: 'smooth' });
   }
 
 
@@ -1846,7 +1872,7 @@ const App = (() => {
     showLbEditor, hideLbEditor, saveLbEditorRow,
     postChatter, deleteChatter, toggleChatterSheet,
     setChatterIdentity, clearChatterIdentity,
-    toggleSection,
+    toggleSection, shelfScroll,
   };
 
 })();

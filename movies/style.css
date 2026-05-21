@@ -2619,10 +2619,41 @@ body.sheet-open { overflow: hidden; }
   scrollbar-color: var(--border) transparent;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-width: 0;
 }
 .lb-shelf-track::-webkit-scrollbar { height: 4px; }
 .lb-shelf-track::-webkit-scrollbar-track { background: transparent; }
 .lb-shelf-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Arrow row wrapper */
+.lb-shelf-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Prev / Next arrow buttons */
+.lb-shelf-arrow {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1.4rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  padding: 0;
+  user-select: none;
+}
+.lb-shelf-arrow:hover { background: var(--bg2); border-color: var(--gold); color: var(--gold); }
+.lb-shelf-arrow-prev { opacity: 0.2; pointer-events: none; } /* starts faded — nothing to scroll back to */
 
 /* Individual card */
 .lbs-card {
