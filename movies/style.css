@@ -2578,3 +2578,175 @@ body.sheet-open { overflow: hidden; }
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Letterboxd Recently-Watched Shelf (Netflix-style)
+═══════════════════════════════════════════════════════ */
+.lb-shelf-section {
+  margin: 0 0 2rem;
+  padding: 0 0 0.25rem;
+}
+
+.lb-shelf-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0 0 0.75rem;
+}
+
+.lb-shelf-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.lb-shelf-sub {
+  font-size: 0.72rem;
+  color: #4ecb71;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Horizontal scroll track */
+.lb-shelf-track {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.lb-shelf-track::-webkit-scrollbar { height: 4px; }
+.lb-shelf-track::-webkit-scrollbar-track { background: transparent; }
+.lb-shelf-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Individual card */
+.lbs-card {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 120px;
+  text-decoration: none;
+  color: var(--text);
+  scroll-snap-align: start;
+  transition: transform 0.18s ease;
+  cursor: pointer;
+}
+.lbs-card:hover { transform: scale(1.05); }
+.lbs-card:hover .lbs-poster { border-color: var(--gold); }
+
+/* Poster */
+.lbs-poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  transition: border-color 0.18s;
+  margin-bottom: 0.5rem;
+}
+.lbs-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 6px;
+}
+.lbs-poster-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  background: var(--bg3);
+}
+
+/* Rating overlay at bottom of poster */
+.lbs-rating {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 0.8rem 0.4rem 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.62rem;
+  color: #f5c518;
+  line-height: 1;
+}
+.lbs-rating-num {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+}
+.lbs-logged {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #aaa;
+}
+
+/* Card info below poster */
+.lbs-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.lbs-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.lbs-watcher {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.lbs-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+}
+.lbs-avatar-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+}
+
+.lbs-name {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lbs-time {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  opacity: 0.7;
+}

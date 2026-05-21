@@ -1678,7 +1678,8 @@ const App = (() => {
   }
 
   async function loadGlobalLetterboxdFeed() {
-    const wrap = document.getElementById('chatterLbCards');
+    const wrap = document.getElementById('lbShelfTrack');
+    const shelf = document.getElementById('lbShelf');
     if (!wrap) return;
 
     // Hide diagnostic banner
@@ -1687,9 +1688,10 @@ const App = (() => {
 
     const withLb = state.participants.filter(p => p.letterboxdUsername);
     if (!withLb.length) {
-      wrap.innerHTML = '<div class="chatter-empty">No one has linked their Letterboxd yet.<br>Add yours in the picks screen!</div>';
+      if (shelf) shelf.style.display = 'none';
       return;
     }
+    if (shelf) shelf.style.display = '';
 
     // Map all tracked movies by slug for easy lookup
     const wagerMoviesBySlug = {};
@@ -1745,25 +1747,47 @@ const App = (() => {
     allReviews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
     if (!allReviews.length) {
-      wrap.innerHTML = '<div class="chatter-empty">No recent wager movie reviews yet.<br>Log a wager movie on Letterboxd and it\'ll show up here!</div>';
+      wrap.innerHTML = '<div class="chatter-empty" style="padding:1.5rem 0;">No wager movies logged on Letterboxd yet — watch one and it\'ll appear here!</div>';
       return;
+    }
+
+    function timeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr);
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 7) return `${days}d ago`;
+      return formatDate(dateStr.split('T')[0]);
     }
 
     wrap.innerHTML = allReviews.map(rev => {
       const p = rev.participant;
+      const movie = rev.wagerMovie;
+      const poster = getPosterUrl(movie);
       const ratingHtml = rev.rating != null
-        ? `<span class="lb-stars">${starsHtml(rev.rating)}</span><span class="lb-rating-num">${rev.rating}</span>`
-        : `<span class="lb-no-rating">Logged</span>`;
+        ? `<div class="lbs-rating">${starsHtml(rev.rating)}<span class="lbs-rating-num">${rev.rating}</span></div>`
+        : `<div class="lbs-rating lbs-logged">Logged</div>`;
+      const avatarHtml = p.avatarUrl
+        ? `<img class="lbs-avatar" src="${esc(p.avatarUrl)}" alt="">`
+        : `<div class="lbs-avatar lbs-avatar-ph">🎬</div>`;
       return `
-      <a class="lb-card" href="${esc(rev.reviewUrl)}" target="_blank" rel="noopener" style="display:flex; flex-direction:column; gap:0.5rem; padding: 1rem;">
-        <div style="display:flex; align-items:center; gap: 0.75rem;">
-          ${p.avatarUrl ? `<img class="lb-card-avatar" src="${esc(p.avatarUrl)}" alt="">` : `<div class="lb-card-avatar lb-card-avatar-ph">🎬</div>`}
-          <div class="lb-card-info">
-            <div class="lb-card-name">${esc(p.name)} watched ${esc(rev.wagerMovie.title)}</div>
-            <div class="lb-card-username" style="font-size:0.7rem;">${formatDate(rev.pubDate.split('T')[0])}</div>
-          </div>
+      <a class="lbs-card" href="${esc(rev.reviewUrl)}" target="_blank" rel="noopener">
+        <div class="lbs-poster-wrap">
+          ${poster
+            ? `<img class="lbs-poster" src="${esc(poster)}" alt="${esc(movie.title)}" loading="lazy" onerror="this.src='';this.style.display='none'">`
+            : `<div class="lbs-poster lbs-poster-ph">🎬</div>`}
+          ${ratingHtml}
         </div>
-        <div class="lb-card-rating" style="position:static; padding: 0.25rem 0 0 0;">${ratingHtml}</div>
+        <div class="lbs-info">
+          <div class="lbs-title">${esc(movie.title)}</div>
+          <div class="lbs-watcher">
+            ${avatarHtml}
+            <span class="lbs-name">${esc(p.name)}</span>
+          </div>
+          <div class="lbs-time">${timeAgo(rev.pubDate)}</div>
+        </div>
       </a>`;
     }).join('');
   }
