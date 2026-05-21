@@ -1686,8 +1686,9 @@ const App = (() => {
     // ── Temporary diagnostic banner ──────────────────────────────────────
     const diagEl = document.getElementById('lbDiag');
     if (diagEl) {
-      const all = state.participants.map(p => `${p.name}: ${p.letterboxdUsername || '❌ none'}`);
-      diagEl.textContent = 'LB usernames → ' + all.join(' | ');
+      const all = state.participants.map(p => `${p.name}: ${p.letterboxdUsername || '(none)'}`);
+      diagEl.textContent = `[DEBUG] ${state.participants.length} participants → ` + all.join(' | ');
+      diagEl.style.display = 'block';
     }
     // ────────────────────────────────────────────────────────────────────
 
