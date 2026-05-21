@@ -1697,6 +1697,28 @@ const App = (() => {
       wagerMoviesBySlug[lbSlug(m.title)] = m;
     });
 
+    // Letterboxd slugs often have a year suffix (e.g. "obsession-2025") that
+    // won't exactly match our generated slug ("obsession"). Try:
+    //  1. Exact match
+    //  2. Prefix match (LB slug starts with our slug)
+    //  3. Film title string match
+    function findWagerMovie(slug, filmTitle) {
+      if (slug && wagerMoviesBySlug[slug]) return wagerMoviesBySlug[slug];
+      if (slug) {
+        const byPrefix = state.movies.find(m => slug.startsWith(lbSlug(m.title)));
+        if (byPrefix) return byPrefix;
+      }
+      if (filmTitle) {
+        const ft = filmTitle.toLowerCase().trim();
+        const byTitle = state.movies.find(m => {
+          const mt = m.title.toLowerCase().trim();
+          return mt === ft || ft.startsWith(mt) || mt.startsWith(ft);
+        });
+        if (byTitle) return byTitle;
+      }
+      return null;
+    }
+
     let allReviews = [];
 
     // Fetch feeds SEQUENTIALLY to avoid Letterboxd rate-limiting parallel requests
@@ -1706,8 +1728,9 @@ const App = (() => {
         const data = await res.json();
         if (data.feed && Array.isArray(data.feed)) {
           data.feed.forEach(item => {
-            if (item.slug && wagerMoviesBySlug[item.slug]) {
-              allReviews.push({ ...item, participant: p, wagerMovie: wagerMoviesBySlug[item.slug] });
+            const wagerMovie = findWagerMovie(item.slug || '', item.filmTitle || '');
+            if (wagerMovie) {
+              allReviews.push({ ...item, participant: p, wagerMovie });
             }
           });
         }
