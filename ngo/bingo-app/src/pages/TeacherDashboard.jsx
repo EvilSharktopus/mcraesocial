@@ -155,42 +155,106 @@ export default function TeacherDashboard() {
   };
 
   const seedTestData = async () => {
-    if (groups.length === 0) {
-      alert('No groups exist yet. Create a group first, then seed test data.');
-      return;
-    }
-    if (!window.confirm('This will add fake scores, funding, and a reflection entry. OK?')) return;
+    if (!window.confirm('This will create 3 fake NGO groups, scores, and funding data. Existing data is not removed. OK?')) return;
 
     try {
-      const FAKE_ID = user?.uid ?? 'test_seed'; // real UID so auth rules pass
-      const perGroup = Math.floor(500000 / groups.length);
+      const teacherId = user?.uid ?? 'seed_teacher';
 
-      // Fake scorecard for each group from the test student
-      for (const g of groups) {
-        await setDoc(doc(db, 'ngo_scorecards', `${FAKE_ID}_${g.id}`), {
-          scorerId: FAKE_ID,
-          targetGroupId: g.id,
+      const fakeGroups = [
+        { ngoName: 'Clean Water Initiative',  tagline: 'Safe water for every community',      issue: 'water access'    },
+        { ngoName: 'Reforest Tomorrow',        tagline: 'Planting trees, rebuilding futures',  issue: 'deforestation'   },
+        { ngoName: 'Hunger Free Schools',      tagline: 'No child learns on an empty stomach', issue: 'food insecurity' },
+      ];
+
+      const createdGroups = [];
+
+      for (const fg of fakeGroups) {
+        // Generate a random join code
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const joinCode = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+        // Fake member UIDs (teacher is member[0] so write permission holds)
+        const fakeUids   = [teacherId, `seed_student_${joinCode}_2`, `seed_student_${joinCode}_3`];
+        const fakeNames  = ['Teacher (seed)', 'Seed Student 2', 'Seed Student 3'];
+
+        const groupRef = doc(collection(db, 'ngo_groups'));
+        await setDoc(groupRef, {
+          groupId:        groupRef.id,
+          joinCode,
+          members:        fakeUids,
+          memberNames:    fakeNames,
+          createdBy:      teacherId,
+          createdAt:      new Date().toISOString(),
+          ngoName:        fg.ngoName,
+          tagline:        fg.tagline,
+          phase1Stage:    5,         // fully approved
+          stage1Approved: true,
+          stage2Approved: true,
+          teacherNote:    '',
+          fundingReceived: 0,
+          funded:         false,
+        });
+
+        // Minimal stage docs so pitch deck page doesn't crash
+        await setDoc(doc(db, 'ngo_stage1', groupRef.id), {
+          groupId:            groupRef.id,
+          issue:              fg.issue,
+          whyThisIssue:       'This is a seeded test entry.',
+          globalContext:      'Global context placeholder.',
+          aiPrompts:          Array.from({ length: 5 }, () => ({ prompt: 'seed prompt', hoping: 'seed result' })),
+          locationChosen:     'Canada',
+          locationJustification: 'Seeded for testing.',
+          roughSolution:      'Seeded solution description.',
+          lastUpdated:        new Date().toISOString(),
+          contributors:       {},
+        });
+
+        await setDoc(doc(db, 'ngo_stage2', groupRef.id), {
+          groupId:         groupRef.id,
+          specificProblem: 'Seeded specific problem.',
+          rootCauses:      'Seeded root causes.',
+          whoAffected:     'Seeded affected population.',
+          stat1:           '1 in 3 people affected',
+          stat1Source:     'WHO (seeded)',
+          stat2:           '$2B annual cost',
+          stat2Source:     'World Bank (seeded)',
+          intervention:    'Seeded intervention plan.',
+          timeline:        [],
+          budget:          [],
+          lastUpdated:     new Date().toISOString(),
+          contributors:    {},
+        });
+
+        createdGroups.push({ id: groupRef.id, ...fg });
+      }
+
+      // Seed a scorecard from the teacher for each group
+      for (const g of createdGroups) {
+        await setDoc(doc(db, 'ngo_scorecards', `${teacherId}_${g.id}`), {
+          scorerId:        teacherId,
+          targetGroupId:   g.id,
           impact: 7, feasibility: 8, urgency: 6, creativity: 9, persuasiveness: 7,
-          notes: 'Auto-seeded test score.',
-          submittedAt: new Date().toISOString(),
+          notes:           'Auto-seeded test score.',
+          submittedAt:     new Date().toISOString(),
         });
       }
 
-      // Fake funding allocation (splits budget evenly across groups)
-      const allocations = groups.map(g => ({ groupId: g.id, amount: perGroup }));
-      await setDoc(doc(db, 'ngo_funding', FAKE_ID), {
-        studentId: FAKE_ID,
+      // Seed a funding allocation splitting budget evenly
+      const perGroup  = Math.floor(500000 / createdGroups.length);
+      const allocations = createdGroups.map(g => ({ groupId: g.id, amount: perGroup }));
+      await setDoc(doc(db, 'ngo_funding', teacherId), {
+        studentId:    teacherId,
         allocations,
-        submittedAt: new Date().toISOString(),
-        locked: true,
+        submittedAt:  new Date().toISOString(),
+        locked:       true,
       });
-      for (const g of groups) {
+      for (const g of createdGroups) {
         await updateDoc(doc(db, 'ngo_groups', g.id), {
-          fundingReceived: (g.fundingReceived ?? 0) + perGroup,
+          fundingReceived: perGroup,
         });
       }
 
-      alert('✅ Test data seeded! Check the Scores and Funding tabs.');
+      alert(`✅ Seeded 3 fake groups with scores and funding!\n\nNGOs created:\n${createdGroups.map(g => `• ${g.ngoName}`).join('\n')}\n\nCheck the Groups, Scores, and Funding tabs.`);
     } catch (e) {
       console.error(e);
       alert('Seeding failed: ' + e.message);
