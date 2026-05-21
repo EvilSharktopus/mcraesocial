@@ -1723,25 +1723,26 @@ const App = (() => {
 
     let allReviews = [];
 
-    // Fetch feeds SEQUENTIALLY to avoid Letterboxd rate-limiting parallel requests
-    for (const p of withLb) {
+    // Fetch all feeds in parallel now that slug matching is reliable
+    const results = await Promise.all(withLb.map(async p => {
       try {
         const res = await fetch(`/api/letterboxd?username=${encodeURIComponent(p.letterboxdUsername)}`);
         const data = await res.json();
+        const reviews = [];
         if (data.feed && Array.isArray(data.feed)) {
           data.feed.forEach(item => {
             const wagerMovie = findWagerMovie(item.slug || '', item.filmTitle || '');
-            if (wagerMovie) {
-              allReviews.push({ ...item, participant: p, wagerMovie });
-            }
+            if (wagerMovie) reviews.push({ ...item, participant: p, wagerMovie });
           });
         }
+        return reviews;
       } catch (err) {
         console.warn('Failed to fetch LB feed for', p.letterboxdUsername, err);
+        return [];
       }
-      // Small delay between requests to avoid rate limiting
-      await new Promise(r => setTimeout(r, 300));
-    }
+    }));
+    allReviews = results.flat();
+
 
     // Sort descending by date
     allReviews.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
