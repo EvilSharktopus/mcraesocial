@@ -22,7 +22,7 @@ const STAGE_LABELS = {
 const CRITERIA = ['impact','feasibility','urgency','creativity','persuasiveness'];
 
 export default function TeacherDashboard() {
-  const { isTeacher, user } = useAuth();
+  const { isTeacher } = useAuth();
   const { settings, loading: settingsLoading } = useNgoSettings();
   const [groups, setGroups]         = useState([]);
   const [scorecards, setScorecards] = useState([]);
@@ -162,8 +162,7 @@ export default function TeacherDashboard() {
     if (!window.confirm('This will add fake scores, funding, and a reflection entry. OK?')) return;
 
     try {
-      const FAKE_ID = user.uid;  // use real teacher UID so Firestore rules pass
-      const FAKE_NAME = user.displayName || user.email || 'Teacher (test)';
+      const FAKE_ID = 'test_student_seed';
       const perGroup = Math.floor(500000 / groups.length);
 
       // Fake scorecard for each group from the test student
@@ -191,26 +190,13 @@ export default function TeacherDashboard() {
         });
       }
 
-      // Fake reflection
-      const peerScores = {};
-      groups.forEach(g => { (g.members || []).forEach(uid => { peerScores[uid] = 8; }); });
-      await setDoc(doc(db, 'ngo_reflections', FAKE_ID), {
-        studentId: FAKE_ID,
-        studentName: FAKE_NAME,
-        groupId: groups[0]?.id ?? 'none',
-        selfScore: 9,
-        peerScores,
-        projectScores: { puttingItTogether: 8, changesFromAI: 7, delivery: 9 },
-        comments: 'Auto-seeded test reflection.',
-        submittedAt: new Date().toISOString(),
-      });
-
-      alert('✅ Test data seeded! Check the Scores, Funding, and Grading tabs.');
+      alert('✅ Test data seeded! Check the Scores and Funding tabs.');
     } catch (e) {
       console.error(e);
       alert('Seeding failed: ' + e.message);
     }
   };
+
 
   // ── Phase 3 controls ──────────────────────────────────────────────────────
   const approvedGroups = groups.filter((g) => g.stage2Approved);
