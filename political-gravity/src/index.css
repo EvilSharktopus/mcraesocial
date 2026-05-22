@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+
+:root {
+  /* Light mode — purple / off-white */
+  --pg-bg:            #f7f6fe;
+  --pg-surface:       #EEEDFE;
+  --pg-surface2:      #e2e0fc;
+  --pg-border:        #CECBF6;
+  --pg-border2:       #b5b1ef;
+  --pg-text:          #26215C;
+  --pg-muted:         #5a549a;
+  --pg-dim:           #8880c0;
+  --pg-faint:         #c4c1ee;
+  --pg-primary:       #7F77DD;
+  --pg-primary-hover: #6b63cc;
+  --pg-primary-ring:  rgba(127, 119, 221, 0.3);
+  --pg-on-primary:    #ffffff;
+  --pg-error:         #c0392b;
+  --pg-error-bg:      #fdf0ef;
+  --pg-error-border:  #e8b4b0;
+}
+
+[data-theme="dark"] {
+  /* Dark mode — amber / near-black */
+  --pg-bg:            #1a1612;
+  --pg-surface:       #26201a;
+  --pg-surface2:      #332b22;
+  --pg-border:        #444441;
+  --pg-border2:       #5a5855;
+  --pg-text:          #FAEEDA;
+  --pg-muted:         #c9b89a;
+  --pg-dim:           #9a8870;
+  --pg-faint:         #665e55;
+  --pg-primary:       #FAC775;
+  --pg-primary-hover: #f5b850;
+  --pg-primary-ring:  rgba(250, 199, 117, 0.3);
+  --pg-on-primary:    #26201a;
+  --pg-error:         #f5a89a;
+  --pg-error-bg:      #3a1a18;
+  --pg-error-border:  #7a3830;
+}
+
+/* ── Base resets ──────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  /* Smooth theme transitions on everything except the spectrum marker
+     (which handles its own transitions) */
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--pg-bg);
+  color: var(--pg-text);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Syne', system-ui, sans-serif;
+}
+
+/* ── Focus ──────────────────────────────────────────────────────────────────*/
+
+:focus-visible {
+  outline: 2px solid var(--pg-primary);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--pg-border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--pg-muted); }
+
+/* ── Spectrum component transitions ─────────────────────────────────────────*/
+
+.spectrum-marker {
+  position: absolute;
+  top: 50%;
+  border-radius: 9999px;
+  background-color: var(--pg-primary);
+  border: 2.5px solid var(--pg-bg);
+  cursor: grab;
+}
+
+.spectrum-marker:active { cursor: grabbing; }
+
+.spectrum-marker--idle {
+  width: 22px;
+  height: 22px;
+  transform: translateX(-50%) translateY(-50%);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  transition:
+    left 0.35s ease,
+    width 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease;
+}
+
+.spectrum-marker--dragging {
+  width: 30px;
+  height: 30px;
+  transform: translateX(-50%) translateY(-50%);
+  box-shadow:
+    0 0 0 6px var(--pg-primary-ring),
+    0 6px 20px rgba(0,0,0,0.25);
+  transition:
+    width 0.12s ease,
+    height 0.12s ease,
+    box-shadow 0.12s ease;
+  cursor: grabbing;
+}
+
+.spectrum-marker--settling {
+  width: 22px;
+  height: 22px;
+  transform: translateX(-50%) translateY(-50%);
+  box-shadow:
+    0 0 0 3px var(--pg-primary-ring),
+    0 2px 10px rgba(0,0,0,0.18);
+  /* Spring ease that slightly overshoots — the "settle" feel */
+  transition:
+    left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.5s ease;
+}
