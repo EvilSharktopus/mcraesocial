@@ -21,6 +21,14 @@
     {
       "source": "/workbooks/10-2",
       "destination": "https://mcraesocial.vercel.app/"
+    },
+    {
+      "source": "/gravity",
+      "destination": "https://political-gravity.vercel.app/"
+    },
+    {
+      "source": "/gravity/(.*)",
+      "destination": "https://political-gravity.vercel.app/$1"
     }
   ],
   "headers": [

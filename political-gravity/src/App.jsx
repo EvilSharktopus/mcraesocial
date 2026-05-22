@@ -28,7 +28,7 @@ function RootRedirect() {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/gravity">
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
