@@ -1,3 +1,26 @@
+# Git & deps
 **/node_modules
 **/.git
 .git
+
+# Carved-out Vercel subprojects (each has its own deployment)
+political-gravity/
+mcrae-submit/
+
+# Build outputs from subprojects
+**/dist/
+**/.next/
+**/.vercel/
+
+# Dev / scratch files
+scratch/
+scratch_*.html
+scratch_empire.html
+scripts/
+*.py
+fix_*.js
+fix_*.ps1
+get_*.py
+update_*.py
+jigsaw-handoff.txt
+PLAN.md

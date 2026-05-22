@@ -1,5 +1,39 @@
 {
   "firestore": {
     "rules": "firestore.rules"
-  }
+  },
+  "hosting": [
+    {
+      "site": "mcraesocial-slides",
+      "public": "assets/slides",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "social-10/historical/intro-to-imperial/**",
+        "social-10/identity/intro-to-identity/**",
+        "social-9/collective-rights/**"
+      ],
+      "headers": [
+        {
+          "source": "**/*.@(png|jpg|jpeg|webp|gif|svg)",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css|html)",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=3600" }
+          ]
+        },
+        {
+          "source": "**",
+          "headers": [
+            { "key": "Access-Control-Allow-Origin", "value": "*" }
+          ]
+        }
+      ]
+    }
+  ]
 }
