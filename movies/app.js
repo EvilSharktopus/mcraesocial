@@ -16,6 +16,7 @@ const App = (() => {
     selectedParticipantId: null,
     adminMode: false,
     posterCache: {},        // movieId -> url
+    movieTitleCache: {},   // movieId -> title (all docs, inc. ineligible)
     _picksByParticipant: {},
   };
 
@@ -129,6 +130,10 @@ const App = (() => {
   async function loadMovies() {
     const snap = await db.collection('movies').get();
 
+    // Build a full title cache for ALL docs (used as fallback in comparison grid)
+    state.movieTitleCache = {};
+    snap.docs.forEach(d => { state.movieTitleCache[d.id] = d.data().title || ''; });
+
     // Seed on first run
     if (snap.empty) {
       const batch = db.batch();
@@ -138,6 +143,7 @@ const App = (() => {
       });
       await batch.commit();
       const seeded = await db.collection('movies').get();
+      seeded.docs.forEach(d => { state.movieTitleCache[d.id] = d.data().title || ''; });
       state.movies = seeded.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(m => m.isEligible !== false)
@@ -1088,14 +1094,15 @@ const App = (() => {
 
   function abbrev(title) {
     const overrides = [
-      ['mortal kombat ii',       'MKII'],
-      ['masters of the universe', 'HEMAN'],
-      ['he-man',                  'HEMAN'],
-      ['he man',                  'HEMAN'],
-      ['mandalorian',      'MANDO'],
-      ['spider-man',       'SPIDY'],
-      ['spider man',       'SPIDY'],
-      ['scary movie',      'SCARY'],
+      ['mortal kombat ii',           'MKII'],
+      ['masters of the universe',    'HEMAN'],
+      ['he-man',                     'HEMAN'],
+      ['he man',                     'HEMAN'],
+      ['star wars the mandalorian',  'MANDO'],
+      ['mandalorian',                'MANDO'],
+      ['spider-man',                 'SPIDY'],
+      ['spider man',                 'SPIDY'],
+      ['scary movie',                'SCARY'],
     ];
     // Normalise key: lowercase, strip leading "the ", collapse punctuation to spaces
     const key = (title || '').toLowerCase().trim()
@@ -1316,7 +1323,8 @@ const App = (() => {
     const cell = (movieId) => {
       if (!movieId) return `<td class="cg-cell cg-empty">—</td>`;
       const m = state.movies.find(m => m.id === movieId);
-      return `<td class="cg-cell" style="background:${color(movieId)};" title="${m ? esc(m.title) : ''}">${m ? abbrev(m.title) : '?'}</td>`;
+      const title = m ? m.title : (state.movieTitleCache[movieId] || null);
+      return `<td class="cg-cell" style="background:${color(movieId)};" title="${title ? esc(title) : 'Unknown movie'}">${title ? abbrev(title) : '?'}</td>`;
     };
 
     let html = `<div class="cg-scroll"><table class="cg-table"><thead><tr>
