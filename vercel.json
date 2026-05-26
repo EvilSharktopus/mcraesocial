@@ -16,11 +16,11 @@
     },
     {
       "source": "/workbooks/10-2/:path*",
-      "destination": "https://mcraesocial.vercel.app/:path*"
+      "destination": "https://10-2-iota.vercel.app/workbooks/10-2/:path*"
     },
     {
       "source": "/workbooks/10-2",
-      "destination": "https://mcraesocial.vercel.app/"
+      "destination": "https://10-2-iota.vercel.app/workbooks/10-2"
     },
     {
       "source": "/gravity/(.*)",
