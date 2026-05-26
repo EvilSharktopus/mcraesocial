@@ -753,6 +753,168 @@ const App = (() => {
     document.getElementById('posterManager')?.classList.add('hidden');
   }
 
+  // ── Add Movie (admin) ──────────────────────────────────────────────────
+  function showAddMovieModal() {
+    document.getElementById('addMovieTitle').value = '';
+    document.getElementById('addMovieDate').value = '';
+    document.getElementById('addMovieStatus').textContent = '';
+    document.getElementById('addMovieModal')?.classList.remove('hidden');
+    setTimeout(() => document.getElementById('addMovieTitle')?.focus(), 50);
+  }
+
+  function hideAddMovieModal() {
+    document.getElementById('addMovieModal')?.classList.add('hidden');
+  }
+
+  async function addMovie() {
+    const titleEl  = document.getElementById('addMovieTitle');
+    const dateEl   = document.getElementById('addMovieDate');
+    const statusEl = document.getElementById('addMovieStatus');
+
+    const title       = (titleEl?.value || '').trim();
+    const releaseDate = (dateEl?.value || '').trim();
+
+    if (!title)       { statusEl.textContent = '⚠️ Enter a movie title.';        return; }
+    if (!releaseDate) { statusEl.textContent = '⚠️ Pick a release date.';        return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(releaseDate)) {
+      statusEl.textContent = '⚠️ Date must be YYYY-MM-DD format.'; return;
+    }
+
+    // Duplicate check (case-insensitive)
+    if (state.movies.some(m => m.title.toLowerCase() === title.toLowerCase())) {
+      statusEl.textContent = '⚠️ That movie is already in the pool.';
+      return;
+    }
+
+    statusEl.textContent = 'Saving…';
+
+    try {
+      const ref = await db.collection('movies').add({
+        title,
+        releaseDate,
+        isEligible:    true,
+        domesticGross: 0,
+        boxOfficeRank: null,
+        posterPath:    null,
+        tmdbId:        null,
+      });
+
+      // Add to local state & re-sort
+      const newMovie = { id: ref.id, title, releaseDate, isEligible: true, domesticGross: 0, boxOfficeRank: null, posterPath: null, tmdbId: null };
+      state.movies.push(newMovie);
+      state.movies.sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
+
+      toast(`"${title}" added to the pool! 🎬`, 'success');
+      statusEl.textContent = `✅ Added! (ID: ${ref.id})`;
+      titleEl.value = '';
+      dateEl.value  = '';
+
+      // Refresh any visible movie grids
+      renderMoviePool(document.getElementById('poolSearch')?.value || '');
+      renderRankingSlots();
+    } catch (err) {
+      statusEl.textContent = '❌ ' + err.message;
+      toast('Failed to add movie: ' + err.message, 'error');
+    }
+  }
+
+  // ── Backfill Picks (admin) ────────────────────────────────────────────
+  async function showBackfillModal() {
+    const sel = document.getElementById('backfillMovieSelect');
+    if (sel) {
+      sel.innerHTML = state.movies
+        .map(m => `<option value="${m.id}">${esc(m.title)} (${m.releaseDate})</option>`)
+        .join('');
+    }
+    document.getElementById('backfillStatus').textContent = '';
+    document.getElementById('backfillModal')?.classList.remove('hidden');
+    await backfillRenderParticipants();
+  }
+
+  function hideBackfillModal() {
+    document.getElementById('backfillModal')?.classList.add('hidden');
+  }
+
+  async function backfillRenderParticipants() {
+    const list   = document.getElementById('backfillParticipantList');
+    const status = document.getElementById('backfillStatus');
+    const movieId = document.getElementById('backfillMovieSelect')?.value;
+    if (!list || !movieId) return;
+
+    status.textContent = 'Loading picks…';
+
+    const snap = await db.collection('picks').get();
+    const allPicks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const pbp = {};
+    allPicks.forEach(p => {
+      if (!pbp[p.participantId]) pbp[p.participantId] = [];
+      pbp[p.participantId].push(p);
+    });
+
+    status.textContent = '';
+
+    const submitted = state.participants.filter(p => p.picksSubmitted);
+    list.innerHTML = submitted.map(p => {
+      const picks = pbp[p.id] || [];
+      const existing = picks.find(pk => pk.movieId === movieId);
+      const existingNote = existing
+        ? (existing.isDarkHorse
+            ? `<span style="color:var(--gold);font-size:0.72rem;"> — already 🐴 dark horse</span>`
+            : `<span style="color:var(--gold);font-size:0.72rem;"> — already ranked #${existing.rank}</span>`)
+        : '';
+      const avatar = p.avatarUrl
+        ? `<img src="${esc(p.avatarUrl)}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:0.9rem;">🎬</div>`;
+      return `
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.6rem;background:var(--bg2);border-radius:8px;">
+          ${avatar}
+          <span style="flex:1;font-size:0.85rem;">${esc(p.name)}${existingNote}</span>
+          <select class="backfill-rank-sel pm-url-input" data-participant-id="${p.id}"
+            style="font-size:0.78rem;padding:0.25rem 0.4rem;width:130px;"
+            ${existing ? 'disabled' : ''}>
+            <option value="skip">${existing ? '— Already set —' : 'Skip'}</option>
+            <option value="dh">🐴 Dark Horse</option>
+            ${[1,2,3,4,5,6,7,8,9,10].map(r => `<option value="${r}">Rank #${r}</option>`).join('')}
+          </select>
+        </div>`;
+    }).join('');
+  }
+
+  async function saveBackfillPicks() {
+    const movieId = document.getElementById('backfillMovieSelect')?.value;
+    const status  = document.getElementById('backfillStatus');
+    if (!movieId) { status.textContent = '⚠️ Select a movie first.'; return; }
+
+    const selects = document.querySelectorAll('.backfill-rank-sel:not([disabled])');
+    const toAdd = Array.from(selects)
+      .map(sel => ({ participantId: sel.dataset.participantId, value: sel.value }))
+      .filter(x => x.value !== 'skip');
+
+    if (!toAdd.length) { status.textContent = '⚠️ Nothing to save — all set to Skip.'; return; }
+
+    status.textContent = `Saving ${toAdd.length} pick(s)…`;
+    try {
+      const batch = db.batch();
+      toAdd.forEach(({ participantId, value }) => {
+        const ref = db.collection('picks').doc();
+        batch.set(ref, {
+          participantId,
+          movieId,
+          rank:        value === 'dh' ? null : parseInt(value),
+          isDarkHorse: value === 'dh',
+        });
+      });
+      await batch.commit();
+      toast(`✅ Saved ${toAdd.length} pick(s)! Scores will update.`, 'success');
+      status.textContent = `✅ Done! ${toAdd.length} pick(s) saved.`;
+      hideBackfillModal();
+      await showResultsScreen();
+    } catch (err) {
+      toast('Failed: ' + err.message, 'error');
+      status.textContent = '❌ ' + err.message;
+    }
+  }
+
   async function handlePosterUpload(movieId, file) {
     if (!file) return;
     if (file.size > 8 * 1024 * 1024) { toast('Image must be under 8MB.', 'error'); return; }
@@ -1867,6 +2029,8 @@ const App = (() => {
     addToPicks, removeFromPicks, filterPool, submitPicks,
     showBoEditor, hideBoEditor, saveBoxOffice, apifySync,
     showPosterManager, hidePosterManager, handlePosterUpload, handlePosterUrlSet,
+    showAddMovieModal, hideAddMovieModal, addMovie,
+    showBackfillModal, hideBackfillModal, backfillRenderParticipants, saveBackfillPicks,
     changeAvatar, removeDarkHorse, deleteUser, openLightbox,
     saveLetterboxdUsername,
     showLbEditor, hideLbEditor, saveLbEditorRow,

@@ -247,6 +247,12 @@
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showLbEditor()">
       🎞 Edit Letterboxd
     </button>
+    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showAddMovieModal()">
+      ➕ Add Movie
+    </button>
+    <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;background:var(--gold);color:#111;" onclick="App.showBackfillModal()">
+      🩹 Backfill Picks
+    </button>
     <div id="adminStatus" style="font-size:0.78rem;color:var(--text-dim);"></div>
     <button class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.75rem;" onclick="App.showPosterManager()">
       🖼 Upload Posters
@@ -422,6 +428,76 @@
       Click any movie to upload a poster image. JPG, PNG, or WebP — portrait orientation works best.
     </p>
     <div class="pm-grid" id="pmGrid"></div>
+  </div>
+</div>
+
+<!-- ── Add Movie modal ── -->
+<!-- ── Backfill Picks modal ── -->
+<div id="backfillModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="App.hideBackfillModal()"></div>
+  <div class="modal-content" style="max-width:540px;">
+    <div class="modal-header">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.06em;color:var(--gold);">
+        🩹 Backfill Picks
+      </div>
+      <button class="btn-ghost" onclick="App.hideBackfillModal()">✕ Close</button>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:1rem;">
+      Assign a missing movie to each player's picks without them needing to log in.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:0.3rem;">Movie to assign</label>
+        <select id="backfillMovieSelect" class="pm-url-input" style="width:100%;box-sizing:border-box;" onchange="App.backfillRenderParticipants()"></select>
+      </div>
+      <div id="backfillParticipantList" style="display:flex;flex-direction:column;gap:0.5rem;max-height:340px;overflow-y:auto;"></div>
+      <div id="backfillStatus" style="font-size:0.78rem;color:var(--text-dim);min-height:1.2em;"></div>
+      <button class="btn-primary" style="font-size:0.85rem;" onclick="App.saveBackfillPicks()">
+        Save Picks for All
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="addMovieModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="App.hideAddMovieModal()"></div>
+  <div class="modal-content" style="max-width:420px;">
+    <div class="modal-header">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.06em;color:var(--gold);">
+        ➕ Add Movie
+      </div>
+      <button class="btn-ghost" onclick="App.hideAddMovieModal()">✕ Close</button>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:1.25rem;">
+      Add a new eligible movie to the pool. It will appear immediately for all players.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:0.3rem;">Movie Title</label>
+        <input
+          type="text"
+          id="addMovieTitle"
+          class="pm-url-input"
+          style="width:100%;box-sizing:border-box;"
+          placeholder="e.g. Star Wars: The Mandalorian & Grogu"
+          maxlength="120"
+          autocomplete="off"
+        >
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:var(--text-dim);display:block;margin-bottom:0.3rem;">Release Date</label>
+        <input
+          type="date"
+          id="addMovieDate"
+          class="pm-url-input"
+          style="width:100%;box-sizing:border-box;"
+        >
+      </div>
+      <div id="addMovieStatus" style="font-size:0.78rem;color:var(--text-dim);min-height:1.2em;"></div>
+      <button class="btn-primary" style="font-size:0.85rem;" onclick="App.addMovie()">
+        Add to Movie Pool
+      </button>
+    </div>
   </div>
 </div>
 
