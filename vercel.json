@@ -1,23 +1,6 @@
 {
   "framework": null,
   "outputDirectory": ".",
-  "redirects": [
-    {
-      "source": "/workbooks/10-2/:path*",
-      "destination": "https://10-2-iota.vercel.app/workbooks/10-2/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/workbooks/10-2",
-      "destination": "https://10-2-iota.vercel.app/workbooks/10-2",
-      "permanent": true
-    },
-    {
-      "source": "/workbooks",
-      "destination": "https://10-2-iota.vercel.app/workbooks/10-2",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/ngo/assets/(.*)",
