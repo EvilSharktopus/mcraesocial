@@ -824,6 +824,35 @@ const App = (() => {
     }
   }
 
+  // ── Clean broken picks (admin) ───────────────────────────────────────
+  async function cleanBrokenPicks() {
+    const status  = document.getElementById('backfillStatus');
+    const movieId = document.getElementById('backfillMovieSelect')?.value;
+    if (!movieId) { if (status) status.textContent = '⚠️ Select the correct movie first.'; return; }
+    if (status) status.textContent = 'Scanning for broken picks…';
+    try {
+      const moviesSnap = await db.collection('movies').get();
+      const validIds   = new Set(moviesSnap.docs.map(d => d.id));
+      const picksSnap  = await db.collection('picks').get();
+      const broken     = picksSnap.docs.filter(d => !validIds.has(d.data().movieId));
+      if (!broken.length) {
+        if (status) status.textContent = '✅ No broken picks found!';
+        toast('No broken picks found.', 'success');
+        return;
+      }
+      const batch = db.batch();
+      broken.forEach(d => batch.update(d.ref, { movieId }));
+      await batch.commit();
+      toast(`✅ Repaired ${broken.length} pick(s)!`, 'success');
+      if (status) status.textContent = `✅ Repaired ${broken.length} pick(s). Refreshing…`;
+      hideBackfillModal();
+      await showResultsScreen();
+    } catch (err) {
+      toast('Failed: ' + err.message, 'error');
+      if (status) status.textContent = '❌ ' + err.message;
+    }
+  }
+
   // ── Backfill Picks (admin) ────────────────────────────────────────────
   async function showBackfillModal() {
     const sel = document.getElementById('backfillMovieSelect');

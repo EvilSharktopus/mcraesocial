@@ -452,9 +452,14 @@
       </div>
       <div id="backfillParticipantList" style="display:flex;flex-direction:column;gap:0.5rem;max-height:340px;overflow-y:auto;"></div>
       <div id="backfillStatus" style="font-size:0.78rem;color:var(--text-dim);min-height:1.2em;"></div>
-      <button class="btn-primary" style="font-size:0.85rem;" onclick="App.saveBackfillPicks()">
-        Save Picks for All
-      </button>
+      <div style="display:flex;gap:0.5rem;">
+        <button class="btn-secondary" style="font-size:0.8rem;flex:1;" onclick="App.cleanBrokenPicks()">
+          🔧 Repair Broken Picks
+        </button>
+        <button class="btn-primary" style="font-size:0.85rem;flex:2;" onclick="App.saveBackfillPicks()">
+          Save Picks for All
+        </button>
+      </div>
     </div>
   </div>
 </div>
