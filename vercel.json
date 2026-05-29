@@ -17,7 +17,7 @@
     {
       "source": "/gravity/(.*)",
       "destination": "/gravity/index.html"
-    }
+    },
   ],
   "headers": [
     {
