@@ -154,6 +154,16 @@ const App = (() => {
         .filter(m => m.isEligible !== false)
         .sort((a, b) => a.releaseDate.localeCompare(b.releaseDate));
     }
+
+    // Always recalculate boxOfficeRank from domesticGross in memory.
+    // Stored ranks can become stale if gross values are updated without
+    // recalculating all sibling ranks, which scrambles scoring.
+    const byGross = [...state.movies]
+      .filter(m => m.domesticGross > 0)
+      .sort((a, b) => b.domesticGross - a.domesticGross);
+    byGross.forEach((m, i) => { m.boxOfficeRank = i + 1; });
+    state.movies.filter(m => !m.domesticGross || m.domesticGross <= 0)
+      .forEach(m => { m.boxOfficeRank = null; });
   }
 
   async function loadParticipants() {
@@ -1279,15 +1289,15 @@ const App = (() => {
     function placeImage(pos) {
       // pos is 0-based rank in the sorted list
       if (n >= 8) {
-        const names = ['1st-place','2nd-place','4th-place','3rd-place','5th-place','6th-place','7th-place','last-place'];
+        const names = ['1st-place','2nd-place','3rd-place','4th-place','5th-place','6th-place','7th-place','last-place'];
         return names[pos] ? `${IMG_BASE}${names[pos]}.jpg` : null;
       }
       if (n === 7) {
-        const map = { 0:'1st-place', 1:'2nd-place', 2:'4th-place', 3:'3rd-place', 4:'5th-place', 5:'7th-place', 6:'last-place' };
+        const map = { 0:'1st-place', 1:'2nd-place', 2:'3rd-place', 3:'4th-place', 4:'5th-place', 5:'7th-place', 6:'last-place' };
         return map[pos] ? `${IMG_BASE}${map[pos]}.jpg` : null;
       }
-      // 6 or fewer: 1st, 2nd, 4th, 5th, 7th, last
-      const map6 = { 0:'1st-place', 1:'2nd-place', 2:'4th-place', 3:'5th-place', 4:'7th-place', 5:'last-place' };
+      // 6 or fewer: 1st, 2nd, 3rd, 5th, 7th, last
+      const map6 = { 0:'1st-place', 1:'2nd-place', 2:'3rd-place', 3:'5th-place', 4:'7th-place', 5:'last-place' };
       return map6[pos] ? `${IMG_BASE}${map6[pos]}.jpg` : null;
     }
 
