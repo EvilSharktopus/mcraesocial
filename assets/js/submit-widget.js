@@ -57,6 +57,8 @@
           let isOpen;
           if (isArchived) {
             isOpen = false;
+          } else if (f.isOpen && f.isOpen.booleanValue === false) {
+            isOpen = false; // manual close overrides schedule
           } else if (isTimed) {
             // Schedule takes precedence — same logic as AssignmentList.jsx
             const notYetOpen = openMs  && now < openMs;
