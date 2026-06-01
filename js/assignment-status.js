@@ -26,12 +26,12 @@
     = await import(`${CDN}/firebase-firestore-lite.js`);
 
   const app = initializeApp({
-    apiKey:            'AIzaSyCIiW1edciPp0kC72oQHYhhTmfTPoSdajA',
-    authDomain:        'mcrae-assignments.firebaseapp.com',
-    projectId:         'mcrae-assignments',
-    storageBucket:     'mcrae-assignments.firebasestorage.app',
-    messagingSenderId: '924165074686',
-    appId:             '1:924165074686:web:67ec3909e1be195aa93faf',
+    apiKey:            'AIzaSyB4Yc51IzKEcBzDPqy3B8fA9QSrnhIAzr4',
+    authDomain:        'mcrae-assignments-ca.firebaseapp.com',
+    projectId:         'mcrae-assignments-ca',
+    storageBucket:     'mcrae-assignments-ca.firebasestorage.app',
+    messagingSenderId: '770513837101',
+    appId:             '1:770513837101:web:6614415cf1e9fcd5afaca4',
   }, 'mcrae-status'); // named app to avoid conflicts
 
   const db = getFirestore(app);
