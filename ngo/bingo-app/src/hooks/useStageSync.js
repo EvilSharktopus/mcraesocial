@@ -92,6 +92,20 @@ export function useStageSync(collectionName, docId) {
     return () => clearInterval(id);
   }, [save]);
 
+  // Save immediately when tab loses focus (switching apps/tabs/clicking away)
+  useEffect(() => {
+    const handleVisChange = () => {
+      if (document.visibilityState === 'hidden') save();
+    };
+    const handleBeforeUnload = () => save();
+    document.addEventListener('visibilitychange', handleVisChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [save]);
+
   const loaded = serverData !== null;
   return { values, set, save, saving, showSaved, loaded, error };
 }
