@@ -25,24 +25,12 @@ update_*.py
 jigsaw-handoff.txt
 PLAN.md
  
-# Temporarily ignore large decks blocking deploy
-assets/slides/social-30/democracy/democracy/**
-assets/slides/social-30/intro-to-ideologies/intro-to-ideologies/**
-assets/slides/social-20/challenges-to-canada/divided-canada/**
-assets/slides/social-10/identity/trade-and-containers/**
-assets/slides/social-10/identity/media-and-identity/**
-assets/slides/social-30/economics/econ-part-1/**
-assets/slides/social-20/factors-of-nationalism/nationalism-and-identity/**
-assets/slides/social-10/historical/case-studies/**
-assets/slides/social-20/ultranationalism/end-of-europe-ww2/**
-assets/slides/social-20/ultranationalism/holocaust/**
-assets/slides/social-30/economics/econ-part-2/**
-assets/slides/social-20/ultranationalism/start-of-ww2/**
-assets/slides/social-20/factors-of-nationalism/a-history-lesson/**
-assets/slides/social-30/intro-to-ideologies/philosophers/**
-assets/slides/social-10/identity/intro-to-identity/**
-assets/slides/social-10/historical/intro-to-imperial/**
-assets/slides/social-30/dictatorships/intro-dictators/**
-assets/slides/social-20/national-interest/ww1/**
-assets/slides/social-20/ultranationalism/rise-of-ultra/**
-assets/slides/social-20/factors-of-nationalism/french-revolution/**
+# All slides are served from Firebase (mcraesocial-slides.web.app)
+assets/slides/
+
+# Deploy tooling (not needed on Vercel)
+sync-slides.ps1
+deploy.ps1
+firebase.json
+.firebaserc
+DEPLOY.md
