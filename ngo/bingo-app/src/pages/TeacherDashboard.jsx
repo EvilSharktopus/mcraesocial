@@ -545,7 +545,16 @@ export default function TeacherDashboard() {
                     </p>
                     {g.tagline && <p style={{ fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--text-dim)', marginTop: '0.1rem' }}>"{g.tagline}"</p>}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                    <Link
+                      to={`/group/${g.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-ghost"
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      View Work →
+                    </Link>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>${(g.fundingReceived || 0).toLocaleString()} received</p>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{g.members.length}/4 members</p>
                   </div>
