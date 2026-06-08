@@ -1570,6 +1570,8 @@ const App = (() => {
       });
       if (!res.ok) throw new Error(`Server ${res.status}: ${await res.text()}`);
       const results = await res.json();
+      console.log('🎬 Raw Apify BOM results:', JSON.stringify(results, null, 2));
+      if (status) status.textContent += ` | Raw: ${results.map(r => `"${r.title}" $${r.domesticGross}`).join(', ')}`;
       if (!results.length) { toast('No box office data returned yet — try again later.', 'error'); return; }
 
       let updated = 0;
