@@ -318,11 +318,11 @@ export default function Stage1Form({ groupId }) {
                 />
               </div>
               <div className="form-group">
-                <label htmlFor={`hoping-${i}`}>What I want to learn from this</label>
+                <label htmlFor={`hoping-${i}`}>What research do I need for the project?</label>
                 <textarea
                   id={`hoping-${i}`}
                   rows={2}
-                  placeholder="Describe what you hope to find out before you run the prompt"
+                  placeholder="What specific information are you looking for to help build your NGO's plan?"
                   value={p.hoping}
                   onChange={(e) => setPrompt(i, 'hoping', e.target.value)}
                   onBlur={blurSave}
