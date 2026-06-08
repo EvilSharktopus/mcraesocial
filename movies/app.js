@@ -1478,6 +1478,12 @@ const App = (() => {
       <tr>
         <td>${esc(m.title)}</td>
         <td><input type="number" class="bo-edit-input" data-id="${m.id}" value="${m.domesticGross || ''}" placeholder="0" min="0"></td>
+        <td style="text-align:center">
+          <label title="Lock: BOM sync won't overwrite this value">
+            <input type="checkbox" class="bo-lock-input" data-id="${m.id}" ${m.grossLocked ? 'checked' : ''}>
+            🔒
+          </label>
+        </td>
       </tr>
     `).join('');
     document.getElementById('boEditor')?.classList.remove('hidden');
@@ -1489,13 +1495,19 @@ const App = (() => {
 
   async function saveBoxOffice() {
     const inputs = document.querySelectorAll('#boEditTable .bo-edit-input');
+    const lockInputs = document.querySelectorAll('#boEditTable .bo-lock-input');
     const status = document.getElementById('adminStatus');
     if (status) status.textContent = 'Saving…';
+
+    // Build lock map
+    const lockMap = {};
+    lockInputs.forEach(cb => { lockMap[cb.dataset.id] = cb.checked; });
 
     try {
       const updates = Array.from(inputs).map(inp => ({
         id: inp.dataset.id,
         domesticGross: parseInt(inp.value) || 0,
+        grossLocked: lockMap[inp.dataset.id] || false,
       }));
       const sorted = [...updates].sort((a, b) => b.domesticGross - a.domesticGross);
       sorted.forEach((u, i) => { u.boxOfficeRank = u.domesticGross > 0 ? i + 1 : null; });
@@ -1505,9 +1517,10 @@ const App = (() => {
         batch.update(db.collection('movies').doc(u.id), {
           domesticGross: u.domesticGross || 0,
           boxOfficeRank: u.boxOfficeRank || null,
+          grossLocked: u.grossLocked,
         });
         const movie = state.movies.find(m => m.id === u.id);
-        if (movie) { movie.domesticGross = u.domesticGross; movie.boxOfficeRank = u.boxOfficeRank; }
+        if (movie) { movie.domesticGross = u.domesticGross; movie.boxOfficeRank = u.boxOfficeRank; movie.grossLocked = u.grossLocked; }
       });
       await batch.commit();
 
@@ -1568,11 +1581,12 @@ const App = (() => {
         if (!gross || gross <= 0) continue;
         const rowTitle = (row.title || '').toLowerCase();
         const match = released.find(m => {
+          if (m.grossLocked) return false; // skip locked movies
           const t = m.title.toLowerCase();
           return t === rowTitle || t.includes(rowTitle) || rowTitle.includes(t);
         });
         if (!match) { console.warn('No BOM match for:', row.title); continue; }
-        
+
         match.domesticGross = gross;
         updated++;
       }
