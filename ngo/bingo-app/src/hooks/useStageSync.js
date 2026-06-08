@@ -9,25 +9,41 @@ export function useStageSync(collectionName, docId) {
   const [error, setError] = useState(null);
   const localRef = useRef({});            // pending edits (not yet saved)
   const [localSnap, setLocalSnap] = useState({}); // mirror for renders
+  const pendingSaveRef = useRef({});       // values we saved but server hasn't confirmed
   const [saving, setSaving]   = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const savedTimer = useRef(null);
 
-  // Live listener — remote wins only for fields NOT pending locally
+  // Live listener — remote wins only for fields NOT pending locally or awaiting confirm
   useEffect(() => {
     if (!docId) return;
     const unsub = onSnapshot(
       doc(db, collectionName, docId),
       (snap) => {
         setError(null);
-        // If doc exists, use its data. If it doesn't exist yet, treat as empty object
-        // so loaded becomes true and we don't spin forever.
-        setServerData(snap.exists() ? snap.data() : {});
+        const data = snap.exists() ? snap.data() : {};
+
+        // Clear pending-save keys that the server has confirmed
+        const pending = pendingSaveRef.current;
+        Object.keys(pending).forEach(k => {
+          const serverVal = data[k];
+          const savedVal = pending[k];
+          // Consider confirmed if server value matches what we saved (deep compare for objects/arrays)
+          if (JSON.stringify(serverVal) === JSON.stringify(savedVal)) {
+            delete pending[k];
+            // Also clear from localRef if user hasn't typed MORE since the save
+            if (JSON.stringify(localRef.current[k]) === JSON.stringify(savedVal)) {
+              delete localRef.current[k];
+            }
+          }
+        });
+
+        setLocalSnap({ ...localRef.current });
+        setServerData(data);
       },
       (err) => {
         console.error(`useStageSync(${collectionName}/${docId}) error:`, err);
         setError(err.message || 'Firestore read error');
-        // Set serverData to {} so loaded = true and the UI can show an error
         setServerData((prev) => prev ?? {});
       }
     );
@@ -53,11 +69,12 @@ export function useStageSync(collectionName, docId) {
         ...edits,
         lastUpdated: serverTimestamp(),
       });
-      // Clear only the keys we just saved
-      Object.keys(edits).forEach((k) => {
-        if (localRef.current[k] === edits[k]) delete localRef.current[k];
+      // Track what we saved — DON'T clear localRef/localSnap yet.
+      // They stay in place so the UI never flashes back to stale server data.
+      // onSnapshot will clear them once the server confirms.
+      Object.keys(edits).forEach(k => {
+        pendingSaveRef.current[k] = edits[k];
       });
-      setLocalSnap({ ...localRef.current });
       setShowSaved(true);
       clearTimeout(savedTimer.current);
       savedTimer.current = setTimeout(() => setShowSaved(false), 2500);
@@ -78,3 +95,4 @@ export function useStageSync(collectionName, docId) {
   const loaded = serverData !== null;
   return { values, set, save, saving, showSaved, loaded, error };
 }
+
