@@ -189,7 +189,7 @@ export default function Stage1Form({ groupId }) {
           <SaveIndicator showSaved={s1.showSaved || grp.showSaved} saving={s1.saving || grp.saving} />
         </div>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-          Auto-saves every 30s · no copy-paste
+          Auto-saves every 5s · no copy-paste
         </span>
       </div>
 

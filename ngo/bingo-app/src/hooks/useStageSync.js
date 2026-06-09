@@ -88,7 +88,7 @@ export function useStageSync(collectionName, docId) {
 
   // 30-second interval auto-save
   useEffect(() => {
-    const id = setInterval(() => save(), 30000);
+    const id = setInterval(() => save(), 5000);
     return () => clearInterval(id);
   }, [save]);
 
