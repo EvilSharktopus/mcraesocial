@@ -59,6 +59,11 @@ function NgoCard({ group, myGroupId, scorerId }) {
   const [saving, setSaving]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const savedTimer = useRef(null);
+  const loadedRef = useRef(false);
+  const scoresRef = useRef(scores);
+  const notesRef  = useRef(notes);
+  scoresRef.current = scores;
+  notesRef.current  = notes;
 
   // Load existing scorecard
   useEffect(() => {
@@ -71,18 +76,19 @@ function NgoCard({ group, myGroupId, scorerId }) {
         setNotes(d.notes ?? '');
         setSubmitted(!!d.submittedAt);
       }
+      loadedRef.current = true;
     });
   }, [isOwn, scorerId, group.id]);
 
   const saveCard = async () => {
-    if (isOwn) return;
+    if (isOwn || !loadedRef.current) return;
     setSaving(true);
     const ref = doc(db, 'ngo_scorecards', `${scorerId}_${group.id}`);
     await setDoc(ref, {
       scorerId,
       targetGroupId: group.id,
-      ...scores,
-      notes,
+      ...scoresRef.current,
+      notes: notesRef.current,
       submittedAt: serverTimestamp(),
     }, { merge: true });
     setSaving(false);
@@ -91,6 +97,28 @@ function NgoCard({ group, myGroupId, scorerId }) {
     clearTimeout(savedTimer.current);
     savedTimer.current = setTimeout(() => setSaved(false), 2500);
   };
+
+  // Auto-save: debounce on score/notes changes
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    if (isOwn || !loadedRef.current) return;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => saveCard(), 2000);
+    return () => clearTimeout(debounceRef.current);
+  }, [scores, notes]);
+
+  // Auto-save on tab switch / page close
+  useEffect(() => {
+    if (isOwn) return;
+    const handleVis = () => { if (document.visibilityState === 'hidden') saveCard(); };
+    const handleUnload = () => saveCard();
+    document.addEventListener('visibilitychange', handleVis);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVis);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [isOwn]);
 
   return (
     <div
