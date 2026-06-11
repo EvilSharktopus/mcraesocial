@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { db } from '../firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useStageSync } from '../hooks/useStageSync';
+import { generatePptx } from '../utils/pptxExport';
 import ContributorTags from './ContributorTags';
 import '../styles/worksite.css';
 
@@ -211,16 +212,28 @@ function BudgetEditor({ rows, onChange, onBlur }) {
 
 // ── Main Component ────────────────────────────────────────────────────────
 export default function Stage2Form({ groupId }) {
+  const s1  = useStageSync('ngo_stage1', groupId);
   const s2  = useStageSync('ngo_stage2', groupId);
   const grp = useStageSync('ngo_groups',  groupId);
 
   const submittingRef = useRef(false);
   const submitErrRef  = useRef('');
+  const [pptxLoading, setPptxLoading] = useState(false);
   const [, setTick] = useState(0);
   const tick = () => setTick((x) => x + 1);
 
   const v = s2.values;
   const blurSave = () => s2.save();
+
+  const handlePptx = async () => {
+    setPptxLoading(true);
+    try {
+      await s2.save();
+      await generatePptx({ group: grp.values, s1: s1.values, s2: v, palette: { name: 'Ocean', accent: [0, 194, 179], secondary: [245, 200, 66] } });
+    } finally {
+      setPptxLoading(false);
+    }
+  };
 
   // Timeline helpers
   const timeline = v.timeline ?? [];
@@ -280,7 +293,7 @@ export default function Stage2Form({ groupId }) {
     }
   };
 
-  if (!s2.loaded || !grp.loaded) {
+  if (!s1.loaded || !s2.loaded || !grp.loaded) {
     return <div className="loading-screen"><span className="spinner" /></div>;
   }
 
@@ -295,7 +308,7 @@ export default function Stage2Form({ groupId }) {
           <SaveIndicator showSaved={s2.showSaved} saving={s2.saving} />
         </div>
         <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-          Auto-saves every 30s · no copy-paste
+          Auto-saves every 5s · no copy-paste
         </span>
       </div>
 
@@ -402,14 +415,24 @@ export default function Stage2Form({ groupId }) {
         {submitErrRef.current && (
           <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{submitErrRef.current}</div>
         )}
-        <button
-          id="submit-stage2-btn"
-          className="btn btn-primary btn-lg"
-          disabled={!allGood || submittingRef.current}
-          onClick={handleSubmit}
-        >
-          {submittingRef.current ? 'Submitting…' : 'Submit Stage 2 for Approval →'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            id="submit-stage2-btn"
+            className="btn btn-primary btn-lg"
+            disabled={!allGood || submittingRef.current}
+            onClick={handleSubmit}
+          >
+            {submittingRef.current ? 'Submitting…' : 'Submit Stage 2 for Approval →'}
+          </button>
+          <button
+            id="download-pptx-btn"
+            className="btn btn-yellow btn-lg"
+            onClick={handlePptx}
+            disabled={pptxLoading}
+          >
+            {pptxLoading ? '⟳ Generating…' : '📊 Download PowerPoint'}
+          </button>
+        </div>
       </div>
     </div>
   );
