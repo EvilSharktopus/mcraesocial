@@ -119,6 +119,16 @@ export default function GroupWorksite() {
         {(stage === 1 || (stage === 2 && isTeacher)) && <Stage1Form groupId={groupId} />}
         {(stage === 3 || (stage === 4 && isTeacher)) && <Stage2Form groupId={groupId} />}
         {(stage === 5) && <PitchDeck groupId={groupId} />}
+
+        {/* View previous stage work */}
+        {stage >= 3 && (
+          <details style={{ marginTop: '2rem' }}>
+            <summary className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', marginBottom: '1rem' }}>
+              📄 View Stage 1 Research
+            </summary>
+            <Stage1Form groupId={groupId} />
+          </details>
+        )}
       </div>
     </>
   );
