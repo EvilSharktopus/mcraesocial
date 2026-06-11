@@ -221,6 +221,11 @@ export default function Phase2Scorecard() {
           <div className="phase-badge">Phase 2 · Pitch Day</div>
           <h1 style={{ marginTop: '0.75rem', marginBottom: '0.5rem' }}>Score the NGOs</h1>
           <p>Rate each NGO on 5 criteria as they pitch. Your scores are saved automatically.</p>
+          {myGroup && (
+            <a href={`/ngo/group/${myGroup.id}`} style={{ display: 'inline-block', marginTop: '0.75rem', fontSize: '0.82rem', color: 'var(--teal)' }}>
+              📄 View your Phase 1 work →
+            </a>
+          )}
         </div>
 
         {allGroups.length === 0 && (
