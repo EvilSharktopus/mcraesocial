@@ -32,9 +32,8 @@ export default function Phase3Funding() {
     const u1  = onSnapshot(q1, (snap) => {
       if (!snap.empty) setMyGroupId(snap.docs[0].id);
     });
-    // All approved groups
-    const q2 = query(collection(db, 'ngo_groups'), where('stage2Approved', '==', true));
-    const u2  = onSnapshot(q2, (snap) => {
+    // All groups
+    const u2  = onSnapshot(collection(db, 'ngo_groups'), (snap) => {
       setAllGroups(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     // My scorecards

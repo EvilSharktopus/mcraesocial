@@ -114,10 +114,9 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // ngo_scorecards — students write their own; teacher reads all
+    // ngo_scorecards — any authenticated user can read; students write their own
     match /ngo_scorecards/{scorecardId} {
-      allow read: if isTeacher()
-        || (request.auth != null && resource.data.scorerId == request.auth.uid);
+      allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.resource.data.scorerId == request.auth.uid;
     }

@@ -6,10 +6,7 @@
       "ignore": [
         "firebase.json",
         "**/.*",
-        "**/node_modules/**",
-        "social-10/historical/intro-to-imperial/**",
-        "social-10/identity/intro-to-identity/**",
-        "social-9/collective-rights/**"
+        "**/node_modules/**"
       ],
       "headers": [
         {
@@ -32,5 +29,8 @@
         }
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }
