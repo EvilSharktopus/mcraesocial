@@ -614,7 +614,7 @@ export default function TeacherDashboard() {
         {/* Funding Tab */}
         {activeTab === 'funding' && (
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {approvedGroups.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0)).map((g) => {
+            {groups.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0)).map((g) => {
               const pct = Math.min(((g.fundingReceived ?? 0) / 500000) * 100, 100);
               return (
                 <div className="card" key={g.id}>
@@ -740,13 +740,13 @@ export default function TeacherDashboard() {
             <div>
               <h1 style={{ fontSize: '3rem', margin: 0 }}>Live Funding</h1>
               <p style={{ fontSize: '1.2rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>
-                Total Allocated: ${(approvedGroups.reduce((s, g) => s + (g.fundingReceived ?? 0), 0)).toLocaleString()}
+                Total Allocated: ${(groups.reduce((s, g) => s + (g.fundingReceived ?? 0), 0)).toLocaleString()}
               </p>
             </div>
             <button className="btn btn-ghost" onClick={() => setProjectorMode(false)}>Exit Projector</button>
           </div>
           <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {approvedGroups.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0)).map((g) => {
+            {groups.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0)).map((g) => {
               const pct = Math.min(((g.fundingReceived ?? 0) / 500000) * 100, 100);
               return (
                 <div key={g.id} style={{ background: 'var(--navy-2)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)' }}>
