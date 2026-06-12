@@ -77,6 +77,8 @@ function NgoCard({ group, myGroupId, scorerId }) {
         setSubmitted(!!d.submittedAt);
       }
       loadedRef.current = true;
+    }).catch(() => {
+      loadedRef.current = true;
     });
   }, [isOwn, scorerId, group.id]);
 
