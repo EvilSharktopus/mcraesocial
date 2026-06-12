@@ -2,7 +2,7 @@
 // Projector-mode fullscreen funding board — real-time via onSnapshot
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { useNgoSettings } from '../hooks/useNgoSettings';
 
 const BUDGET_MAX = 500000;
@@ -84,13 +84,12 @@ export default function FundingBoard() {
   const [groups, setGroups] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'ngo_groups'), where('stage2Approved', '==', true));
-    return onSnapshot(q, (snap) => {
+    const u = onSnapshot(collection(db, 'ngo_groups'), (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      // Sort: funded first (by fundingReceived desc), then unfunded
       list.sort((a, b) => (b.fundingReceived ?? 0) - (a.fundingReceived ?? 0));
       setGroups(list);
     });
+    return u;
   }, []);
 
   const isLocked  = settings?.phase3Locked;
