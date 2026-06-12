@@ -207,9 +207,8 @@ export default function Phase2Scorecard() {
     const u1  = onSnapshot(q1, (snap) => {
       if (!snap.empty) setMyGroup({ id: snap.docs[0].id, ...snap.docs[0].data() });
     });
-    // All groups (stage2Approved)
-    const q2 = query(collection(db, 'ngo_groups'), where('stage2Approved', '==', true));
-    const u2  = onSnapshot(q2, (snap) => {
+    // All groups
+    const u2  = onSnapshot(collection(db, 'ngo_groups'), (snap) => {
       setAllGroups(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => { u1(); u2(); };

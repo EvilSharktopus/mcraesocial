@@ -408,13 +408,16 @@ export default function TeacherDashboard() {
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Students wait for the next pitch.</p>
                 </div>
               </div>
-              {approvedGroups.map((g) => (
+              {groups.map((g) => (
                 <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: settings?.presentingGroupId === g.id ? 'var(--navy-3)' : 'transparent', borderRadius: 'var(--radius)', border: settings?.presentingGroupId === g.id ? '1px solid var(--teal)' : '1px solid var(--glass-border)' }}>
                   <button className={`btn btn-sm ${settings?.presentingGroupId === g.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setPresentingGroup(g.id)}>
                     {settings?.presentingGroupId === g.id ? 'Presenting' : 'Set Presenting'}
                   </button>
                   <div>
-                    <strong>{g.ngoName || '(unnamed)'}</strong>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <strong>{g.ngoName || '(unnamed)'}</strong>
+                      {!g.stage2Approved && <span className="badge badge-yellow" style={{ fontSize: '0.6rem' }}>Incomplete</span>}
+                    </div>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{g.memberNames.join(', ')}</p>
                   </div>
                 </div>
