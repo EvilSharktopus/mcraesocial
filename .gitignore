@@ -3,7 +3,7 @@ mcrae-submit/
 node_modules/
 **/node_modules/
 
-scratch/temp_convert/
+/scratch/
 
 .vercel
 scripts/

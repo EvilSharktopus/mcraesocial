@@ -2,17 +2,19 @@
 // Split-screen: reading text on left, Spectrum + justification on right.
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import { PENDULUM_READINGS } from '../data/pendulumReadings';
+import { useAuth } from '../auth/AuthContext';
 
 const DEFAULT_SUBLABELS = [];
 
 export default function Reading() {
   const { id } = useParams();
   const reading = PENDULUM_READINGS.find(r => r.id === id);
+  const { user } = useAuth();
 
   const [positionX,     setPositionX]     = useState(null);
   const [positionY,     setPositionY]     = useState(null);
@@ -38,11 +40,22 @@ export default function Reading() {
     loadConsensus();
   }, [id]);
 
-  function handleSave() {
-    if (positionX === null || positionY === null) return;
+  async function handleSave() {
+    if (positionX === null || positionY === null || !user) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    // TODO: write to Firestore plots/{uid}_{readingId}
+    try {
+      await setDoc(doc(db, 'plots', `${user.uid}_${reading.id}`), {
+        uid: user.uid,
+        readingId: reading.id,
+        positionX,
+        positionY,
+        justification,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save plot", err);
+    }
   }
 
   if (!reading) {

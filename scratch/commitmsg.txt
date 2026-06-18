@@ -1,1 +1,0 @@
-Add Position Paper 2 to Modern Globalization; fix vercelignore; add Firebase slide config

@@ -1,27 +1,55 @@
 // src/pages/Reflect.jsx
 // Post-seminar: student can adjust their plot and write a reflection.
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
-
-const PLACEHOLDER = {
-  title: 'Economic Systems Compared',
-  originalPosition: -20,
-};
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../auth/AuthContext';
+import { PENDULUM_READINGS } from '../data/pendulumReadings';
 
 export default function Reflect() {
   const { id } = useParams();
-  const [position,   setPosition]   = useState(PLACEHOLDER.originalPosition);
+  const { user } = useAuth();
+  const reading = PENDULUM_READINGS.find(r => r.id === id);
+
+  const [originalPosition, setOriginalPosition] = useState(0);
+  const [position,   setPosition]   = useState(0);
   const [reflection, setReflection] = useState('');
   const [saved,      setSaved]      = useState(false);
 
-  const hasChanged = position !== PLACEHOLDER.originalPosition;
+  useEffect(() => {
+    async function loadPlot() {
+      if (!user || !reading) return;
+      const snap = await getDoc(doc(db, 'plots', `${user.uid}_${reading.id}`));
+      if (snap.exists()) {
+        const x = snap.data().positionX || 0;
+        setOriginalPosition(x);
+        setPosition(x);
+      }
+    }
+    loadPlot();
+  }, [user, reading]);
 
-  function handleSave() {
+  const hasChanged = position !== originalPosition;
+
+  async function handleSave() {
+    if (!user || !reading) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    // TODO: write to Firestore reflections/
+    try {
+      await setDoc(doc(db, 'reflections', `${user.uid}_${reading.id}`), {
+        uid: user.uid,
+        readingId: reading.id,
+        originalPosition,
+        newPosition: position,
+        reflection,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save reflection", err);
+    }
   }
 
   return (
@@ -35,7 +63,7 @@ export default function Reflect() {
           </span>
         </div>
         <h1 className="font-display font-bold text-2xl mb-6" style={{ color: 'var(--pg-text)' }}>
-          {PLACEHOLDER.title}
+          {reading?.title || 'Reflection'}
         </h1>
 
         {/* Spectrum — with ghost dot at original position */}
@@ -54,11 +82,11 @@ export default function Reflect() {
             onChange={setPosition}
             leftLabel="Collective"
             rightLabel="Individual"
-            secondaryDot={{ value: PLACEHOLDER.originalPosition, label: 'Your original position' }}
+            secondaryDot={{ value: originalPosition, label: 'Your original position' }}
           />
           {hasChanged && (
             <p className="text-xs text-center mt-4" style={{ color: 'var(--pg-primary)' }}>
-              You moved {Math.abs(position - PLACEHOLDER.originalPosition)} units {position > PLACEHOLDER.originalPosition ? 'right →' : '← left'}
+              You moved {Math.abs(position - originalPosition)} units {position > originalPosition ? 'right →' : '← left'}
             </p>
           )}
         </div>
