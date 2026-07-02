@@ -15,7 +15,11 @@
       "destination": "/minerals/index.html"
     },
     {
-      "source": "/gravity/(.*)",
+      "source": "/gravity/assets/(.*)",
+      "destination": "/gravity/assets/$1"
+    },
+    {
+      "source": "/gravity/((?!assets/).*)",
       "destination": "/gravity/index.html"
     }
   ],
