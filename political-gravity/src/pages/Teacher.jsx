@@ -1,12 +1,13 @@
 // src/pages/Teacher.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { PENDULUM_READINGS } from '../data/pendulumReadings';
 
 const NAV_TABS = ['Readings', 'Classes', 'Grading', 'Settings'];
-
-import { PENDULUM_READINGS } from '../data/pendulumReadings';
 
 // Add placeholder submissions and seminar fields for the teacher view
 const TEACHER_READINGS = PENDULUM_READINGS.map(r => ({
@@ -41,76 +42,181 @@ const btnGhost = {
 
 // ── Tab panels ──────────────────────────────────────────────────────────────
 
-import { useEffect } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+// Helper: format a Firestore Timestamp or JS Date as "Jun 2 · 9:41 am"
+function fmtTs(ts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
 
 function ReadingsTab() {
-  const [openReadings, setOpenReadings] = useState([]);
+  const { user } = useAuth();
+  const [openReadings,  setOpenReadings]  = useState([]);
+  const [publishMeta,   setPublishMeta]   = useState({}); // { [id]: { publishedAt, publishedBy } }
+  const [publishing,    setPublishing]    = useState({}); // { [id]: true/false }
+  const [publishErr,    setPublishErr]    = useState({}); // { [id]: errorString }
+  const [customUrls,    setCustomUrls]    = useState({});
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
-      if (docSnap.exists()) {
-        setOpenReadings(docSnap.data().openReadings || []);
-      }
+    const unsub1 = onSnapshot(doc(db, 'settings', 'global'), snap => {
+      if (snap.exists()) setOpenReadings(snap.data().openReadings || []);
     });
-    return () => unsub();
+    // Published metadata lives in settings/publishedReadings
+    const unsub2 = onSnapshot(doc(db, 'settings', 'publishedReadings'), snap => {
+      if (snap.exists()) setPublishMeta(snap.data());
+    });
+    const unsub3 = onSnapshot(doc(db, 'settings', 'readings'), snap => {
+      if (snap.exists()) setCustomUrls(snap.data());
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   async function toggleOpen(readingId) {
     const current = new Set(openReadings);
-    if (current.has(readingId)) {
-      current.delete(readingId);
-    } else {
-      current.add(readingId);
-    }
+    current.has(readingId) ? current.delete(readingId) : current.add(readingId);
     await setDoc(doc(db, 'settings', 'global'), { openReadings: Array.from(current) }, { merge: true });
+  }
+
+  async function publishReading(r) {
+    const url = customUrls[r.id] || r.url;
+    setPublishing(p => ({ ...p, [r.id]: true }));
+    setPublishErr(e => ({ ...e, [r.id]: null }));
+    try {
+      const res = await fetch('/api/fetch-reading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docUrl: url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unknown error');
+
+      // Save the fetched HTML content to Firestore
+      await setDoc(doc(db, 'readingContent', r.id), {
+        html: data.html,
+        publishedAt: serverTimestamp(),
+        publishedBy: user?.email || 'teacher',
+        sourceUrl: url,
+      });
+      // Save metadata for the table display
+      await setDoc(doc(db, 'settings', 'publishedReadings'),
+        { [r.id]: { publishedAt: new Date().toISOString(), publishedBy: user?.email || 'teacher' } },
+        { merge: true }
+      );
+    } catch (err) {
+      setPublishErr(e => ({ ...e, [r.id]: err.message }));
+    } finally {
+      setPublishing(p => ({ ...p, [r.id]: false }));
+    }
   }
 
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Readings</h1>
-        <button className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity" style={btnPrimary}>
-          + New Reading
-        </button>
+        <div>
+          <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Readings</h1>
+          <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+            Edit in Google Docs anytime, then hit <strong>Publish ↑</strong> to push the latest version to students.
+          </p>
+        </div>
       </div>
+
       <div style={cardStyle} className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--pg-border)' }}>
-              {['Title', 'Submissions', 'Status', 'Actions'].map(h => (
+              {['Time Period', 'Published', 'Status', 'Actions'].map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--pg-dim)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {TEACHER_READINGS.map((r, i) => {
-              const isOpen = openReadings.includes(r.id);
+              const isOpen    = openReadings.includes(r.id);
+              const meta      = publishMeta[r.id];
+              const isPublished = !!meta;
+              const isPub     = publishing[r.id];
+              const err       = publishErr[r.id];
+              const docUrl    = customUrls[r.id] || r.url;
+
               return (
                 <tr key={r.id} style={{ borderBottom: i < TEACHER_READINGS.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
-                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--pg-text)' }}>{r.title}</td>
-                  <td className="px-5 py-4" style={{ color: 'var(--pg-muted)' }}>{r.submissions} students</td>
+
+                  {/* Title */}
+                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--pg-text)' }}>
+                    <div>{r.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>{r.century}</div>
+                  </td>
+
+                  {/* Published status */}
                   <td className="px-5 py-4">
-                    <button 
+                    {isPublished ? (
+                      <div>
+                        <span className="text-xs font-semibold" style={{ color: '#22c55e' }}>✓ Published</span>
+                        <div className="text-[11px] mt-0.5" style={{ color: 'var(--pg-dim)' }}>
+                          {fmtTs(meta.publishedAt)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xs" style={{ color: 'var(--pg-dim)' }}>Not published</span>
+                    )}
+                    {err && (
+                      <div className="text-[11px] mt-1" style={{ color: '#ef4444' }} title={err}>
+                        ⚠ {err.length > 40 ? err.slice(0, 40) + '…' : err}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Open/Closed toggle */}
+                  <td className="px-5 py-4">
+                    <button
                       onClick={() => toggleOpen(r.id)}
                       className="text-xs font-semibold hover:opacity-80 transition-opacity px-3 py-1.5 rounded-full border"
-                      style={{ 
+                      style={{
                         color: isOpen ? '#22c55e' : 'var(--pg-dim)',
                         borderColor: isOpen ? '#22c55e44' : 'var(--pg-border)',
-                        backgroundColor: isOpen ? '#22c55e11' : 'transparent'
+                        backgroundColor: isOpen ? '#22c55e11' : 'transparent',
                       }}
                     >
                       {isOpen ? '● Open' : '○ Closed'}
                     </button>
                   </td>
+
+                  {/* Actions */}
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <Link to={`/seminar/${r.id}`} className="text-xs font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--pg-primary)' }}>
-                        Launch seminar
-                      </Link>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {/* Publish button */}
+                      <button
+                        onClick={() => publishReading(r)}
+                        disabled={isPub}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                        title={isPublished ? 'Re-publish latest version from Google Docs' : 'Fetch content from Google Docs and publish to students'}
+                      >
+                        {isPub ? '⏳ Publishing…' : isPublished ? '↑ Re-publish' : '↑ Publish'}
+                      </button>
+
                       <span style={{ color: 'var(--pg-faint)' }}>|</span>
-                      <button className="text-xs hover:opacity-80 transition-opacity" style={{ color: 'var(--pg-muted)' }}>View submissions</button>
+
+                      {/* View Google Doc */}
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs hover:opacity-80 transition-opacity"
+                        style={{ color: 'var(--pg-muted)' }}
+                      >
+                        Edit in Docs ↗
+                      </a>
+
+                      <span style={{ color: 'var(--pg-faint)' }}>|</span>
+
+                      <Link
+                        to={`/seminar/${r.id}`}
+                        className="text-xs hover:opacity-80 transition-opacity"
+                        style={{ color: 'var(--pg-muted)' }}
+                      >
+                        Seminar
+                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -122,6 +228,7 @@ function ReadingsTab() {
     </>
   );
 }
+
 
 function ClassesTab() {
   return (

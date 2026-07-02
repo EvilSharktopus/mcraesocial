@@ -3,7 +3,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
-import { PENDULUM_READINGS, HANDOUT_URL, RUBRIC_URL } from '../data/pendulumReadings';
+import { HANDOUT_URL, RUBRIC_URL } from '../data/pendulumReadings';
+import { useReadings } from '../hooks/useReadings';
 
 const STATUS_CONFIG = {
   'submitted':   { label: 'Submitted',    dot: '#34d399' },
@@ -13,6 +14,7 @@ const STATUS_CONFIG = {
 
 export default function Dashboard() {
   const [openReadings, setOpenReadings] = useState([]);
+  const { readings, loading } = useReadings();
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
@@ -24,7 +26,7 @@ export default function Dashboard() {
   }, []);
 
   // Filter only open readings, then group by century
-  const groupedReadings = PENDULUM_READINGS
+  const groupedReadings = readings
     .filter(r => openReadings.includes(r.id))
     .reduce((acc, reading) => {
       if (!acc[reading.century]) acc[reading.century] = [];
