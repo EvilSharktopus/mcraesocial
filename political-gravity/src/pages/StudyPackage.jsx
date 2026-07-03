@@ -97,30 +97,42 @@ export default function StudyPackage() {
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 p-1 rounded-xl w-fit" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
-          <button
-            onClick={() => setActiveTab('positions')}
-            className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-            style={{
-              backgroundColor: activeTab === 'positions' ? 'var(--pg-surface2)' : 'transparent',
-              color: activeTab === 'positions' ? 'var(--pg-text)' : 'var(--pg-muted)'
-            }}
-          >
-            My Positions
-          </button>
-          <button
-            onClick={() => setActiveTab('vault')}
-            className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-            style={{
-              backgroundColor: activeTab === 'vault' ? 'var(--pg-surface2)' : 'transparent',
-              color: activeTab === 'vault' ? 'var(--pg-text)' : 'var(--pg-muted)'
-            }}
-          >
-            Diploma Vault
-            <span className="px-1.5 py-0.5 rounded-full text-[10px]" style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
-              {flags.length}
-            </span>
-          </button>
+        <div className="flex items-center justify-between mb-8 gap-4">
+          <div className="flex gap-2 p-1 rounded-xl w-fit no-print" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+            <button
+              onClick={() => setActiveTab('positions')}
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+              style={{
+                backgroundColor: activeTab === 'positions' ? 'var(--pg-surface2)' : 'transparent',
+                color: activeTab === 'positions' ? 'var(--pg-text)' : 'var(--pg-muted)'
+              }}
+            >
+              My Positions
+            </button>
+            <button
+              onClick={() => setActiveTab('vault')}
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+              style={{
+                backgroundColor: activeTab === 'vault' ? 'var(--pg-surface2)' : 'transparent',
+                color: activeTab === 'vault' ? 'var(--pg-text)' : 'var(--pg-muted)'
+              }}
+            >
+              Diploma Vault
+              <span className="px-1.5 py-0.5 rounded-full text-[10px]" style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                {flags.length}
+              </span>
+            </button>
+          </div>
+
+          {activeTab === 'vault' && flags.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="no-print flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
+              style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+            >
+              🖨️ Print Handout
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -213,6 +225,12 @@ export default function StudyPackage() {
           </>
         ) : (
           <div className="space-y-4">
+            {/* Hidden header that only shows when printing */}
+            <div className="vault-print-header" style={{ display: 'none' }}>
+              <h2 style={{ margin: 0, fontSize: '16pt', fontWeight: 'bold' }}>Diploma Exam Study Guide</h2>
+              <p style={{ margin: '4px 0 0', fontSize: '10pt', color: '#555' }}>Social Studies 30 — Diploma Vault</p>
+            </div>
+
             {flags.length === 0 && (
               <div className="text-center py-12 rounded-2xl" style={{ border: '1px dashed var(--pg-border)' }}>
                 <span className="text-3xl mb-3 block">🔖</span>
@@ -223,25 +241,25 @@ export default function StudyPackage() {
               </div>
             )}
             {flags.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map((flag) => (
-              <div key={flag.id} className="rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+              <div key={flag.id} className="vault-flag-card rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
                 <div className="mb-4 flex flex-wrap gap-2 items-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-primary)' }}>
                     📚 {flag.readingTitle}
                   </span>
                   {flag.tags?.map(tag => (
-                    <span key={tag} className="text-[10px] font-semibold px-2 py-1 rounded-md" style={{ border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                    <span key={tag} className="vault-tag text-[10px] font-semibold px-2 py-1 rounded-md" style={{ border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
                       {tag}
                     </span>
                   ))}
                 </div>
                 
-                <div className="mb-4 pl-4 border-l-2" style={{ borderColor: 'var(--pg-primary)' }}>
+                <div className="vault-quote-block mb-4 pl-4 border-l-2" style={{ borderColor: 'var(--pg-primary)' }}>
                   <p className="text-sm italic leading-relaxed" style={{ color: 'var(--pg-muted)' }}>
                     "{flag.quote}"
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--pg-surface2)' }}>
+                <div className="vault-commentary-block p-4 rounded-xl" style={{ backgroundColor: 'var(--pg-surface2)' }}>
                   <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pg-muted)' }}>Your Commentary</p>
                   <p className="text-sm" style={{ color: 'var(--pg-text)' }}>
                     {flag.commentary}

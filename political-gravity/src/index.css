@@ -135,3 +135,84 @@ h1, h2, h3, h4 {
     height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.5s ease;
 }
+
+/* ── Print / Diploma Vault handout ──────────────────────────────────────────── */
+
+@media print {
+  /* Force light colours — never print dark backgrounds */
+  * {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #ccc !important;
+  }
+
+  /* Hide everything that isn't the vault content */
+  nav,
+  .no-print,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Only show the vault section, hide the tab switcher */
+  .print-vault-only {
+    display: block !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1.5cm 2cm;
+    size: A4 portrait;
+  }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  /* Vault header */
+  .vault-print-header {
+    display: block !important;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #000;
+    padding-bottom: 0.75rem;
+  }
+
+  /* Each flag card stays on one page if possible */
+  .vault-flag-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #ccc !important;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Quote block — left border accent */
+  .vault-quote-block {
+    border-left: 3px solid #555 !important;
+    padding-left: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-style: italic;
+  }
+
+  /* Commentary block */
+  .vault-commentary-block {
+    background: #f5f5f5 !important;
+    border-radius: 4px;
+    padding: 0.6rem 0.75rem;
+  }
+
+  /* Tag pills */
+  .vault-tag {
+    display: inline-block;
+    border: 1px solid #999 !important;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 9pt;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+}
+
