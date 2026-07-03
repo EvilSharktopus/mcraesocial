@@ -224,10 +224,15 @@ export default function StudyPackage() {
             )}
             {flags.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map((flag) => (
               <div key={flag.id} className="rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
-                <div className="mb-4">
+                <div className="mb-4 flex flex-wrap gap-2 items-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-primary)' }}>
-                    {flag.readingTitle}
+                    📚 {flag.readingTitle}
                   </span>
+                  {flag.tags?.map(tag => (
+                    <span key={tag} className="text-[10px] font-semibold px-2 py-1 rounded-md" style={{ border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                      {tag}
+                    </span>
+                  ))}
                 </div>
                 
                 <div className="mb-4 pl-4 border-l-2" style={{ borderColor: 'var(--pg-primary)' }}>
