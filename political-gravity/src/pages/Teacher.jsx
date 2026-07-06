@@ -5,16 +5,10 @@ import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { PENDULUM_READINGS } from '../data/pendulumReadings';
+import { useReadings } from '../hooks/useReadings';
+import ReadingEditorModal from '../components/ReadingEditorModal';
 
 const NAV_TABS = ['Readings', 'Classes', 'Grading', 'Settings'];
-
-// Add placeholder submissions and seminar fields for the teacher view
-const TEACHER_READINGS = PENDULUM_READINGS.map(r => ({
-  ...r,
-  submissions: 0,
-  seminar: false
-}));
 
 const PLACEHOLDER_CLASSES = [
   { code: 'SS30-A', name: 'Social Studies 30-1 — Block A', students: 24 },
@@ -51,11 +45,14 @@ function fmtTs(ts) {
 
 function ReadingsTab() {
   const { user } = useAuth();
+  const { readings, loading } = useReadings();
   const [openReadings,  setOpenReadings]  = useState([]);
   const [publishMeta,   setPublishMeta]   = useState({}); // { [id]: { publishedAt, publishedBy } }
   const [publishing,    setPublishing]    = useState({}); // { [id]: true/false }
   const [publishErr,    setPublishErr]    = useState({}); // { [id]: errorString }
-  const [customUrls,    setCustomUrls]    = useState({});
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingReading, setEditingReading] = useState(null);
 
   useEffect(() => {
     const unsub1 = onSnapshot(doc(db, 'settings', 'global'), snap => {
@@ -65,10 +62,7 @@ function ReadingsTab() {
     const unsub2 = onSnapshot(doc(db, 'settings', 'publishedReadings'), snap => {
       if (snap.exists()) setPublishMeta(snap.data());
     });
-    const unsub3 = onSnapshot(doc(db, 'settings', 'readings'), snap => {
-      if (snap.exists()) setCustomUrls(snap.data());
-    });
-    return () => { unsub1(); unsub2(); unsub3(); };
+    return () => { unsub1(); unsub2(); };
   }, []);
 
   async function toggleOpen(readingId) {
@@ -78,7 +72,7 @@ function ReadingsTab() {
   }
 
   async function publishReading(r) {
-    const url = customUrls[r.id] || r.url;
+    const url = r.url;
     setPublishing(p => ({ ...p, [r.id]: true }));
     setPublishErr(e => ({ ...e, [r.id]: null }));
     try {
@@ -109,16 +103,55 @@ function ReadingsTab() {
     }
   }
 
+  async function handleSaveReading(data) {
+    let newReadings = [...readings];
+    if (editingReading) {
+      const idx = newReadings.findIndex(r => r.id === editingReading.id);
+      if (idx !== -1) {
+        newReadings[idx] = { ...newReadings[idx], ...data };
+      }
+    } else {
+      const newId = 'r' + (readings.length > 0 ? Math.max(...readings.map(r => parseInt(r.id.replace('r','')) || 0)) + 1 : 1);
+      newReadings.push({ id: newId, ...data });
+    }
+    await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
+    setEditorOpen(false);
+  }
+
+  async function handleDeleteReading(id) {
+    if (!confirm('Are you sure you want to delete this time period?')) return;
+    const newReadings = readings.filter(r => r.id !== id);
+    await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
+  }
+
+  if (loading) {
+    return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Readings</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
-            Edit in Google Docs anytime, then hit <strong>Publish ↑</strong> to push the latest version to students.
+            Manage time periods. Edit in Google Docs anytime, then hit <strong>Publish ↑</strong> to push the latest version to students.
           </p>
         </div>
+        <button
+          onClick={() => { setEditingReading(null); setEditorOpen(true); }}
+          className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity"
+          style={btnPrimary}
+        >
+          + New Time Period
+        </button>
       </div>
+
+      <ReadingEditorModal 
+        isOpen={editorOpen} 
+        onClose={() => setEditorOpen(false)} 
+        onSave={handleSaveReading} 
+        reading={editingReading} 
+      />
 
       <div style={cardStyle} className="overflow-hidden">
         <table className="w-full text-sm">
@@ -130,16 +163,16 @@ function ReadingsTab() {
             </tr>
           </thead>
           <tbody>
-            {TEACHER_READINGS.map((r, i) => {
+            {readings.map((r, i) => {
               const isOpen    = openReadings.includes(r.id);
               const meta      = publishMeta[r.id];
               const isPublished = !!meta;
               const isPub     = publishing[r.id];
               const err       = publishErr[r.id];
-              const docUrl    = customUrls[r.id] || r.url;
+              const docUrl    = r.url;
 
               return (
-                <tr key={r.id} style={{ borderBottom: i < TEACHER_READINGS.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
+                <tr key={r.id} style={{ borderBottom: i < readings.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
 
                   {/* Title */}
                   <td className="px-5 py-4 font-medium" style={{ color: 'var(--pg-text)' }}>
@@ -197,6 +230,24 @@ function ReadingsTab() {
 
                       <span style={{ color: 'var(--pg-faint)' }}>|</span>
 
+                      <button
+                        onClick={() => { setEditingReading(r); setEditorOpen(true); }}
+                        className="text-xs hover:opacity-80 transition-opacity font-semibold"
+                        style={{ color: 'var(--pg-text)' }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteReading(r.id)}
+                        className="text-xs hover:opacity-80 transition-opacity font-semibold"
+                        style={{ color: 'var(--pg-error)' }}
+                      >
+                        Delete
+                      </button>
+
+                      <span style={{ color: 'var(--pg-faint)' }}>|</span>
+
                       {/* View Google Doc */}
                       <a
                         href={docUrl}
@@ -205,7 +256,7 @@ function ReadingsTab() {
                         className="text-xs hover:opacity-80 transition-opacity"
                         style={{ color: 'var(--pg-muted)' }}
                       >
-                        Edit in Docs ↗
+                        Docs ↗
                       </a>
 
                       <span style={{ color: 'var(--pg-faint)' }}>|</span>
@@ -262,16 +313,22 @@ function ClassesTab() {
 }
 
 function GradingTab() {
+  const { readings, loading } = useReadings();
+
+  if (loading) {
+    return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
+  }
+
   return (
     <>
       <h1 className="font-display font-bold text-xl mb-1" style={{ color: 'var(--pg-text)' }}>Grading</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--pg-dim)' }}>Review student plots, justifications, and reflections</p>
       <div className="space-y-3">
-        {TEACHER_READINGS.map(r => (
+        {readings.map(r => (
           <div key={r.id} className="rounded-2xl p-5" style={cardStyle}>
             <div className="flex items-center justify-between mb-3">
               <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>{r.title}</p>
-              <span className="text-xs" style={{ color: 'var(--pg-dim)' }}>{r.submissions} submissions</span>
+              <span className="text-xs" style={{ color: 'var(--pg-dim)' }}>-- submissions</span>
             </div>
             <div className="flex gap-2 flex-wrap">
               {['View plots', 'View justifications', 'View reflections'].map(label => (
