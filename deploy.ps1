@@ -4,10 +4,15 @@
 #
 # IMPORTANT: This folder is linked to Vercel project "socialsite" which
 # serves mcraesocial.com. Do NOT relink to a different project.
+#
+# NOTE: NODE_OPTIONS=--use-system-ca is required on the school network
+# because the SSL inspection proxy uses a local root CA that Node.js
+# won't trust by default.
 
 Push-Location $PSScriptRoot
 
 Write-Host "`n=== Deploying site to mcraesocial.com ===" -ForegroundColor Cyan
+$env:NODE_OPTIONS = "--use-system-ca"
 vercel --prod --yes
 
 Pop-Location
