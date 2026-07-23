@@ -21,6 +21,20 @@
     {
       "source": "/gravity/((?!assets/).*)",
       "destination": "/gravity/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "food.mcraesocial.com"
+        }
+      ],
+      "destination": "/food/:path*"
+    },
+    {
+      "source": "/food/:path*",
+      "destination": "/food/index.html"
     }
   ],
   "headers": [

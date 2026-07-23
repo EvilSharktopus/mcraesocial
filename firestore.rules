@@ -80,6 +80,14 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // ── Books (book rating site) ─────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if true;
+      match /books/{bookId} {
+        allow read, write: if true;
+      }
+    }
+
     // ── Political Gravity ───────────────────────────────────────────────────
     match /settings/{id} {
       allow read, write: if request.auth != null;
@@ -158,6 +166,20 @@ service cloud.firestore {
     match /ngo_reflections/{uid} {
       allow read: if isTeacher();
       allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Daily Nutrition & Training Log (food.mcraesocial.com) ───────────────
+    match /food_logs/{date} {
+      allow read, write: if true;
+    }
+    match /food_settings/{id} {
+      allow read, write: if true;
+    }
+    match /saved_foods/{id} {
+      allow read, write: if true;
+    }
+    match /fcm_tokens/{id} {
+      allow read, write: if true;
     }
   }
 }
