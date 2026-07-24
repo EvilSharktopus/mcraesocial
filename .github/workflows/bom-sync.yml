@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -40,24 +41,66 @@ jobs:
 
             console.log(`Syncing ${movieList.length} movies: ${movieList.join(', ')}`);
 
-            // ── 2. Call Apify (wait up to 2 min for results) ─────────────────
-            const apifyRes = await fetch(
-              `https://api.apify.com/v2/acts/trovevault~movie-box-office-tracker/run-sync-get-dataset-items?token=${APIFY_TOKEN}&timeout=120`,
+            // ── 2. Start Apify run asynchronously ────────────────────────────
+            const startRes = await fetch(
+              `https://api.apify.com/v2/acts/trovevault~movie-box-office-tracker/runs?token=${APIFY_TOKEN}`,
               {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify({ movies: movieList }),
               }
             );
-            if (!apifyRes.ok) {
-              const txt = await apifyRes.text();
-              core.setFailed(`Apify ${apifyRes.status}: ${txt}`);
+            if (!startRes.ok) {
+              const txt = await startRes.text();
+              core.setFailed(`Apify start failed ${startRes.status}: ${txt}`);
               return;
             }
-            const results = await apifyRes.json();
+            const startData = await startRes.json();
+            const runId = startData.data?.id;
+            if (!runId) {
+              core.setFailed(`Apify did not return a run ID: ${JSON.stringify(startData)}`);
+              return;
+            }
+            console.log(`Apify run started: ${runId}`);
+
+            // ── 3. Poll until SUCCEEDED (up to 5 min) ────────────────────────
+            const MAX_WAIT_MS  = 5 * 60 * 1000;
+            const POLL_MS      = 10_000;
+            const deadline     = Date.now() + MAX_WAIT_MS;
+            let status         = 'RUNNING';
+
+            while (Date.now() < deadline) {
+              await new Promise(r => setTimeout(r, POLL_MS));
+              const statusRes = await fetch(
+                `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_TOKEN}`
+              );
+              const statusData = await statusRes.json();
+              status = statusData.data?.status || 'UNKNOWN';
+              console.log(`  run status: ${status}`);
+              if (status === 'SUCCEEDED') break;
+              if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) {
+                core.setFailed(`Apify run ended with status: ${status}`);
+                return;
+              }
+            }
+
+            if (status !== 'SUCCEEDED') {
+              core.setFailed(`Apify run did not complete within 5 minutes (last status: ${status})`);
+              return;
+            }
+
+            // ── 4. Fetch dataset items ────────────────────────────────────────
+            const datasetRes = await fetch(
+              `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_TOKEN}&format=json`
+            );
+            if (!datasetRes.ok) {
+              core.setFailed(`Failed to fetch dataset: ${datasetRes.status}`);
+              return;
+            }
+            const results = await datasetRes.json();
             console.log(`Apify returned ${results.length} rows`);
 
-            // ── 3. Patch domesticGross in Firestore ───────────────────────────
+            // ── 5. Patch domesticGross in Firestore ───────────────────────────
             let updated = 0;
             for (const row of results) {
               if (!row.domesticGross) continue;
