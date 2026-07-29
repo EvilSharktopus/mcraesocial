@@ -1,4 +1,4 @@
-﻿/* === McRae Social â€” Shared Stylesheet === */
+/* === McRae Social â€” Shared Stylesheet === */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -113,7 +113,7 @@ body {
   opacity: 1;
 }
 
-/* Inline logo images used inside nav link items (Workbooks, McRae Marks) */
+/* Inline logo images used inside nav link items (Workbooks, Desk) */
 .site-nav__link--logo {
   display: inline-flex;
   align-items: center;

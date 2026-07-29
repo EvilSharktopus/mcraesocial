@@ -6,7 +6,7 @@
 (function () {
   const FIREBASE_API_KEY = 'AIzaSyB4Yc51IzKEcBzDPqy3B8fA9QSrnhIAzr4';
   const PROJECT_ID       = 'mcrae-assignments-ca';
-  const SUBMIT_BASE      = 'https://submit.mcraesocial.com/submit';
+  const SUBMIT_BASE      = 'https://desk.mcraesocial.com/submit';
 
   const parts = window.location.pathname.replace(/^\/|\/$/g, '').split('/');
   const unit  = parts.slice(0, 2).join('/');
