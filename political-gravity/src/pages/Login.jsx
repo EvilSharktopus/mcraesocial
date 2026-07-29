@@ -15,7 +15,7 @@ const TERMS_CONTENT = `
 Access is restricted to students currently enrolled in Mr. McRae's Social Studies 30 class and to Mr. McRae in his instructional capacity.
 
 ### Authentication
-Sign-in requires a valid @rvschools.ab.ca school email address.
+Sign-in requires a valid email address.
 
 ### Acceptable Use
 By signing in, you agree to:
@@ -199,7 +199,7 @@ export default function Login() {
             </h1>
           </div>
           <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>
-            Social Studies 30 &nbsp;·&nbsp; The Pendulum of Human History
+            Social Studies 30 &nbsp;·&nbsp; History's ideological orbits
           </p>
         </div>
 
@@ -225,7 +225,7 @@ export default function Login() {
             {mode === 'signup' && (
               <Field label="Full name" type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="Firstname Lastname" />
             )}
-            <Field label="School email" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@rvschools.ab.ca" />
+            <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" />
             <Field label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
 
             {mode === 'signup' && (

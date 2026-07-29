@@ -86,9 +86,6 @@ export function AuthProvider({ children }) {
     signInWithEmailAndPassword(auth, email, password);
 
   const signUp = async (email, password, displayName) => {
-    if (!email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-      throw new Error(`Please use your @${ALLOWED_DOMAIN} school email.`);
-    }
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName) await updateProfile(cred.user, { displayName });
     return cred;
