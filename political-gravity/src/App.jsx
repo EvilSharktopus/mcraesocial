@@ -26,9 +26,11 @@ function RootRedirect() {
 }
 
 export default function App() {
+  const basename = window.location.pathname.startsWith('/gravity') ? '/gravity' : '';
+
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
