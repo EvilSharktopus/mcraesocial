@@ -142,9 +142,11 @@ body {
 }
 
 .utility-logo-img {
-  max-height: 52px;
-  width: auto;
+  /* Sized by width so all three logos in the row match, despite differing
+     aspect ratios. Height follows from each image's own proportions. */
+  width: 180px;
   max-width: 100%;
+  height: auto;
   object-fit: contain;
 }
 

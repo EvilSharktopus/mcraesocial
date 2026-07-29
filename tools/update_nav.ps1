@@ -10,7 +10,7 @@ $files = Get-ChildItem -Path $root -Recurse -Include "*.html" |
 # Regex pattern: matches the old Workbooks dropdown <li> block (flexible whitespace)
 $oldPattern = '(?s)<li class="site-nav__dropdown">\r?\n\s+<span class="site-nav__link" style="cursor: pointer;">Workbooks &#x25BE;</span>\r?\n\s+<div class="site-nav__dropdown-menu">\r?\n\s+<a href="https://mcraesocial\.vercel\.app/workbooks/10-2" class="site-nav__dropdown-item" target="_blank">10-2 Digital Workbook</a>\r?\n\s+</div>\r?\n\s+</li>'
 
-# New Workbooks + McRae Marks logo links
+# New Workbooks + Desk logo links
 $newLinks = @'
         <li>
           <a href="https://mcraesocial.vercel.app/workbooks/10-2" class="site-nav__link site-nav__link--logo" target="_blank" aria-label="McRae's Workbooks">
@@ -21,8 +21,8 @@ $newLinks = @'
           </a>
         </li>
         <li>
-          <a href="https://submit.mcraesocial.com/" class="site-nav__link site-nav__link--logo" target="_blank" aria-label="McRae Marks">
-            <img src="/assets/images/marks-logo.png" alt="McRae Marks" class="site-nav__inline-logo" loading="eager">
+          <a href="https://desk.mcraesocial.com/" class="site-nav__link site-nav__link--logo" target="_blank" aria-label="Desk">
+            <img src="/assets/images/DESK.png" alt="Desk" class="site-nav__inline-logo" loading="eager">
           </a>
         </li>
 '@

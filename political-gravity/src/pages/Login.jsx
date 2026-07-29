@@ -266,7 +266,7 @@ export default function Login() {
           <button onClick={() => setModal('privacy')} className="hover:opacity-80 transition-opacity">Privacy Policy</button>
         </div>
         <p className="text-center text-xs mt-2" style={{ color: 'var(--pg-faint)' }}>
-          Same credentials as your McRae Submit account
+          Same credentials as your Desk account
         </p>
       </div>
 
