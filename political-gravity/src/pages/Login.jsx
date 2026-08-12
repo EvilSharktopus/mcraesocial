@@ -199,7 +199,7 @@ export default function Login() {
             </h1>
           </div>
           <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>
-            Social Studies 30 &nbsp;·&nbsp; History's ideological orbits
+            Social Studies 30 &nbsp;·&nbsp; The ideological orbit of history
           </p>
         </div>
 
