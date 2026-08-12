@@ -1,5 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://mcraesocial.com/gravity/:path*",
+      "permanent": false
+    }
   ]
 }
