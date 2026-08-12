@@ -4,16 +4,19 @@ export default function ReadingEditorModal({ isOpen, onClose, onSave, reading })
   const [title, setTitle] = useState('');
   const [century, setCentury] = useState('');
   const [url, setUrl] = useState('');
+  const [deskAssignmentId, setDeskAssignmentId] = useState('');
 
   useEffect(() => {
     if (reading) {
       setTitle(reading.title || '');
       setCentury(reading.century || '');
       setUrl(reading.url || '');
+      setDeskAssignmentId(reading.deskAssignmentId || '');
     } else {
       setTitle('');
       setCentury('');
       setUrl('');
+      setDeskAssignmentId('');
     }
   }, [reading, isOpen]);
 
@@ -56,6 +59,21 @@ export default function ReadingEditorModal({ isOpen, onClose, onSave, reading })
           placeholder="https://docs.google.com/document/d/..."
         />
 
+        <label className="block text-sm font-semibold mb-1" style={{ color: 'var(--pg-text)' }}>
+          Desk assignment ID <span className="font-normal" style={{ color: 'var(--pg-dim)' }}>(optional)</span>
+        </label>
+        <input
+          value={deskAssignmentId}
+          onChange={e => setDeskAssignmentId(e.target.value.trim())}
+          className="w-full rounded-lg px-3 py-2 mb-1 text-sm"
+          style={{ backgroundColor: 'var(--pg-bg)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+          placeholder="the id from desk.mcraesocial.com/submit/..."
+        />
+        <p className="text-xs mb-6" style={{ color: 'var(--pg-dim)' }}>
+          Set this to send students to Desk to write their response, where copy/paste protection
+          and integrity checks apply. Leave blank to keep the in-app justification box only.
+        </p>
+
         <div className="flex justify-end gap-3 mt-auto">
           <button
             onClick={onClose}
@@ -65,7 +83,7 @@ export default function ReadingEditorModal({ isOpen, onClose, onSave, reading })
             Cancel
           </button>
           <button
-            onClick={() => onSave({ title, century, url })}
+            onClick={() => onSave({ title, century, url, deskAssignmentId })}
             disabled={!title.trim() || !url.trim()}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity disabled:opacity-50"
             style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}

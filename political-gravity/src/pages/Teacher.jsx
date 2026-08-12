@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
 import { PENDULUM_READINGS } from '../data/pendulumReadings';
@@ -468,34 +468,177 @@ function ClassesTab() {
   );
 }
 
+const DESK_SUBMIT_BASE = 'https://desk.mcraesocial.com/submit';
+
+const GRADING_VIEWS = [
+  { key: 'plots',          label: 'View plots' },
+  { key: 'justifications', label: 'View justifications' },
+  { key: 'reflections',    label: 'View reflections' },
+];
+
 function GradingTab() {
   const { readings, loading } = useReadings();
+  const [plots,       setPlots]       = useState(null);
+  const [reflections, setReflections] = useState(null);
+  const [users,       setUsers]       = useState({});
+  const [expanded,    setExpanded]    = useState(null);   // reading id
+  const [view,        setView]        = useState('plots');
 
-  if (loading) {
-    return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
+  useEffect(() => {
+    const rows = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const fail = (name, setter) => (error) => {
+      console.error(`Error fetching ${name}:`, error);
+      setter([]);
+    };
+    const unsubPlots = onSnapshot(collection(db, 'plots'),
+      s => setPlots(rows(s)), fail('plots', setPlots));
+    const unsubReflections = onSnapshot(collection(db, 'reflections'),
+      s => setReflections(rows(s)), fail('reflections', setReflections));
+    const unsubUsers = onSnapshot(collection(db, 'users'),
+      s => setUsers(Object.fromEntries(s.docs.map(d => [d.id, d.data()]))),
+      error => console.error('Error fetching users:', error));
+    return () => { unsubPlots(); unsubReflections(); unsubUsers(); };
+  }, []);
+
+  const who = (uid) => users[uid]?.displayName || users[uid]?.email || uid;
+
+  if (loading || plots === null || reflections === null) {
+    return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading submissions…</div>;
+  }
+
+  const active = readings.filter(r => !r.archived);
+
+  // Everything a student has submitted for one reading, newest name order.
+  function submissionsFor(readingId) {
+    const byUid = new Map();
+    for (const p of plots.filter(p => p.readingId === readingId && p.uid)) {
+      byUid.set(p.uid, { uid: p.uid, plot: p, reflection: null });
+    }
+    for (const f of reflections.filter(f => f.readingId === readingId && f.uid)) {
+      const entry = byUid.get(f.uid) || { uid: f.uid, plot: null, reflection: null };
+      entry.reflection = f;
+      byUid.set(f.uid, entry);
+    }
+    return [...byUid.values()].sort((a, b) => who(a.uid).localeCompare(who(b.uid)));
   }
 
   return (
     <>
       <h1 className="font-display font-bold text-xl mb-1" style={{ color: 'var(--pg-text)' }}>Grading</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--pg-dim)' }}>Review student plots, justifications, and reflections</p>
+
+      {active.length === 0 && (
+        <div style={cardStyle} className="p-6 text-center">
+          <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No time periods on the reading list yet.</p>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {readings.map(r => (
-          <div key={r.id} className="rounded-2xl p-5" style={cardStyle}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>{r.title}</p>
-              <span className="text-xs" style={{ color: 'var(--pg-dim)' }}>-- submissions</span>
+        {active.map(r => {
+          const subs      = submissionsFor(r.id);
+          const isOpen    = expanded === r.id;
+          const nDone     = subs.filter(s => s.reflection).length;
+
+          return (
+            <div key={r.id} className="rounded-2xl p-5" style={cardStyle}>
+              <div className="flex items-center justify-between mb-3 gap-4">
+                <button
+                  onClick={() => setExpanded(isOpen ? null : r.id)}
+                  className="font-semibold text-left hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--pg-text)' }}
+                >
+                  {isOpen ? '▾' : '▸'} {r.title}
+                </button>
+                <span className="text-xs shrink-0" style={{ color: 'var(--pg-dim)' }}>
+                  {subs.length === 0
+                    ? 'No submissions'
+                    : `${subs.length} submission${subs.length === 1 ? '' : 's'}` +
+                      (nDone ? ` · ${nDone} reflected` : '')}
+                </span>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {GRADING_VIEWS.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setExpanded(r.id); setView(key); }}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    style={isOpen && view === key
+                      ? { ...btnGhost, borderColor: 'var(--pg-primary)', color: 'var(--pg-text)' }
+                      : btnGhost}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {r.deskAssignmentId && (
+                  <a
+                    href={`${DESK_SUBMIT_BASE}/${r.deskAssignmentId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity"
+                    style={btnGhost}
+                  >
+                    Open in Desk ↗
+                  </a>
+                )}
+              </div>
+
+              {isOpen && (
+                <div className="mt-4 space-y-2">
+                  {subs.length === 0 ? (
+                    <p className="text-xs" style={{ color: 'var(--pg-dim)' }}>
+                      Nothing submitted for this time period yet.
+                    </p>
+                  ) : subs.map(s => (
+                    <div key={s.uid} className="rounded-xl p-3 text-sm"
+                      style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)' }}>
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="font-medium" style={{ color: 'var(--pg-text)' }}>{who(s.uid)}</span>
+                        <span className="text-[11px] shrink-0" style={{ color: 'var(--pg-dim)' }}>
+                          {fmtTs((view === 'reflections' ? s.reflection : s.plot)?.updatedAt)}
+                        </span>
+                      </div>
+                      <GradingDetail view={view} sub={s} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {['View plots', 'View justifications', 'View reflections'].map(label => (
-                <button key={label} className="text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity" style={btnGhost}>{label}</button>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
+}
+
+function GradingDetail({ view, sub }) {
+  const dim  = { color: 'var(--pg-dim)' };
+  const body = { color: 'var(--pg-muted)', whiteSpace: 'pre-wrap' };
+
+  if (view === 'plots') {
+    if (!sub.plot) return <p className="text-xs" style={dim}>No position plotted.</p>;
+    const moved = sub.reflection && sub.reflection.newPosition !== sub.reflection.originalPosition;
+    return (
+      <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>
+        x {sub.plot.positionX} · y {sub.plot.positionY}
+        {moved && (
+          <span style={dim}>
+            {'  '}→ moved to x {sub.reflection.newPosition} on reflection
+          </span>
+        )}
+      </p>
+    );
+  }
+
+  if (view === 'justifications') {
+    return sub.plot?.justification
+      ? <p className="text-xs" style={body}>{sub.plot.justification}</p>
+      : <p className="text-xs" style={dim}>No justification written.</p>;
+  }
+
+  return sub.reflection?.reflection
+    ? <p className="text-xs" style={body}>{sub.reflection.reflection}</p>
+    : <p className="text-xs" style={dim}>No reflection submitted.</p>;
 }
 
 function SettingsTab({ userEmail }) {

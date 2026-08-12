@@ -318,6 +318,19 @@ export default function Reading() {
             />
           </div>
 
+          {/* Long-form response lives in Desk when the teacher has linked one */}
+          {reading.deskAssignmentId && (
+            <a
+              href={`https://desk.mcraesocial.com/submit/${reading.deskAssignmentId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full text-center font-semibold py-2.5 rounded-xl transition-opacity hover:opacity-80 text-sm"
+              style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+            >
+              ✏️ Write your full response in Desk ↗
+            </a>
+          )}
+
           {/* Save */}
           <button
             onClick={handleSave}
