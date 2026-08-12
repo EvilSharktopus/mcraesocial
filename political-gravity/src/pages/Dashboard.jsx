@@ -59,7 +59,7 @@ export default function Dashboard() {
 
   // Filter only open readings, then group by century
   const groupedReadings = readings
-    .filter(r => openReadings.includes(r.id))
+    .filter(r => !r.archived && openReadings.includes(r.id))
     .reduce((acc, reading) => {
       const century = reading.century || 'Other';
       if (!acc[century]) acc[century] = [];

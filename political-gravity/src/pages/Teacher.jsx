@@ -6,9 +6,23 @@ import NavBar from '../components/NavBar';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
+import { PENDULUM_READINGS } from '../data/pendulumReadings';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 
-const NAV_TABS = ['Readings', 'Classes', 'Grading', 'Settings'];
+const NAV_TABS = ['Readings', 'Archive', 'Classes', 'Grading', 'Settings'];
+
+const ERA_ORDER = ['1700s', '1800s', '1900s', '2000s'];
+
+// Group readings by era, eras in curriculum order and anything unrecognised last.
+function byEra(list) {
+  const groups = new Map(ERA_ORDER.map(e => [e, []]));
+  for (const r of list) {
+    const era = r.century || 'Other';
+    if (!groups.has(era)) groups.set(era, []);
+    groups.get(era).push(r);
+  }
+  return [...groups].filter(([, rs]) => rs.length > 0);
+}
 
 const PLACEHOLDER_CLASSES = [
   { code: 'SS30-A', name: 'Social Studies 30-1 — Block A', students: 24 },
@@ -42,6 +56,12 @@ function fmtTs(ts) {
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
+
+const saveReadings = (readings) =>
+  setDoc(doc(db, 'settings', 'masterReadings'), { readings }, { merge: true });
+
+const setArchived = (readings, id, archived) =>
+  saveReadings(readings.map(r => (r.id === id ? { ...r, archived } : r)));
 
 function ReadingsTab() {
   const { user } = useAuth();
@@ -124,26 +144,61 @@ function ReadingsTab() {
     await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
   }
 
+  // Replace the live list with the standard 14, keeping any doc URL already set
+  // for a matching id and archiving whatever is left over.
+  async function applyStandardList() {
+    if (!confirm(
+      `Set the reading list to the standard ${PENDULUM_READINGS.length} time periods?\n\n` +
+      'Time periods you have added that are not on the standard list are moved to ' +
+      'the Archive tab, not deleted. Student work is not affected.'
+    )) return;
+
+    const existing = new Map(readings.map(r => [r.id, r]));
+    const standard = PENDULUM_READINGS.map(std => ({
+      ...std,
+      url: existing.get(std.id)?.url || std.url,
+      archived: false,
+    }));
+    const standardIds = new Set(standard.map(r => r.id));
+    const leftovers = readings
+      .filter(r => !standardIds.has(r.id))
+      .map(r => ({ ...r, archived: true }));
+
+    await saveReadings([...standard, ...leftovers]);
+  }
+
   if (loading) {
     return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
   }
 
+  const active = readings.filter(r => !r.archived);
+
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Readings</h1>
           <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
             Manage time periods. Edit in Google Docs anytime, then hit <strong>Publish ↑</strong> to push the latest version to students.
           </p>
         </div>
-        <button
-          onClick={() => { setEditingReading(null); setEditorOpen(true); }}
-          className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity"
-          style={btnPrimary}
-        >
-          + New Time Period
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={applyStandardList}
+            className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity"
+            style={btnGhost}
+            title="Set the list to the standard time periods, archiving anything else"
+          >
+            Load standard list
+          </button>
+          <button
+            onClick={() => { setEditingReading(null); setEditorOpen(true); }}
+            className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity"
+            style={btnPrimary}
+          >
+            + New Time Period
+          </button>
+        </div>
       </div>
 
       <ReadingEditorModal 
@@ -153,17 +208,30 @@ function ReadingsTab() {
         reading={editingReading} 
       />
 
-      <div style={cardStyle} className="overflow-hidden">
+      {active.length === 0 && (
+        <div style={cardStyle} className="p-6 text-center">
+          <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>No time periods yet</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+            Use <strong>Load standard list</strong> above to add the standard {PENDULUM_READINGS.length} time periods.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-6">
+      {byEra(active).map(([era, group]) => (
+        <div key={era}>
+        <h2 className="font-display font-bold text-sm mb-2 px-1" style={{ color: 'var(--pg-muted)' }}>{era}</h2>
+        <div style={cardStyle} className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--pg-border)' }}>
-              {['Time Period', 'Published', 'Status', 'Actions'].map(h => (
+              {['#', 'Time Period', 'Published', 'Status', 'Actions'].map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--pg-dim)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {readings.map((r, i) => {
+            {group.map((r, i) => {
               const isOpen    = openReadings.includes(r.id);
               const meta      = publishMeta[r.id];
               const isPublished = !!meta;
@@ -172,7 +240,12 @@ function ReadingsTab() {
               const docUrl    = r.url;
 
               return (
-                <tr key={r.id} style={{ borderBottom: i < readings.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
+                <tr key={r.id} style={{ borderBottom: i < group.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
+
+                  {/* Position in the overall list */}
+                  <td className="px-5 py-4 text-xs" style={{ color: 'var(--pg-dim)' }}>
+                    {active.indexOf(r) + 1}
+                  </td>
 
                   {/* Title */}
                   <td className="px-5 py-4 font-medium" style={{ color: 'var(--pg-text)' }}>
@@ -239,6 +312,15 @@ function ReadingsTab() {
                       </button>
 
                       <button
+                        onClick={() => setArchived(readings, r.id, true)}
+                        className="text-xs hover:opacity-80 transition-opacity font-semibold"
+                        style={{ color: 'var(--pg-muted)' }}
+                        title="Move to the Archive tab — hidden from students, not deleted"
+                      >
+                        Archive
+                      </button>
+
+                      <button
                         onClick={() => handleDeleteReading(r.id)}
                         className="text-xs hover:opacity-80 transition-opacity font-semibold"
                         style={{ color: 'var(--pg-error)' }}
@@ -275,11 +357,85 @@ function ReadingsTab() {
             })}
           </tbody>
         </table>
+        </div>
+        </div>
+      ))}
       </div>
     </>
   );
 }
 
+function ArchiveTab() {
+  const { readings, loading } = useReadings();
+  const archived = readings.filter(r => r.archived);
+
+  if (loading) {
+    return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
+  }
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Archive</h1>
+        <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+          Time periods no longer in the reading list. Students never see these. Restore one to
+          put it back on the Readings tab — the Google Doc link is kept either way.
+        </p>
+      </div>
+
+      {archived.length === 0 ? (
+        <div style={cardStyle} className="p-6 text-center">
+          <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Nothing archived</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+            Archiving a time period on the Readings tab moves it here.
+          </p>
+        </div>
+      ) : (
+        <div style={cardStyle} className="overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--pg-border)' }}>
+                {['Time Period', 'Actions'].map(h => (
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--pg-dim)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {archived.map((r, i) => (
+                <tr key={r.id} style={{ borderBottom: i < archived.length - 1 ? '1px solid var(--pg-border)' : 'none' }}>
+                  <td className="px-5 py-4 font-medium" style={{ color: 'var(--pg-text)' }}>
+                    <div>{r.title}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>{r.century}</div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <button
+                        onClick={() => setArchived(readings, r.id, false)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={btnGhost}
+                      >
+                        ↩ Restore
+                      </button>
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs hover:opacity-80 transition-opacity"
+                        style={{ color: 'var(--pg-muted)' }}
+                      >
+                        Docs ↗
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
 
 function ClassesTab() {
   return (
@@ -421,6 +577,7 @@ export default function Teacher() {
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
         {activeTab === 'Readings' && <ReadingsTab />}
+        {activeTab === 'Archive'  && <ArchiveTab />}
         {activeTab === 'Classes'  && <ClassesTab />}
         {activeTab === 'Grading'  && <GradingTab />}
         {activeTab === 'Settings' && <SettingsTab userEmail={user?.email} />}

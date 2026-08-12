@@ -28,7 +28,8 @@ export default function NavBar({ backTo, backLabel, extra }) {
           </Link>
         ) : (
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src="/images/icon.jfif" alt="Political Gravity Icon" className="w-6 h-6 rounded-md object-cover" />
+            {/* BASE_URL keeps this correct under /gravity/ as well as at the root */}
+            <img src={`${import.meta.env.BASE_URL}images/icon.jfif`} alt="Political Gravity Icon" className="w-6 h-6 rounded-md object-cover" />
             <span
               className="font-display font-bold text-base tracking-tight"
               style={{ color: 'var(--pg-text)' }}
