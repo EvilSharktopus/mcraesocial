@@ -20,7 +20,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const ALLOWED_DOMAIN   = 'rvschools.ab.ca';
-const DEFAULT_TEACHER  = import.meta.env.VITE_TEACHER_EMAIL; // amcrae@rvschools.ab.ca
+const DEFAULT_TEACHER  = 'amcrae@rvschools.ab.ca';
 
 const AuthContext = createContext(null);
 

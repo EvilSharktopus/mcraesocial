@@ -14,13 +14,16 @@ const STATUS_CONFIG = {
 
 export default function Dashboard() {
   const [openReadings, setOpenReadings] = useState([]);
+  const [openLoading, setOpenLoading]   = useState(true);
   const { readings, loading } = useReadings();
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
-      if (docSnap.exists()) {
-        setOpenReadings(docSnap.data().openReadings || []);
-      }
+      setOpenReadings(docSnap.exists() ? (docSnap.data().openReadings || []) : []);
+      setOpenLoading(false);
+    }, (error) => {
+      console.error('Error fetching open readings:', error);
+      setOpenLoading(false);
     });
     return () => unsub();
   }, []);
@@ -29,10 +32,14 @@ export default function Dashboard() {
   const groupedReadings = readings
     .filter(r => openReadings.includes(r.id))
     .reduce((acc, reading) => {
-      if (!acc[reading.century]) acc[reading.century] = [];
-      acc[reading.century].push(reading);
+      const century = reading.century || 'Other';
+      if (!acc[century]) acc[century] = [];
+      acc[century].push(reading);
       return acc;
     }, {});
+
+  const isLoading = loading || openLoading;
+  const hasOpenReadings = Object.keys(groupedReadings).length > 0;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
@@ -68,6 +75,17 @@ export default function Dashboard() {
         </div>
 
         {/* Grouped Readings */}
+        {isLoading ? (
+          <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>Loading readings…</p>
+        ) : !hasOpenReadings ? (
+          <div className="rounded-2xl p-6 text-center"
+            style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+            <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>No readings are open right now</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+              Your teacher hasn’t opened any time periods yet. Check back later.
+            </p>
+          </div>
+        ) : (
         <div className="space-y-8">
           {Object.entries(groupedReadings).map(([century, readings]) => (
             <section key={century}>
@@ -76,7 +94,7 @@ export default function Dashboard() {
               </h2>
               <div className="space-y-3">
                 {readings.map((r) => {
-                  const cfg = STATUS_CONFIG[r.status];
+                  const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG['not-started'];
                   const canOpen = r.status !== 'submitted';
                   return (
                     <div
@@ -111,6 +129,7 @@ export default function Dashboard() {
             </section>
           ))}
         </div>
+        )}
 
         {/* Study package link */}
         <div className="mt-10 rounded-2xl p-5 flex items-center justify-between gap-4"
