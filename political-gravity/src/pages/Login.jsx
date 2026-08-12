@@ -138,8 +138,6 @@ export default function Login() {
   const { signIn, signUp, user, isTeacher } = useAuth();
   const navigate = useNavigate();
 
-  if (user) return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
-
   const [mode,     setMode]     = useState('signin');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -148,6 +146,10 @@ export default function Login() {
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
   const [modal,    setModal]    = useState(null);
+
+  // Must come after every hook above: returning earlier changes the number of
+  // hooks between renders once auth resolves, which unmounts the whole app.
+  if (user) return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
 
   const friendlyError = (code, message) => {
     switch (code) {
