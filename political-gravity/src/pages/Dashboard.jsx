@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
+import { useAuth } from '../auth/AuthContext';
 import { HANDOUT_URL, RUBRIC_URL } from '../data/pendulumReadings';
 import { useReadings } from '../hooks/useReadings';
 
@@ -13,8 +14,12 @@ const STATUS_CONFIG = {
 };
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [openReadings, setOpenReadings] = useState([]);
   const [openLoading, setOpenLoading]   = useState(true);
+  // Reading ids this student has plotted / reflected on. null = not loaded yet.
+  const [plotted,   setPlotted]   = useState(null);
+  const [reflected, setReflected] = useState(null);
   const { readings, loading } = useReadings();
 
   useEffect(() => {
@@ -28,6 +33,30 @@ export default function Dashboard() {
     return () => unsub();
   }, []);
 
+  // Progress is per student: a plot means started, a reflection means done.
+  // Anything stored on the reading itself would be shared by the whole class.
+  useEffect(() => {
+    if (!user) return;
+    const readingIds = snap => new Set(snap.docs.map(d => d.data().readingId));
+    const sub = (name, setter) => onSnapshot(
+      query(collection(db, name), where('uid', '==', user.uid)),
+      snap => setter(readingIds(snap)),
+      error => {
+        console.error(`Error fetching ${name}:`, error);
+        setter(new Set());
+      },
+    );
+    const unsubPlots       = sub('plots', setPlotted);
+    const unsubReflections = sub('reflections', setReflected);
+    return () => { unsubPlots(); unsubReflections(); };
+  }, [user]);
+
+  function statusFor(readingId) {
+    if (reflected?.has(readingId)) return 'submitted';
+    if (plotted?.has(readingId))   return 'in-progress';
+    return 'not-started';
+  }
+
   // Filter only open readings, then group by century
   const groupedReadings = readings
     .filter(r => openReadings.includes(r.id))
@@ -38,7 +67,7 @@ export default function Dashboard() {
       return acc;
     }, {});
 
-  const isLoading = loading || openLoading;
+  const isLoading = loading || openLoading || plotted === null || reflected === null;
   const hasOpenReadings = Object.keys(groupedReadings).length > 0;
 
   return (
@@ -94,8 +123,9 @@ export default function Dashboard() {
               </h2>
               <div className="space-y-3">
                 {readings.map((r) => {
-                  const cfg = STATUS_CONFIG[r.status] || STATUS_CONFIG['not-started'];
-                  const canOpen = r.status !== 'submitted';
+                  const status  = statusFor(r.id);
+                  const cfg     = STATUS_CONFIG[status];
+                  const canOpen = status !== 'submitted';
                   return (
                     <div
                       key={r.id}
@@ -120,7 +150,7 @@ export default function Dashboard() {
                           color: canOpen ? 'var(--pg-on-primary)' : 'var(--pg-dim)',
                         }}
                       >
-                        {r.status === 'submitted' ? 'Review' : r.status === 'in-progress' ? 'Continue' : 'Open'}
+                        {status === 'submitted' ? 'Review' : status === 'in-progress' ? 'Continue' : 'Open'}
                       </Link>
                     </div>
                   );

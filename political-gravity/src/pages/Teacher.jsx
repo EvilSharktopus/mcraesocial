@@ -112,7 +112,7 @@ function ReadingsTab() {
       }
     } else {
       const newId = 'r' + (readings.length > 0 ? Math.max(...readings.map(r => parseInt(r.id.replace('r','')) || 0)) + 1 : 1);
-      newReadings.push({ id: newId, status: 'not-started', ...data });
+      newReadings.push({ id: newId, ...data });
     }
     await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
     setEditorOpen(false);
