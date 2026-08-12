@@ -185,13 +185,32 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative" style={{ backgroundColor: 'var(--pg-bg)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: 'var(--pg-bg)' }}>
+      {/* Faded wordmark art behind the form. Sits under everything else, which
+          is why the layers below it are positioned too. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${import.meta.env.BASE_URL}images/icon.jfif)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.14,
+        }}
+      />
+      {/* Scrim so the form stays readable over the busiest part of the image */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at center, var(--pg-bg) 0%, transparent 75%)' }}
+      />
+
       {/* Theme toggle — top right */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm relative">
         {/* Wordmark */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
