@@ -95,11 +95,33 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if request.auth != null;
     }
+    // Plots — the whole class can see each other's positions (that is the
+    // point of the seminar reveal), but a student may only write their own.
     match /plots/{id} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+        && (resource.data.uid == request.auth.uid
+            || request.auth.token.email == 'amcrae@rvschools.ab.ca');
     }
 
-    // Shared by WYR (unauth) and Political Gravity (auth)
+    // Political Gravity reflections — private to the student who wrote them
+    // and to the teacher. Deliberately NOT the /reflections collection below:
+    // Would You Rather writes there unauthenticated, so it cannot be locked
+    // down without breaking that activity.
+    match /pg_reflections/{id} {
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid
+            || request.auth.token.email == 'amcrae@rvschools.ab.ca');
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null
+        && (resource.data.uid == request.auth.uid
+            || request.auth.token.email == 'amcrae@rvschools.ab.ca');
+    }
+
+    // Shared by WYR (unauth) — Political Gravity no longer writes here
     match /reflections/{id} {
       allow read, write: if true;
     }

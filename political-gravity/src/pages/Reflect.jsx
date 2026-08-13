@@ -39,7 +39,7 @@ export default function Reflect() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
     try {
-      await setDoc(doc(db, 'reflections', `${user.uid}_${reading.id}`), {
+      await setDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`), {
         uid: user.uid,
         readingId: reading.id,
         originalPosition,

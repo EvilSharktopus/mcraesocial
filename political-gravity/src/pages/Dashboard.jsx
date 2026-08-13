@@ -47,7 +47,7 @@ export default function Dashboard() {
       },
     );
     const unsubPlots       = sub('plots', setPlotted);
-    const unsubReflections = sub('reflections', setReflected);
+    const unsubReflections = sub('pg_reflections', setReflected);
     return () => { unsubPlots(); unsubReflections(); };
   }, [user]);
 

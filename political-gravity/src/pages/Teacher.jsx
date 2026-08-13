@@ -492,8 +492,8 @@ function GradingTab() {
     };
     const unsubPlots = onSnapshot(collection(db, 'plots'),
       s => setPlots(rows(s)), fail('plots', setPlots));
-    const unsubReflections = onSnapshot(collection(db, 'reflections'),
-      s => setReflections(rows(s)), fail('reflections', setReflections));
+    const unsubReflections = onSnapshot(collection(db, 'pg_reflections'),
+      s => setReflections(rows(s)), fail('pg_reflections', setReflections));
     const unsubUsers = onSnapshot(collection(db, 'users'),
       s => setUsers(Object.fromEntries(s.docs.map(d => [d.id, d.data()]))),
       error => console.error('Error fetching users:', error));
