@@ -1,3 +1,9 @@
+// ⚠ NOT AUTHORITATIVE — the rules deployed to mcrae-assignments-ca have
+// diverged from this file (the live ones use an isPGTeacher() helper and
+// per-user rules for /users that are not reflected here). Deploying this
+// file as-is would regress them. Sync it from the Firebase console before
+// running `firebase deploy --only firestore:rules`.
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
