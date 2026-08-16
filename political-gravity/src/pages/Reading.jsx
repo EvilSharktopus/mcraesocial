@@ -2,7 +2,7 @@
 // Split-screen: reading text on left, Spectrum + justification on right.
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
@@ -24,6 +24,11 @@ export default function Reading() {
   const [axes,          setAxes]          = useState('economic'); // economic | political | both
   // null = we have not looked yet, so the consensus prefill must wait.
   const [hadSaved,      setHadSaved]      = useState(null);
+  const [savedPlot,     setSavedPlot]     = useState(null);   // what they submitted first time
+  const [reflectMode,   setReflectMode]   = useState(false);  // teacher-controlled
+  const [classPlots,    setClassPlots]    = useState([]);     // everyone's positions
+  const [reflection,    setReflection]    = useState('');
+  const [reflectionSaved, setReflectionSaved] = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [publishedHtml, setPublishedHtml] = useState(null); // null = still loading
   const [htmlLoading,   setHtmlLoading]   = useState(true);
@@ -91,6 +96,7 @@ export default function Reading() {
           if (typeof d.positionY === 'number') setPositionY(d.positionY);
           if (d.justification) setJustification(d.justification);
           if (d.axes) setAxes(d.axes);
+          setSavedPlot(d);
           setHadSaved(true);
         } else {
           setHadSaved(false);
@@ -102,6 +108,41 @@ export default function Reading() {
     })();
     return () => { cancelled = true; };
   }, [user, reading]);
+
+  // Reflection mode is a per-reading switch the teacher flips after the seminar.
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'global'),
+      snap => setReflectMode(!!(snap.exists() && (snap.data().reflectReadings || []).includes(id))),
+      err => console.error('Could not read reflection mode', err));
+    return () => unsub();
+  }, [id]);
+
+  // In reflection mode the whole class's positions appear on the spectrum.
+  useEffect(() => {
+    if (!reflectMode || !id) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'plots'), where('readingId', '==', id)),
+      snap => setClassPlots(snap.docs.map(d => d.data())),
+      err => console.error('Could not load class positions', err));
+    return () => unsub();
+  }, [reflectMode, id]);
+
+  // Restore a reflection already written for this reading.
+  useEffect(() => {
+    if (!user || !reading || !reflectMode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`));
+        if (!cancelled && snap.exists() && snap.data().reflection) {
+          setReflection(snap.data().reflection);
+        }
+      } catch (err) {
+        console.error('Could not load your reflection', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, reading, reflectMode]);
 
   // Load previous class consensus for initial spectrum position
   useEffect(() => {
@@ -143,6 +184,29 @@ export default function Reading() {
     }
   }
 
+  async function handleSaveReflection() {
+    if (!user || !reading || !reflection.trim()) return;
+    setReflectionSaved(true);
+    setTimeout(() => setReflectionSaved(false), 2500);
+    try {
+      await setDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`), {
+        uid: user.uid,
+        readingId: reading.id,
+        originalPositionX: savedPlot?.positionX ?? null,
+        originalPositionY: savedPlot?.positionY ?? null,
+        newPositionX: needX ? positionX : null,
+        newPositionY: needY ? positionY : null,
+        // Single-axis pair the grading view reads
+        originalPosition: savedPlot?.positionX ?? savedPlot?.positionY ?? null,
+        newPosition: (needX ? positionX : null) ?? (needY ? positionY : null),
+        reflection,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.error('Failed to save reflection', err);
+    }
+  }
+
   if (readingsLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--pg-bg)' }}>
@@ -151,6 +215,13 @@ export default function Reading() {
       </div>
     );
   }
+
+  const classDotsX = classPlots
+    .filter(p => p.uid !== user?.uid && typeof p.positionX === 'number')
+    .map(p => ({ value: p.positionX, label: 'Classmate' }));
+  const classDotsY = classPlots
+    .filter(p => p.uid !== user?.uid && typeof p.positionY === 'number')
+    .map(p => ({ value: p.positionY, label: 'Classmate' }));
 
   const needX = axes !== 'political';
   const needY = axes !== 'economic';
@@ -250,7 +321,14 @@ export default function Reading() {
               {needX && (
                 <>
                   <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
-                  <Spectrum value={positionX ?? 0} onChange={setPositionX} leftLabel={null} rightLabel={null} sublabels={[]} />
+                  <Spectrum
+                    value={positionX ?? 0}
+                    onChange={setPositionX}
+                    leftLabel={null} rightLabel={null} sublabels={[]}
+                    classDots={reflectMode ? classDotsX : []}
+                    secondaryDot={reflectMode && typeof savedPlot?.positionX === 'number'
+                      ? { value: savedPlot.positionX, label: 'Where you started' } : null}
+                  />
                 </>
               )}
 
@@ -264,7 +342,14 @@ export default function Reading() {
 
               {needY && (
                 <>
-                  <Spectrum value={positionY ?? 0} onChange={setPositionY} leftLabel={null} rightLabel={null} sublabels={[]} />
+                  <Spectrum
+                    value={positionY ?? 0}
+                    onChange={setPositionY}
+                    leftLabel={null} rightLabel={null} sublabels={[]}
+                    classDots={reflectMode ? classDotsY : []}
+                    secondaryDot={reflectMode && typeof savedPlot?.positionY === 'number'
+                      ? { value: savedPlot.positionY, label: 'Where you started' } : null}
+                  />
                   <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
                 </>
               )}
@@ -383,7 +468,7 @@ export default function Reading() {
               style={{ color: 'var(--pg-text)', writingMode: 'vertical-rl' }}
               title="Show the writing panel"
             >
-              ◂ Justify your position
+              ◂ {reflectMode ? 'Reflect on your position' : 'Justify your position'}
             </button>
           </div>
         ) : (
@@ -395,7 +480,7 @@ export default function Reading() {
           <div className="flex-1 flex flex-col">
             <div className="flex items-center justify-between gap-2 mb-2">
               <label className="block text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>
-                Justify your position
+                {reflectMode ? 'Reflect on your position' : 'Justify your position'}
               </label>
               <button
                 onClick={() => togglePanel('writing', writingOpen, setWritingOpen)}
@@ -407,13 +492,15 @@ export default function Reading() {
               </button>
             </div>
             <p className="text-xs mb-3" style={{ color: 'var(--pg-dim)' }}>
-              Use at least one piece of evidence from the reading to support your placement.
+              {reflectMode
+                ? 'The grey dots are the rest of the class. Move your marker if the seminar changed your mind, then explain what changed and why.'
+                : 'Use at least one piece of evidence from the reading to support your placement.'}
             </p>
             <textarea
-              value={justification}
-              onChange={e => setJustification(e.target.value)}
+              value={reflectMode ? reflection : justification}
+              onChange={e => (reflectMode ? setReflection : setJustification)(e.target.value)}
               onPaste={e => { e.preventDefault(); alert('Pasting is not allowed on this site.'); }}
-              placeholder="The text argues that…"
+              placeholder={reflectMode ? 'After the seminar I…' : 'The text argues that…'}
               className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px]"
               style={{
                 backgroundColor: 'var(--pg-surface2)',
@@ -439,14 +526,25 @@ export default function Reading() {
           )}
 
           {/* Save */}
-          <button
-            onClick={handleSave}
-            disabled={!ready || !justification.trim()}
-            className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
-            style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
-          >
-            {saved ? '✓ Saved!' : hadSaved ? 'Update Position' : 'Save Position'}
-          </button>
+          {reflectMode ? (
+            <button
+              onClick={handleSaveReflection}
+              disabled={!reflection.trim()}
+              className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+            >
+              {reflectionSaved ? '✓ Saved!' : 'Save Reflection'}
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              disabled={!ready || !justification.trim()}
+              className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+            >
+              {saved ? '✓ Saved!' : hadSaved ? 'Update Position' : 'Save Position'}
+            </button>
+          )}
         </div>
         )}
         </div>

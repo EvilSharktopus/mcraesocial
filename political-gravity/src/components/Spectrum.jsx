@@ -8,7 +8,8 @@
 // disabled:    boolean
 // showValue:   show numeric readout (default true)
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { positionLabel } from '../data/pendulumReadings';
 
 const SNAP_THRESHOLD = 6; // snap to center if within this many units
 
@@ -25,6 +26,7 @@ export default function Spectrum({
   disabled   = false,
   showValue  = true,
   secondaryDot = null, // { value, label } — faint "original" dot
+  classDots  = [],     // [{ value, label }] — everyone else's positions
 }) {
   const trackRef   = useRef(null);
   const [phase, setPhase] = useState('idle'); // 'idle' | 'dragging' | 'settling'
@@ -83,12 +85,8 @@ export default function Spectrum({
   const fillLeft  = Math.min(50, pct);
   const fillWidth = Math.abs(pct - 50);
 
-  // Readable label
-  const readout = value === 0
-    ? 'Center'
-    : value > 0
-      ? `+${value} — leaning right`
-      : `${value} — leaning left`;
+  // Readable label — the same band names the teacher sees when marking
+  const readout = positionLabel(value) ?? 'Center';
 
   return (
     <div className="select-none w-full">
@@ -165,6 +163,24 @@ export default function Spectrum({
             </div>
           );
         })}
+
+        {/* The rest of the class */}
+        {classDots.map((d, i) => (
+          <div
+            key={`${d.value}-${i}`}
+            className="absolute rounded-full"
+            style={{
+              left:   `${(clamp(d.value, -100, 100) + 100) / 2}%`,
+              top:    '50%',
+              width:  '10px',
+              height: '10px',
+              transform: 'translateX(-50%) translateY(-50%)',
+              backgroundColor: 'var(--pg-muted)',
+              opacity: 0.55,
+            }}
+            title={d.label ?? 'Classmate'}
+          />
+        ))}
 
         {/* Secondary (original) dot */}
         {secondaryPct != null && (

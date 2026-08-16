@@ -9,7 +9,6 @@ import Login        from './pages/Login';
 import Dashboard    from './pages/Dashboard';
 import Reading      from './pages/Reading';
 import Seminar      from './pages/Seminar';
-import Reflect      from './pages/Reflect';
 import Teacher      from './pages/Teacher';
 import StudyPackage from './pages/StudyPackage';
 
@@ -39,7 +38,6 @@ export default function App() {
               <Route path="/" element={<RootRedirect />} />
               <Route path="/dashboard"     element={<ProtectedRoute role="student"><Dashboard /></ProtectedRoute>} />
               <Route path="/reading/:id"   element={<ProtectedRoute role="student"><Reading /></ProtectedRoute>} />
-              <Route path="/reflect/:id"   element={<ProtectedRoute role="student"><Reflect /></ProtectedRoute>} />
               <Route path="/study-package" element={<ProtectedRoute role="student"><StudyPackage /></ProtectedRoute>} />
               <Route path="/teacher"       element={<ProtectedRoute role="teacher"><Teacher /></ProtectedRoute>} />
               <Route path="/seminar/:id"   element={<ProtectedRoute><Seminar /></ProtectedRoute>} />

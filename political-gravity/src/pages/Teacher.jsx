@@ -63,6 +63,7 @@ function ReadingsTab() {
   const { user } = useAuth();
   const { readings, loading } = useReadings();
   const [openReadings,  setOpenReadings]  = useState([]);
+  const [reflectReadings, setReflectReadings] = useState([]);
   const [publishMeta,   setPublishMeta]   = useState({}); // { [id]: { publishedAt, publishedBy } }
   const [publishing,    setPublishing]    = useState({}); // { [id]: true/false }
   const [publishErr,    setPublishErr]    = useState({}); // { [id]: errorString }
@@ -100,7 +101,10 @@ function ReadingsTab() {
 
   useEffect(() => {
     const unsub1 = onSnapshot(doc(db, 'settings', 'global'), snap => {
-      if (snap.exists()) setOpenReadings(snap.data().openReadings || []);
+      if (snap.exists()) {
+        setOpenReadings(snap.data().openReadings || []);
+        setReflectReadings(snap.data().reflectReadings || []);
+      }
     });
     // Published metadata lives in settings/publishedReadings
     const unsub2 = onSnapshot(doc(db, 'settings', 'publishedReadings'), snap => {
@@ -108,6 +112,15 @@ function ReadingsTab() {
     });
     return () => { unsub1(); unsub2(); };
   }, []);
+
+  // Reflection mode: students see the whole class's positions and the writing
+  // box becomes a reflection box.
+  function toggleReflect(readingId) {
+    const current = new Set(reflectReadings);
+    current.has(readingId) ? current.delete(readingId) : current.add(readingId);
+    return run('Switching reflection mode', () =>
+      setDoc(doc(db, 'settings', 'global'), { reflectReadings: Array.from(current) }, { merge: true }));
+  }
 
   function toggleOpen(readingId) {
     const current = new Set(openReadings);
@@ -278,6 +291,7 @@ function ReadingsTab() {
           <tbody>
             {group.map((r, i) => {
               const isOpen    = openReadings.includes(r.id);
+              const isReflect = reflectReadings.includes(r.id);
               const meta      = publishMeta[r.id];
               const isPublished = !!meta;
               const isPub     = publishing[r.id];
@@ -329,6 +343,18 @@ function ReadingsTab() {
                       }}
                     >
                       {isOpen ? '● Open' : '○ Closed'}
+                    </button>
+                    <button
+                      onClick={() => toggleReflect(r.id)}
+                      className="block mt-1.5 text-xs font-semibold hover:opacity-80 transition-opacity px-3 py-1.5 rounded-full border"
+                      style={{
+                        color: isReflect ? 'var(--pg-primary)' : 'var(--pg-dim)',
+                        borderColor: isReflect ? 'var(--pg-primary)' : 'var(--pg-border)',
+                        backgroundColor: isReflect ? 'var(--pg-surface2)' : 'transparent',
+                      }}
+                      title="Show the class their classmates' positions and switch the writing box to a reflection"
+                    >
+                      {isReflect ? '◆ Reflecting' : '◇ Reflect'}
                     </button>
                   </td>
 
