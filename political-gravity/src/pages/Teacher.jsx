@@ -70,6 +70,17 @@ function ReadingsTab() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingReading, setEditingReading] = useState(null);
   const [actionErr, setActionErr] = useState(null);
+  const [collapsedEras, setCollapsedEras] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('pg-collapsed-eras') || '[]')); }
+    catch { return new Set(); }
+  });
+
+  function toggleEra(era) {
+    const next = new Set(collapsedEras);
+    next.has(era) ? next.delete(era) : next.add(era);
+    localStorage.setItem('pg-collapsed-eras', JSON.stringify([...next]));
+    setCollapsedEras(next);
+  }
 
   // Every write goes through this so a failure is visible instead of silent.
   // Permission errors in particular used to leave the button looking fine.
@@ -242,9 +253,19 @@ function ReadingsTab() {
       )}
 
       <div className="space-y-6">
-      {byEra(active).map(([era, group]) => (
+      {byEra(active).map(([era, group]) => {
+        const eraOpen = !collapsedEras.has(era);
+        return (
         <div key={era}>
-        <h2 className="font-display font-bold text-sm mb-2 px-1" style={{ color: 'var(--pg-muted)' }}>{era}</h2>
+        <button
+          onClick={() => toggleEra(era)}
+          className="font-display font-bold text-sm mb-2 px-1 hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--pg-muted)' }}
+        >
+          {eraOpen ? '▾' : '▸'} {era}
+          {!eraOpen && <span className="font-normal ml-2">({group.length})</span>}
+        </button>
+        {eraOpen && (
         <div style={cardStyle} className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -382,8 +403,10 @@ function ReadingsTab() {
           </tbody>
         </table>
         </div>
+        )}
         </div>
-      ))}
+        );
+      })}
       </div>
     </>
   );

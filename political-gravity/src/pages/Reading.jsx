@@ -27,6 +27,17 @@ export default function Reading() {
   const [extractedText, setExtractedText] = useState('');
   const readingPaneRef = useRef(null);
 
+  // Panel collapse state, remembered so a student's layout survives a reload.
+  const [spectrumOpen, setSpectrumOpen] = useState(
+    () => localStorage.getItem('pg-panel-spectrum') !== 'closed');
+  const [writingOpen, setWritingOpen] = useState(
+    () => localStorage.getItem('pg-panel-writing') !== 'closed');
+
+  const togglePanel = (which, open, setOpen) => {
+    localStorage.setItem(`pg-panel-${which}`, open ? 'closed' : 'open');
+    setOpen(!open);
+  };
+
   // Load published content from Firestore
   useEffect(() => {
     if (!id) return;
@@ -160,19 +171,25 @@ export default function Reading() {
           style={{ backgroundColor: 'var(--pg-surface)', borderBottom: '1px solid var(--pg-border)' }}
         >
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-baseline justify-between mb-2 gap-4">
-              <h2 className="font-display font-bold text-sm" style={{ color: 'var(--pg-text)' }}>
-                Where do you stand?
-              </h2>
+            <div className="flex items-baseline justify-between gap-4">
+              <button
+                onClick={() => togglePanel('spectrum', spectrumOpen, setSpectrumOpen)}
+                className="font-display font-bold text-sm hover:opacity-80 transition-opacity"
+                style={{ color: 'var(--pg-text)' }}
+                title={spectrumOpen ? 'Hide the spectrums' : 'Show the spectrums'}
+              >
+                {spectrumOpen ? '▾' : '▸'} Where do you stand?
+              </button>
               <p className="text-xs font-medium"
                 style={{ color: positionX === null || positionY === null ? 'var(--pg-primary)' : 'var(--pg-dim)' }}>
                 {positionX === null || positionY === null
                   ? 'Move both markers to record your position'
-                  : 'Drag either marker to adjust'}
+                  : `Economic ${positionX} · Political ${positionY}`}
               </p>
             </div>
 
-            <div className="flex flex-col">
+            {spectrumOpen && (
+            <div className="flex flex-col mt-2">
               <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
               <Spectrum value={positionX ?? 0} onChange={setPositionX} leftLabel={null} rightLabel={null} sublabels={[]} />
 
@@ -185,6 +202,7 @@ export default function Reading() {
               <Spectrum value={positionY ?? 0} onChange={setPositionY} leftLabel={null} rightLabel={null} sublabels={[]} />
               <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
             </div>
+            )}
 
           </div>
         </div>
@@ -286,16 +304,41 @@ export default function Reading() {
           )}
         </div>
 
-        {/* ── Right: justification ── */}
+        {/* ── Right: justification, collapsible to a rail ── */}
+        {!writingOpen ? (
+          <div
+            className="w-12 shrink-0 flex items-start justify-center pt-5"
+            style={{ backgroundColor: 'var(--pg-surface)', borderLeft: '1px solid var(--pg-border)' }}
+          >
+            <button
+              onClick={() => togglePanel('writing', writingOpen, setWritingOpen)}
+              className="text-xs font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+              style={{ color: 'var(--pg-text)', writingMode: 'vertical-rl' }}
+              title="Show the writing panel"
+            >
+              ◂ Justify your position
+            </button>
+          </div>
+        ) : (
         <div
           className="w-[26rem] shrink-0 flex flex-col overflow-y-auto p-6 gap-4"
           style={{ backgroundColor: 'var(--pg-surface)' }}
         >
           {/* Justification */}
           <div className="flex-1 flex flex-col">
-            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--pg-text)' }}>
-              Justify your position
-            </label>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <label className="block text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>
+                Justify your position
+              </label>
+              <button
+                onClick={() => togglePanel('writing', writingOpen, setWritingOpen)}
+                className="text-xs hover:opacity-100 opacity-60 transition-opacity"
+                style={{ color: 'var(--pg-text)' }}
+                title="Hide the writing panel and widen the reading"
+              >
+                ▸
+              </button>
+            </div>
             <p className="text-xs mb-3" style={{ color: 'var(--pg-dim)' }}>
               Use at least one piece of evidence from the reading to support your placement.
             </p>
@@ -338,6 +381,7 @@ export default function Reading() {
             {saved ? '✓ Saved!' : 'Save Position'}
           </button>
         </div>
+        )}
         </div>
       </div>
     </div>
