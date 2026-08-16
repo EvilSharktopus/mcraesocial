@@ -6,8 +6,10 @@ import NavBar from '../components/NavBar';
 import { useAuth } from '../auth/AuthContext';
 import { HANDOUT_URL, RUBRIC_URL } from '../data/pendulumReadings';
 import { useReadings } from '../hooks/useReadings';
+import { isGraded, totalFor } from '../data/rubric';
 
 const STATUS_CONFIG = {
+  'graded':      { label: 'Graded',       dot: '#60a5fa' },
   'submitted':   { label: 'Submitted',    dot: '#34d399' },
   'in-progress': { label: 'In Progress',  dot: '#fbbf24' },
   'not-started': { label: 'Not Started',  dot: 'var(--pg-border2)' },
@@ -20,6 +22,8 @@ export default function Dashboard() {
   // Reading ids this student has plotted / reflected on. null = not loaded yet.
   const [plotted,   setPlotted]   = useState(null);
   const [reflected, setReflected] = useState(null);
+  // readingId -> the teacher's rubric marks for this student
+  const [graded,    setGraded]    = useState(null);
   const { readings, loading } = useReadings();
 
   useEffect(() => {
@@ -48,12 +52,23 @@ export default function Dashboard() {
     );
     const unsubPlots       = sub('plots', setPlotted);
     const unsubReflections = sub('pg_reflections', setReflected);
-    return () => { unsubPlots(); unsubReflections(); };
+    // Marks stream in live, so a grade appears without the student reloading.
+    const unsubGrades = onSnapshot(
+      query(collection(db, 'pg_grades'), where('uid', '==', user.uid)),
+      snap => setGraded(Object.fromEntries(
+        snap.docs.map(d => [d.data().readingId, d.data()]))),
+      error => {
+        console.error('Error fetching grades:', error);
+        setGraded({});
+      },
+    );
+    return () => { unsubPlots(); unsubReflections(); unsubGrades(); };
   }, [user]);
 
   function statusFor(readingId) {
-    if (reflected?.has(readingId)) return 'submitted';
-    if (plotted?.has(readingId))   return 'in-progress';
+    if (isGraded(graded?.[readingId]))  return 'graded';
+    if (reflected?.has(readingId))      return 'submitted';
+    if (plotted?.has(readingId))        return 'in-progress';
     return 'not-started';
   }
 
@@ -67,7 +82,7 @@ export default function Dashboard() {
       return acc;
     }, {});
 
-  const isLoading = loading || openLoading || plotted === null || reflected === null;
+  const isLoading = loading || openLoading || plotted === null || reflected === null || graded === null;
   const hasOpenReadings = Object.keys(groupedReadings).length > 0;
 
   return (
@@ -125,7 +140,8 @@ export default function Dashboard() {
                 {readings.map((r) => {
                   const status  = statusFor(r.id);
                   const cfg     = STATUS_CONFIG[status];
-                  const canOpen = status !== 'submitted';
+                  const canOpen = status !== 'submitted' && status !== 'graded';
+                  const mark    = status === 'graded' ? totalFor(graded[r.id]) : null;
                   return (
                     <div
                       key={r.id}
@@ -142,6 +158,13 @@ export default function Dashboard() {
                           <span className="text-xs" style={{ color: 'var(--pg-muted)' }}>{cfg.label}</span>
                         </div>
                       </div>
+                      {mark !== null && (
+                        <div className="ml-auto mr-1 text-right shrink-0">
+                          <div className="font-display font-bold text-2xl leading-none" style={{ color: 'var(--pg-text)' }}>
+                            {mark}%
+                          </div>
+                        </div>
+                      )}
                       <Link
                         to={`/reading/${r.id}`}
                         className="shrink-0 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80"
@@ -150,7 +173,9 @@ export default function Dashboard() {
                           color: canOpen ? 'var(--pg-on-primary)' : 'var(--pg-dim)',
                         }}
                       >
-                        {status === 'submitted' ? 'Review' : status === 'in-progress' ? 'Continue' : 'Open'}
+                        {status === 'graded' || status === 'submitted'
+                          ? 'Review'
+                          : status === 'in-progress' ? 'Continue' : 'Open'}
                       </Link>
                     </div>
                   );

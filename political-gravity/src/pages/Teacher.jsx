@@ -7,6 +7,7 @@ import { collection, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/f
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
 import { PENDULUM_READINGS, positionLabel } from '../data/pendulumReadings';
+import { GRADE_SCALE, gradeKey, scoreOf, totalFor } from '../data/rubric';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 
 const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Settings'];
@@ -519,23 +520,7 @@ const GRADING_VIEWS = [
   { key: 'grades',         label: 'View grades' },
 ];
 
-// Five-band rubric, each band worth 20%.
-const GRADE_SCALE = [
-  { code: 'P',  score: 20,  name: 'Poor' },
-  { code: 'L',  score: 40,  name: 'Limited' },
-  { code: 'S',  score: 60,  name: 'Satisfactory' },
-  { code: 'Pf', score: 80,  name: 'Proficient' },
-  { code: 'E',  score: 100, name: 'Excellent' },
-];
 
-const scoreOf = (code) => GRADE_SCALE.find(g => g.code === code)?.score ?? 0;
-
-// Justification and reflection each carry half. Anything ungraded or never
-// submitted scores zero, so the total is always out of both halves.
-const totalFor = (grade) =>
-  Math.round((scoreOf(grade?.justification) + scoreOf(grade?.reflection)) / 2);
-
-const gradeKey = (uid, readingId) => `${uid}_${readingId}`;
 
 function GradingTab() {
   const { readings, loading } = useReadings();
