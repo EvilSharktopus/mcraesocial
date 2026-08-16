@@ -8,6 +8,7 @@ import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useReadings } from '../hooks/useReadings';
+import { positionLabel } from '../data/pendulumReadings';
 import { useAuth } from '../auth/AuthContext';
 
 export default function Reading() {
@@ -19,6 +20,10 @@ export default function Reading() {
   const [positionX,     setPositionX]     = useState(null);
   const [positionY,     setPositionY]     = useState(null);
   const [justification, setJustification] = useState('');
+  // Which spectrum(s) the student is placing themselves on.
+  const [axes,          setAxes]          = useState('economic'); // economic | political | both
+  // null = we have not looked yet, so the consensus prefill must wait.
+  const [hadSaved,      setHadSaved]      = useState(null);
   const [saved,         setSaved]         = useState(false);
   const [publishedHtml, setPublishedHtml] = useState(null); // null = still loading
   const [htmlLoading,   setHtmlLoading]   = useState(true);
@@ -70,9 +75,38 @@ export default function Reading() {
     };
   }, [publishedHtml]);
 
+  // Reload whatever this student already saved for this reading, so leaving
+  // and coming back shows their position and justification rather than a
+  // blank form.
+  useEffect(() => {
+    if (!user || !reading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'plots', `${user.uid}_${reading.id}`));
+        if (cancelled) return;
+        if (snap.exists()) {
+          const d = snap.data();
+          if (typeof d.positionX === 'number') setPositionX(d.positionX);
+          if (typeof d.positionY === 'number') setPositionY(d.positionY);
+          if (d.justification) setJustification(d.justification);
+          if (d.axes) setAxes(d.axes);
+          setHadSaved(true);
+        } else {
+          setHadSaved(false);
+        }
+      } catch (err) {
+        console.error('Could not load your saved position', err);
+        if (!cancelled) setHadSaved(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, reading]);
+
   // Load previous class consensus for initial spectrum position
   useEffect(() => {
     async function loadConsensus() {
+      if (hadSaved !== false) return;   // only seed a genuinely blank form
       if (!readings || readings.length === 0) return;
       const idx = readings.findIndex(r => r.id === id);
       if (idx > 0) {
@@ -88,18 +122,19 @@ export default function Reading() {
       }
     }
     loadConsensus();
-  }, [id, readings]);
+  }, [id, readings, hadSaved]);
 
   async function handleSave() {
-    if (positionX === null || positionY === null || !user) return;
+    if (!ready || !user) return;
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
     try {
       await setDoc(doc(db, 'plots', `${user.uid}_${reading.id}`), {
         uid: user.uid,
         readingId: reading.id,
-        positionX,
-        positionY,
+        positionX: needX ? positionX : null,
+        positionY: needY ? positionY : null,
+        axes,
         justification,
         updatedAt: serverTimestamp()
       }, { merge: true });
@@ -116,6 +151,14 @@ export default function Reading() {
       </div>
     );
   }
+
+  const needX = axes !== 'political';
+  const needY = axes !== 'economic';
+  const ready = (!needX || positionX !== null) && (!needY || positionY !== null);
+  const summary = !ready
+    ? (needX && needY ? 'Move both markers to record your position' : 'Move the marker to record your position')
+    : [needX && `Economic: ${positionLabel(positionX)}`, needY && `Political: ${positionLabel(positionY)}`]
+        .filter(Boolean).join('  ·  ');
 
   if (!reading) {
     return (
@@ -180,27 +223,51 @@ export default function Reading() {
               >
                 {spectrumOpen ? '▾' : '▸'} Where do you stand?
               </button>
-              <p className="text-xs font-medium"
-                style={{ color: positionX === null || positionY === null ? 'var(--pg-primary)' : 'var(--pg-dim)' }}>
-                {positionX === null || positionY === null
-                  ? 'Move both markers to record your position'
-                  : `Economic ${positionX} · Political ${positionY}`}
-              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  {[['economic','Economic'],['political','Political'],['both','Both']].map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setAxes(key)}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80"
+                      style={axes === key
+                        ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
+                        : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs font-medium"
+                  style={{ color: ready ? 'var(--pg-dim)' : 'var(--pg-primary)' }}>
+                  {summary}
+                </p>
+              </div>
             </div>
 
             {spectrumOpen && (
             <div className="flex flex-col mt-2">
-              <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
-              <Spectrum value={positionX ?? 0} onChange={setPositionX} leftLabel={null} rightLabel={null} sublabels={[]} />
+              {needX && (
+                <>
+                  <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
+                  <Spectrum value={positionX ?? 0} onChange={setPositionX} leftLabel={null} rightLabel={null} sublabels={[]} />
+                </>
+              )}
 
-              <div className="flex justify-between items-center my-1 px-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Collectivism</span>
-                <span className="text-[11px]" style={{ color: 'var(--pg-dim)' }}>◆</span>
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Individualism</span>
-              </div>
+              {needX && needY && (
+                <div className="flex justify-between items-center my-1 px-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Collectivism</span>
+                  <span className="text-[11px]" style={{ color: 'var(--pg-dim)' }}>◆</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Individualism</span>
+                </div>
+              )}
 
-              <Spectrum value={positionY ?? 0} onChange={setPositionY} leftLabel={null} rightLabel={null} sublabels={[]} />
-              <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
+              {needY && (
+                <>
+                  <Spectrum value={positionY ?? 0} onChange={setPositionY} leftLabel={null} rightLabel={null} sublabels={[]} />
+                  <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
+                </>
+              )}
             </div>
             )}
 
@@ -374,11 +441,11 @@ export default function Reading() {
           {/* Save */}
           <button
             onClick={handleSave}
-            disabled={positionX === null || positionY === null || !justification.trim()}
+            disabled={!ready || !justification.trim()}
             className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
             style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
           >
-            {saved ? '✓ Saved!' : 'Save Position'}
+            {saved ? '✓ Saved!' : hadSaved ? 'Update Position' : 'Save Position'}
           </button>
         </div>
         )}

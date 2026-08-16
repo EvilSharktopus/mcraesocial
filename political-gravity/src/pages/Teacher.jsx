@@ -6,7 +6,7 @@ import NavBar from '../components/NavBar';
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
-import { PENDULUM_READINGS } from '../data/pendulumReadings';
+import { PENDULUM_READINGS, positionLabel } from '../data/pendulumReadings';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 
 const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Settings'];
@@ -634,12 +634,16 @@ function GradingDetail({ view, sub }) {
   if (view === 'plots') {
     if (!sub.plot) return <p className="text-xs" style={dim}>No position plotted.</p>;
     const moved = sub.reflection && sub.reflection.newPosition !== sub.reflection.originalPosition;
+    const placed = [
+      typeof sub.plot.positionX === 'number' && `Economic: ${positionLabel(sub.plot.positionX)}`,
+      typeof sub.plot.positionY === 'number' && `Political: ${positionLabel(sub.plot.positionY)}`,
+    ].filter(Boolean);
     return (
       <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>
-        x {sub.plot.positionX} · y {sub.plot.positionY}
+        {placed.length ? placed.join('  ·  ') : 'No position plotted.'}
         {moved && (
           <span style={dim}>
-            {'  '}→ moved to x {sub.reflection.newPosition} on reflection
+            {'  '}→ moved to {positionLabel(sub.reflection.newPosition)} on reflection
           </span>
         )}
       </p>

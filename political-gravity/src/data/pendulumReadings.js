@@ -32,3 +32,19 @@ export const ARCHIVED_READINGS = [
   { id: '2022-2024', century: '21st Century', title: '2022 - 2024', url: 'https://docs.google.com/document/d/1Ifa_QCVY4iDVKbbjbh2bPyFd_MNpIxwRc-xm9WH4ajM/preview', archived: true },
   { id: '2024-2026', century: '21st Century', title: '2024 - 2026', url: 'https://docs.google.com/document/d/1WryHNvANuRKXVJlvMjfCWV1hEOY679mFsSjlpzTAkQs/preview', archived: true },
 ];
+
+// Spectrum bands. A raw -100..100 value means little on its own, so both the
+// teacher view and the student's own summary read as one of these.
+export const POSITION_BANDS = [
+  { max: -67, label: 'Extreme left' },
+  { max: -34, label: 'Moderate left' },
+  { max:   0, label: 'Centrist left' },
+  { max:  34, label: 'Centrist right' },
+  { max:  67, label: 'Moderate right' },
+  { max: 101, label: 'Extreme right' },
+];
+
+export function positionLabel(value) {
+  if (typeof value !== 'number') return null;
+  return POSITION_BANDS.find(b => value < b.max)?.label ?? 'Extreme right';
+}

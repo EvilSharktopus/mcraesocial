@@ -86,7 +86,7 @@ export default function StudyPackage() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
-      <NavBar />
+      <NavBar backTo="/dashboard" backLabel="Readings" />
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-10">
         <h1 className="font-display font-bold text-2xl mb-1" style={{ color: 'var(--pg-text)' }}>
