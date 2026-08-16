@@ -516,13 +516,33 @@ const GRADING_VIEWS = [
   { key: 'plots',          label: 'View plots' },
   { key: 'justifications', label: 'View justifications' },
   { key: 'reflections',    label: 'View reflections' },
+  { key: 'grades',         label: 'View grades' },
 ];
+
+// Five-band rubric, each band worth 20%.
+const GRADE_SCALE = [
+  { code: 'P',  score: 20,  name: 'Poor' },
+  { code: 'L',  score: 40,  name: 'Limited' },
+  { code: 'S',  score: 60,  name: 'Satisfactory' },
+  { code: 'Pf', score: 80,  name: 'Proficient' },
+  { code: 'E',  score: 100, name: 'Excellent' },
+];
+
+const scoreOf = (code) => GRADE_SCALE.find(g => g.code === code)?.score ?? 0;
+
+// Justification and reflection each carry half. Anything ungraded or never
+// submitted scores zero, so the total is always out of both halves.
+const totalFor = (grade) =>
+  Math.round((scoreOf(grade?.justification) + scoreOf(grade?.reflection)) / 2);
+
+const gradeKey = (uid, readingId) => `${uid}_${readingId}`;
 
 function GradingTab() {
   const { readings, loading } = useReadings();
   const [plots,       setPlots]       = useState(null);
   const [reflections, setReflections] = useState(null);
   const [users,       setUsers]       = useState({});
+  const [grades,      setGrades]      = useState({});
   const [expanded,    setExpanded]    = useState(null);   // reading id
   const [view,        setView]        = useState('plots');
 
@@ -536,13 +556,31 @@ function GradingTab() {
       s => setPlots(rows(s)), fail('plots', setPlots));
     const unsubReflections = onSnapshot(collection(db, 'pg_reflections'),
       s => setReflections(rows(s)), fail('pg_reflections', setReflections));
+    const unsubGrades = onSnapshot(collection(db, 'pg_grades'),
+      s => setGrades(Object.fromEntries(s.docs.map(d => [d.id, d.data()]))),
+      error => console.error('Error fetching grades:', error));
     const unsubUsers = onSnapshot(collection(db, 'users'),
       s => setUsers(Object.fromEntries(s.docs.map(d => [d.id, d.data()]))),
       error => console.error('Error fetching users:', error));
-    return () => { unsubPlots(); unsubReflections(); unsubUsers(); };
+    return () => { unsubPlots(); unsubReflections(); unsubGrades(); unsubUsers(); };
   }, []);
 
   const who = (uid) => users[uid]?.displayName || users[uid]?.email || uid;
+
+  // Clicking the band already set clears it, so a misclick is undoable.
+  async function setGrade(uid, readingId, field, code) {
+    const key = gradeKey(uid, readingId);
+    const next = grades[key]?.[field] === code ? null : code;
+    try {
+      await setDoc(doc(db, 'pg_grades', key),
+        { uid, readingId, [field]: next, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (err) {
+      console.error('Failed to save grade:', err);
+      alert(err.code === 'permission-denied'
+        ? 'Saving the grade was blocked by Firestore permissions — the pg_grades rule is missing.'
+        : `Failed to save grade: ${err.message}`);
+    }
+  }
 
   if (loading || plots === null || reflections === null) {
     return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading submissions…</div>;
@@ -637,10 +675,17 @@ function GradingTab() {
                       <div className="flex items-center justify-between gap-3 mb-1">
                         <span className="font-medium" style={{ color: 'var(--pg-text)' }}>{who(s.uid)}</span>
                         <span className="text-[11px] shrink-0" style={{ color: 'var(--pg-dim)' }}>
-                          {fmtTs((view === 'reflections' ? s.reflection : s.plot)?.updatedAt)}
+                          {view === 'grades'
+                            ? `${totalFor(grades[gradeKey(s.uid, r.id)])}%`
+                            : fmtTs((view === 'reflections' ? s.reflection : s.plot)?.updatedAt)}
                         </span>
                       </div>
-                      <GradingDetail view={view} sub={s} />
+                      <GradingDetail
+                        view={view}
+                        sub={s}
+                        grade={grades[gradeKey(s.uid, r.id)]}
+                        onGrade={(field, code) => setGrade(s.uid, r.id, field, code)}
+                      />
                     </div>
                   ))}
                 </div>
@@ -653,7 +698,31 @@ function GradingTab() {
   );
 }
 
-function GradingDetail({ view, sub }) {
+function RubricRow({ label, value, onPick }) {
+  return (
+    <div className="flex items-center gap-2 mt-2 flex-wrap">
+      <span className="text-[11px] w-20 shrink-0" style={{ color: 'var(--pg-dim)' }}>{label}</span>
+      {GRADE_SCALE.map(g => {
+        const on = value === g.code;
+        return (
+          <button
+            key={g.code}
+            onClick={() => onPick(g.code)}
+            title={`${g.name} — ${g.score}%`}
+            className="text-[11px] font-bold px-2 py-1 rounded-md transition-opacity hover:opacity-80 min-w-[2rem]"
+            style={on
+              ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
+              : { backgroundColor: 'var(--pg-bg)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+          >
+            {g.code}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function GradingDetail({ view, sub, grade, onGrade }) {
   const dim  = { color: 'var(--pg-dim)' };
   const body = { color: 'var(--pg-muted)', whiteSpace: 'pre-wrap' };
 
@@ -677,14 +746,46 @@ function GradingDetail({ view, sub }) {
   }
 
   if (view === 'justifications') {
-    return sub.plot?.justification
-      ? <p className="text-xs" style={body}>{sub.plot.justification}</p>
-      : <p className="text-xs" style={dim}>No justification written.</p>;
+    return (
+      <>
+        {sub.plot?.justification
+          ? <p className="text-xs" style={body}>{sub.plot.justification}</p>
+          : <p className="text-xs" style={dim}>No justification written.</p>}
+        <RubricRow label="Justification" value={grade?.justification}
+          onPick={code => onGrade('justification', code)} />
+      </>
+    );
   }
 
-  return sub.reflection?.reflection
-    ? <p className="text-xs" style={body}>{sub.reflection.reflection}</p>
-    : <p className="text-xs" style={dim}>No reflection submitted.</p>;
+  if (view === 'reflections') {
+    return (
+      <>
+        {sub.reflection?.reflection
+          ? <p className="text-xs" style={body}>{sub.reflection.reflection}</p>
+          : <p className="text-xs" style={dim}>No reflection submitted.</p>}
+        <RubricRow label="Reflection" value={grade?.reflection}
+          onPick={code => onGrade('reflection', code)} />
+      </>
+    );
+  }
+
+  // grades — the two halves and what they add up to
+  const j = grade?.justification;
+  const f = grade?.reflection;
+  const part = (code, missing) => code
+    ? `${code} (${scoreOf(code)})`
+    : missing;
+  return (
+    <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>
+      Justification {part(j, sub.plot?.justification ? 'ungraded (0)' : 'not submitted (0)')}
+      {'  +  '}
+      Reflection {part(f, sub.reflection?.reflection ? 'ungraded (0)' : 'not submitted (0)')}
+      {'  =  '}
+      <span style={{ color: 'var(--pg-text)', fontWeight: 600 }}>
+        {scoreOf(j) + scoreOf(f)} ÷ 2 = {totalFor(grade)}%
+      </span>
+    </p>
+  );
 }
 
 function SettingsTab({ userEmail }) {
