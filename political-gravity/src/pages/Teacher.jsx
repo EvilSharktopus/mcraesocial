@@ -9,7 +9,7 @@ import { useReadings } from '../hooks/useReadings';
 import { PENDULUM_READINGS } from '../data/pendulumReadings';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 
-const NAV_TABS = ['Readings', 'Archive', 'Classes', 'Grading', 'Settings'];
+const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Settings'];
 
 const ERA_ORDER = ['1700s', '1800s', '1900s', '2000s'];
 
@@ -24,10 +24,6 @@ function byEra(list) {
   return [...groups].filter(([, rs]) => rs.length > 0);
 }
 
-const PLACEHOLDER_CLASSES = [
-  { code: 'SS30-A', name: 'Social Studies 30-1 — Block A', students: 24 },
-  { code: 'SS30-B', name: 'Social Studies 30-1 — Block B', students: 21 },
-];
 
 // ── Shared table/card styles ────────────────────────────────────────────────
 
@@ -437,37 +433,6 @@ function ArchiveTab() {
   );
 }
 
-function ClassesTab() {
-  return (
-    <>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>Classes</h1>
-        <button className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity" style={btnPrimary}>
-          + New Class
-        </button>
-      </div>
-      <div className="space-y-3">
-        {PLACEHOLDER_CLASSES.map(c => (
-          <div key={c.code} className="rounded-2xl p-5 flex items-center justify-between gap-4" style={cardStyle}>
-            <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--pg-dim)' }}>
-                Code: <code style={{ color: 'var(--pg-primary)' }}>{c.code}</code>
-              </p>
-              <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>{c.name}</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--pg-muted)' }}>{c.students} students</p>
-            </div>
-            <div className="flex gap-2">
-              {['View roster', 'Assign reading'].map(label => (
-                <button key={label} className="text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity" style={btnGhost}>{label}</button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
 const DESK_SUBMIT_BASE = 'https://desk.mcraesocial.com/submit';
 
 const GRADING_VIEWS = [
@@ -721,7 +686,6 @@ export default function Teacher() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
         {activeTab === 'Readings' && <ReadingsTab />}
         {activeTab === 'Archive'  && <ArchiveTab />}
-        {activeTab === 'Classes'  && <ClassesTab />}
         {activeTab === 'Grading'  && <GradingTab />}
         {activeTab === 'Settings' && <SettingsTab userEmail={user?.email} />}
       </main>
