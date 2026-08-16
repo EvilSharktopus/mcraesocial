@@ -69,6 +69,23 @@ function ReadingsTab() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingReading, setEditingReading] = useState(null);
+  const [actionErr, setActionErr] = useState(null);
+
+  // Every write goes through this so a failure is visible instead of silent.
+  // Permission errors in particular used to leave the button looking fine.
+  async function run(what, fn) {
+    try {
+      setActionErr(null);
+      await fn();
+    } catch (err) {
+      console.error(`${what} failed:`, err);
+      setActionErr(
+        err.code === 'permission-denied'
+          ? `${what} was blocked by Firestore permissions. The security rules need updating for this collection.`
+          : `${what} failed: ${err.message}`
+      );
+    }
+  }
 
   useEffect(() => {
     const unsub1 = onSnapshot(doc(db, 'settings', 'global'), snap => {
@@ -81,10 +98,11 @@ function ReadingsTab() {
     return () => { unsub1(); unsub2(); };
   }, []);
 
-  async function toggleOpen(readingId) {
+  function toggleOpen(readingId) {
     const current = new Set(openReadings);
     current.has(readingId) ? current.delete(readingId) : current.add(readingId);
-    await setDoc(doc(db, 'settings', 'global'), { openReadings: Array.from(current) }, { merge: true });
+    return run('Opening or closing the time period', () =>
+      setDoc(doc(db, 'settings', 'global'), { openReadings: Array.from(current) }, { merge: true }));
   }
 
   async function publishReading(r) {
@@ -130,14 +148,16 @@ function ReadingsTab() {
       const newId = 'r' + (readings.length > 0 ? Math.max(...readings.map(r => parseInt(r.id.replace('r','')) || 0)) + 1 : 1);
       newReadings.push({ id: newId, ...data });
     }
-    await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
+    await run('Saving the time period', () =>
+      setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true }));
     setEditorOpen(false);
   }
 
   async function handleDeleteReading(id) {
     if (!confirm('Are you sure you want to delete this time period?')) return;
     const newReadings = readings.filter(r => r.id !== id);
-    await setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true });
+    await run('Deleting the time period', () =>
+      setDoc(doc(db, 'settings', 'masterReadings'), { readings: newReadings }, { merge: true }));
   }
 
   // Replace the live list with the standard 14, keeping any doc URL already set
@@ -160,7 +180,7 @@ function ReadingsTab() {
       .filter(r => !standardIds.has(r.id))
       .map(r => ({ ...r, archived: true }));
 
-    await saveReadings([...standard, ...leftovers]);
+    await run('Loading the standard list', () => saveReadings([...standard, ...leftovers]));
   }
 
   if (loading) {
@@ -196,6 +216,14 @@ function ReadingsTab() {
           </button>
         </div>
       </div>
+
+      {actionErr && (
+        <div className="rounded-2xl p-4 mb-4 text-sm flex items-start justify-between gap-4"
+          style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid #ef4444', color: 'var(--pg-text)' }}>
+          <span>⚠ {actionErr}</span>
+          <button onClick={() => setActionErr(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
 
       <ReadingEditorModal 
         isOpen={editorOpen} 
@@ -308,7 +336,7 @@ function ReadingsTab() {
                       </button>
 
                       <button
-                        onClick={() => setArchived(readings, r.id, true)}
+                        onClick={() => run('Archiving the time period', () => setArchived(readings, r.id, true))}
                         className="text-xs hover:opacity-80 transition-opacity font-semibold"
                         style={{ color: 'var(--pg-muted)' }}
                         title="Move to the Archive tab — hidden from students, not deleted"

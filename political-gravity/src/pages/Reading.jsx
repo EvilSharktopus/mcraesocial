@@ -152,7 +152,45 @@ export default function Reading() {
         readingTitle={reading.title}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* ── Top: both spectrums, spanning the full width ── */}
+        <div
+          className="shrink-0 px-6 py-3"
+          style={{ backgroundColor: 'var(--pg-surface)', borderBottom: '1px solid var(--pg-border)' }}
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-baseline justify-between mb-2 gap-4">
+              <h2 className="font-display font-bold text-sm" style={{ color: 'var(--pg-text)' }}>
+                Where do you stand?
+              </h2>
+              <p className="text-xs font-medium"
+                style={{ color: positionX === null || positionY === null ? 'var(--pg-primary)' : 'var(--pg-dim)' }}>
+                {positionX === null || positionY === null
+                  ? 'Move both markers to record your position'
+                  : 'Drag either marker to adjust'}
+              </p>
+            </div>
+
+            <div className="flex flex-col">
+              <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
+              <Spectrum value={positionX ?? 0} onChange={setPositionX} leftLabel={null} rightLabel={null} sublabels={[]} />
+
+              <div className="flex justify-between items-center my-1 px-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Collectivism</span>
+                <span className="text-[11px]" style={{ color: 'var(--pg-dim)' }}>◆</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Individualism</span>
+              </div>
+
+              <Spectrum value={positionY ?? 0} onChange={setPositionY} leftLabel={null} rightLabel={null} sublabels={[]} />
+              <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── Below: reading on the left, writing on the right ── */}
+        <div className="flex-1 flex overflow-hidden">
         {/* ── Left: Reading pane ── */}
         <div
           className="flex-1 overflow-hidden flex flex-col"
@@ -248,52 +286,11 @@ export default function Reading() {
           )}
         </div>
 
-        {/* ── Right: dual spectrums + justification ── */}
+        {/* ── Right: justification ── */}
         <div
-          className="w-96 shrink-0 flex flex-col overflow-y-auto p-6 gap-6"
+          className="w-[26rem] shrink-0 flex flex-col overflow-y-auto p-6 gap-4"
           style={{ backgroundColor: 'var(--pg-surface)' }}
         >
-          <div>
-            <h2 className="font-display font-bold text-lg mb-1" style={{ color: 'var(--pg-text)' }}>
-              Where do you stand?
-            </h2>
-            <p className="text-xs mb-5" style={{ color: 'var(--pg-dim)' }}>
-              Drag the markers to place your position on both spectrums.
-            </p>
-
-            <div className="flex flex-col">
-              <h3 className="text-center font-bold text-xs mb-2 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
-              <Spectrum
-                value={positionX ?? 0}
-                onChange={setPositionX}
-                leftLabel={null}
-                rightLabel={null}
-                sublabels={[]}
-              />
-
-              <div className="flex justify-between items-center my-3 px-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Collectivism</span>
-                <span className="text-[11px]" style={{ color: 'var(--pg-dim)' }}>◆</span>
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Individualism</span>
-              </div>
-
-              <Spectrum
-                value={positionY ?? 0}
-                onChange={setPositionY}
-                leftLabel={null}
-                rightLabel={null}
-                sublabels={[]}
-              />
-              <h3 className="text-center font-bold text-xs mt-2 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
-            </div>
-
-            {(positionX === null || positionY === null) && (
-              <p className="text-xs text-center mt-4 font-medium" style={{ color: 'var(--pg-primary)' }}>
-                Move both markers to record your position
-              </p>
-            )}
-          </div>
-
           {/* Justification */}
           <div className="flex-1 flex flex-col">
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--pg-text)' }}>
@@ -340,6 +337,7 @@ export default function Reading() {
           >
             {saved ? '✓ Saved!' : 'Save Position'}
           </button>
+        </div>
         </div>
       </div>
     </div>
