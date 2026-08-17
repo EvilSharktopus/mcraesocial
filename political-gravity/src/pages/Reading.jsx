@@ -159,8 +159,11 @@ export default function Reading() {
         if (snap.exists()) {
           const data = snap.data();
           if (data[prevId]) {
-            setPositionX(data[prevId].x);
-            setPositionY(data[prevId].y);
+            // The seminar consensus is a single value now, so only seed what is
+            // actually there — writing undefined would break the "has the
+            // student placed themselves yet" checks.
+            if (typeof data[prevId].x === 'number') setPositionX(data[prevId].x);
+            if (typeof data[prevId].y === 'number') setPositionY(data[prevId].y);
           }
         }
       }

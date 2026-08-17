@@ -3,7 +3,7 @@
 // as they move during discussion. Projection mode strips the page back to just
 // the spectrums at a size that reads from the back of a classroom.
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { collection, doc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
@@ -14,11 +14,8 @@ import { positionLabel } from '../data/pendulumReadings';
 // One dot per student, stacked upward where positions collide. Everything is
 // measured from the groove rather than from a percentage of the box, so tall
 // stacks cannot drift up over the heading.
-function SeminarSpectrum({ students, axis, showNames, big }) {
-  const key = axis === 'x' ? 'X' : 'Y';
-  const placed = students
-    .map(s => ({ ...s, to: s[`to${key}`], from: s[`from${key}`] }))
-    .filter(s => typeof s.to === 'number');
+function SeminarSpectrum({ students, showNames, big }) {
+  const placed = students.filter(s => typeof s.to === 'number');
 
   const dot     = big ? 22 : 14;
   // A tier has to clear the dot plus the name chip above it, or a chip lands on
@@ -137,6 +134,7 @@ function SeminarSpectrum({ students, axis, showNames, big }) {
 
 export default function Seminar() {
   const { id } = useParams();
+  const [params] = useSearchParams();
   const { readings } = useReadings();
   const reading = readings.find(r => r.id === id);
 
@@ -144,12 +142,12 @@ export default function Seminar() {
   const [reflections, setReflections] = useState([]);
   const [users,       setUsers]       = useState({});
 
-  const [projecting, setProjecting] = useState(false);
+  // ?project=1 comes from the Project button on the Readings tab, so the board
+  // opens ready for the screen instead of needing a click on the projector.
+  const [projecting, setProjecting] = useState(params.get('project') === '1');
   const [showNames,  setShowNames]  = useState(false);
-  const [axis,       setAxis]       = useState('both');   // economic | political | both
 
   const [consensusX, setConsensusX] = useState(0);
-  const [consensusY, setConsensusY] = useState(0);
   const [saved,      setSaved]      = useState(false);
   const [saveErr,    setSaveErr]    = useState(null);
 
@@ -169,35 +167,36 @@ export default function Seminar() {
     return () => { unsubPlots(); unsubRefl(); unsubUsers(); };
   }, [id]);
 
-  // A student's current position is where they moved to if they have moved,
-  // otherwise where they first placed themselves.
+  // One dot per student on one spectrum. Whether they labelled their placement
+  // economic or political does not matter here — the board shows where the room
+  // sits, so take whichever value they actually placed.
   const students = useMemo(() => {
     const moves = new Map(reflections.filter(r => r.uid).map(r => [r.uid, r]));
+    const pick = (a, b) => (typeof a === 'number' ? a : b);
     return plots.filter(p => p.uid).map(p => {
       const m = moves.get(p.uid);
-      const toX = typeof m?.newPositionX === 'number' ? m.newPositionX : p.positionX;
-      const toY = typeof m?.newPositionY === 'number' ? m.newPositionY : p.positionY;
-      const moved =
-        (typeof toX === 'number' && typeof p.positionX === 'number' && toX !== p.positionX) ||
-        (typeof toY === 'number' && typeof p.positionY === 'number' && toY !== p.positionY);
+      const from = pick(p.positionX, p.positionY);
+      const to = pick(
+        typeof m?.newPositionX === 'number' ? m.newPositionX : undefined,
+        typeof m?.newPositionY === 'number' ? m.newPositionY : from,
+      );
       return {
         uid: p.uid,
         name: users[p.uid]?.displayName || users[p.uid]?.email || 'Student',
-        fromX: p.positionX, fromY: p.positionY,
-        toX, toY, moved,
+        from,
+        to,
+        moved: typeof to === 'number' && typeof from === 'number' && to !== from,
       };
     });
   }, [plots, reflections, users]);
 
   const movedCount = students.filter(s => s.moved).length;
-  const showX = axis !== 'political';
-  const showY = axis !== 'economic';
 
   async function saveConsensus() {
     try {
       setSaveErr(null);
       await setDoc(doc(db, 'settings', 'consensus'),
-        { [id]: { x: consensusX, y: consensusY } }, { merge: true });
+        { [id]: { x: consensusX } }, { merge: true });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -227,7 +226,7 @@ export default function Seminar() {
         />
       )}
 
-      <main className={`flex-1 w-full mx-auto flex flex-col ${projecting ? 'max-w-none px-10 py-8 gap-8' : 'max-w-4xl px-5 py-8 gap-8'}`}>
+      <main className={`flex-1 w-full mx-auto flex flex-col ${projecting ? 'max-w-none px-10 py-8 gap-8 justify-center' : 'max-w-4xl px-5 py-8 gap-8'}`}>
 
         {/* ── Header + controls ── */}
         <div className="flex items-end justify-between gap-6 flex-wrap">
@@ -245,18 +244,6 @@ export default function Seminar() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {[['economic', 'Economic'], ['political', 'Political'], ['both', 'Both']].map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => setAxis(k)}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                style={axis === k
-                  ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
-                  : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
-              >
-                {label}
-              </button>
-            ))}
             <button
               onClick={() => setShowNames(v => !v)}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
@@ -292,34 +279,12 @@ export default function Seminar() {
             </p>
           ) : (
             <>
-              {showX && (
-                <>
-                  <h3
-                    className="text-center font-bold uppercase tracking-wide"
-                    style={{ color: 'var(--pg-text)', fontSize: projecting ? '1rem' : '0.75rem' }}
-                  >
-                    Economic Spectrum
-                  </h3>
-                  <SeminarSpectrum students={students} axis="x" showNames={showNames} big={projecting} />
-                </>
-              )}
+              <SeminarSpectrum students={students} showNames={showNames} big={projecting} />
 
-              <div className="flex justify-between items-center px-1" style={{ margin: projecting ? '1rem 0 2rem' : '0.5rem 0 1.5rem' }}>
-                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '0.9rem' : '0.7rem' }}>Collectivism</span>
-                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '0.9rem' : '0.7rem' }}>Individualism</span>
+              <div className="flex justify-between items-center px-1" style={{ marginTop: projecting ? '0.5rem' : '0.25rem' }}>
+                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '1.05rem' : '0.7rem' }}>Left</span>
+                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '1.05rem' : '0.7rem' }}>Right</span>
               </div>
-
-              {showY && (
-                <>
-                  <h3
-                    className="text-center font-bold uppercase tracking-wide"
-                    style={{ color: 'var(--pg-text)', fontSize: projecting ? '1rem' : '0.75rem' }}
-                  >
-                    Political Spectrum
-                  </h3>
-                  <SeminarSpectrum students={students} axis="y" showNames={showNames} big={projecting} />
-                </>
-              )}
 
               {movedCount > 0 && (
                 <p className="text-center mt-4" style={{ color: 'var(--pg-dim)', fontSize: projecting ? '0.95rem' : '0.7rem' }}>
@@ -353,17 +318,13 @@ export default function Seminar() {
               <p className="text-xs mb-3" style={{ color: '#ef4444' }}>⚠ {saveErr}</p>
             )}
 
-            <h3 className="text-center font-bold text-xs mb-2 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
-            <Spectrum value={consensusX} onChange={setConsensusX} leftLabel={null} rightLabel={null} sublabels={[]} showValue={false} />
+            <Spectrum value={consensusX} onChange={setConsensusX} leftLabel={null} rightLabel={null} sublabels={[]} showValue />
 
-            <div className="flex justify-between items-center my-3 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Collectivism</span>
-              <span className="text-[11px]" style={{ color: 'var(--pg-dim)' }}>◆</span>
-              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Individualism</span>
+            <div className="flex justify-between items-center mt-1 px-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Left</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Right</span>
             </div>
 
-            <Spectrum value={consensusY} onChange={setConsensusY} leftLabel={null} rightLabel={null} sublabels={[]} showValue={false} />
-            <h3 className="text-center font-bold text-xs mt-2 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
           </div>
         )}
       </main>

@@ -422,6 +422,17 @@ function ReadingsTab() {
                       >
                         Seminar
                       </Link>
+
+                      <Link
+                        to={`/seminar/${r.id}?project=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+                        title="Open the class board full size in a new tab, ready for the projector"
+                      >
+                        📽 Project
+                      </Link>
                     </div>
                   </td>
                 </tr>
