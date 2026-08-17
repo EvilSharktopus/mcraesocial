@@ -9,6 +9,9 @@ import Spectrum from '../components/Spectrum';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useReadings } from '../hooks/useReadings';
 import { positionLabel } from '../data/pendulumReadings';
+
+const needXAxis = (axes) => axes !== 'political';
+const needYAxis = (axes) => axes !== 'economic';
 import { useAuth } from '../auth/AuthContext';
 
 export default function Reading() {
@@ -222,6 +225,12 @@ export default function Reading() {
   const classDotsY = classPlots
     .filter(p => p.uid !== user?.uid && typeof p.positionY === 'number')
     .map(p => ({ value: p.positionY, label: 'Classmate' }));
+
+  // During a live seminar a student should be able to move their point on the
+  // strength of the discussion, without having to write the reflection first.
+  const movedX = needXAxis(axes) && typeof savedPlot?.positionX === 'number' && positionX !== savedPlot.positionX;
+  const movedY = needYAxis(axes) && typeof savedPlot?.positionY === 'number' && positionY !== savedPlot.positionY;
+  const hasMoved = movedX || movedY;
 
   const needX = axes !== 'political';
   const needY = axes !== 'economic';
@@ -529,11 +538,14 @@ export default function Reading() {
           {reflectMode ? (
             <button
               onClick={handleSaveReflection}
-              disabled={!reflection.trim()}
+              disabled={!reflection.trim() && !hasMoved}
               className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
               style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+              title="Your new position shows on the class board as soon as you save"
             >
-              {reflectionSaved ? '✓ Saved!' : 'Save Reflection'}
+              {reflectionSaved
+                ? '✓ Saved!'
+                : reflection.trim() ? 'Save Reflection' : 'Save New Position'}
             </button>
           ) : (
             <button

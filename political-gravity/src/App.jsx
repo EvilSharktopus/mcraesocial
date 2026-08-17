@@ -40,7 +40,7 @@ export default function App() {
               <Route path="/reading/:id"   element={<ProtectedRoute role="student"><Reading /></ProtectedRoute>} />
               <Route path="/study-package" element={<ProtectedRoute role="student"><StudyPackage /></ProtectedRoute>} />
               <Route path="/teacher"       element={<ProtectedRoute role="teacher"><Teacher /></ProtectedRoute>} />
-              <Route path="/seminar/:id"   element={<ProtectedRoute><Seminar /></ProtectedRoute>} />
+              <Route path="/seminar/:id"   element={<ProtectedRoute role="teacher"><Seminar /></ProtectedRoute>} />
               <Route path="*"              element={<Navigate to="/" replace />} />
             </Routes>
           </AuthProvider>
