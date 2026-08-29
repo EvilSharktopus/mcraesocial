@@ -852,6 +852,32 @@ body {
   flex-wrap: wrap;
 }
 
+/* Political Gravity row — the logo itself is the link to the project */
+.assignment-block--pg .assignment-block__label {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.assignment-block--pg .pg-link {
+  display: block;
+  flex-shrink: 0;
+  line-height: 0;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+}
+
+.assignment-block--pg .pg-link:hover {
+  border-color: var(--accent);
+}
+
+.assignment-block--pg .pg-logo {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+}
+
 
 /* â”€â”€ PDF Thumbnail Tile â”€â”€ */
 
