@@ -562,6 +562,22 @@ body {
   background: rgba(123, 143, 181, 0.05);
 }
 
+/* Logo links: shrink the anchor to the image so only the image is clickable */
+.home-grid-3 .utility-btn--logo {
+  padding: 0 !important;
+  border: none !important;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: center;
+  align-self: center;
+  line-height: 0;
+}
+
+.home-grid-3 .utility-btn--logo picture,
+.home-grid-3 .utility-btn--logo .utility-logo-img {
+  display: block;
+}
+
 .split-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
