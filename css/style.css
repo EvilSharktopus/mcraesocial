@@ -578,6 +578,14 @@ body {
   display: block;
 }
 
+/* The Desk wordmark is a narrower image than the Nationalism one. Widen its
+   link to match and fill the gap with bars in the logo's own near-black, so
+   the two read as the same size and the bars stay inside the click target. */
+.home-grid-3 .utility-btn--desk {
+  width: 180px;
+  background: #060606 !important;
+}
+
 .split-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
