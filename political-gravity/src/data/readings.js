@@ -1,7 +1,7 @@
 export const HANDOUT_URL = 'https://docs.google.com/document/d/1WUT8stleZ05QU-Xtw9brweKWBDkV3Aw7cTMSeZ_O3fo/preview';
 export const RUBRIC_URL = 'https://docs.google.com/document/d/1NRBhYnGlpOh8JExhIAu76EetO8BFQ2gfDJAQKvvMIoI/preview';
 
-export const PENDULUM_READINGS = [
+export const STANDARD_READINGS = [
   // 1700s
   { id: '1700-1725', century: '1700s', title: '1700–1725', url: 'https://docs.google.com/document/d/1CxrMoXRj8wcPQAm4MEANORWKs_UxZo8p420xr5DW0Gw/preview' },
   { id: '1750-1800', century: '1700s', title: '1750–1800', url: 'https://docs.google.com/document/d/1BCi1c3B_nNpGoFmZE0VMPo_mi5istM5ZtBg7ttHOsEM/preview' },

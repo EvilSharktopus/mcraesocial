@@ -9,7 +9,7 @@ import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import { useReadings } from '../hooks/useReadings';
-import { positionLabel } from '../data/pendulumReadings';
+import { positionLabel } from '../data/readings';
 
 // One dot per student, stacked upward where positions collide. Everything is
 // measured from the groove rather than from a percentage of the box, so tall

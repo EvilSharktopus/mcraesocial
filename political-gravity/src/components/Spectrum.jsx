@@ -9,7 +9,7 @@
 // showValue:   show numeric readout (default true)
 
 import { useRef, useState, useCallback } from 'react';
-import { positionLabel } from '../data/pendulumReadings';
+import { positionLabel } from '../data/readings';
 
 const SNAP_THRESHOLD = 6; // snap to center if within this many units
 

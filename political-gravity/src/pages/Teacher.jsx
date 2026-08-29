@@ -6,7 +6,7 @@ import NavBar from '../components/NavBar';
 import { collection, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
-import { PENDULUM_READINGS, positionLabel } from '../data/pendulumReadings';
+import { STANDARD_READINGS, positionLabel } from '../data/readings';
 import { GRADE_SCALE, gradeKey, scoreOf, totalFor } from '../data/rubric';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 
@@ -189,13 +189,13 @@ function ReadingsTab() {
   // for a matching id and archiving whatever is left over.
   async function applyStandardList() {
     if (!confirm(
-      `Set the reading list to the standard ${PENDULUM_READINGS.length} time periods?\n\n` +
+      `Set the reading list to the standard ${STANDARD_READINGS.length} time periods?\n\n` +
       'Time periods you have added that are not on the standard list are moved to ' +
       'the Archive tab, not deleted. Student work is not affected.'
     )) return;
 
     const existing = new Map(readings.map(r => [r.id, r]));
-    const standard = PENDULUM_READINGS.map(std => ({
+    const standard = STANDARD_READINGS.map(std => ({
       ...std,
       url: existing.get(std.id)?.url || std.url,
       archived: false,
@@ -261,7 +261,7 @@ function ReadingsTab() {
         <div style={cardStyle} className="p-6 text-center">
           <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>No time periods yet</p>
           <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
-            Use <strong>Load standard list</strong> above to add the standard {PENDULUM_READINGS.length} time periods.
+            Use <strong>Load standard list</strong> above to add the standard {STANDARD_READINGS.length} time periods.
           </p>
         </div>
       )}

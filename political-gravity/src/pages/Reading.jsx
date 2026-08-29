@@ -8,7 +8,7 @@ import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useReadings } from '../hooks/useReadings';
-import { positionLabel } from '../data/pendulumReadings';
+import { positionLabel } from '../data/readings';
 
 const needXAxis = (axes) => axes !== 'political';
 const needYAxis = (axes) => axes !== 'economic';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { PENDULUM_READINGS as HARDCODED_READINGS } from '../data/pendulumReadings';
+import { STANDARD_READINGS as HARDCODED_READINGS } from '../data/readings';
 
 export function useReadings() {
   const [readings, setReadings] = useState(HARDCODED_READINGS);

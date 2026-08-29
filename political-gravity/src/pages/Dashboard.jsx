@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import { useAuth } from '../auth/AuthContext';
-import { HANDOUT_URL, RUBRIC_URL } from '../data/pendulumReadings';
+import { HANDOUT_URL, RUBRIC_URL } from '../data/readings';
 import { useReadings } from '../hooks/useReadings';
 import { isGraded, totalFor } from '../data/rubric';
 
@@ -91,7 +91,7 @@ export default function Dashboard() {
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-10">
         <h1 className="font-display font-bold text-2xl mb-1" style={{ color: 'var(--pg-text)' }}>
-          Pendulum of Ideology
+          Political Gravity
         </h1>
         <p className="text-sm mb-8" style={{ color: 'var(--pg-dim)' }}>
           Social Studies 30 &nbsp;·&nbsp; Yearlong Project
