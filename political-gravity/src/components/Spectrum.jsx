@@ -9,9 +9,7 @@
 // showValue:   show numeric readout (default true)
 
 import { useRef, useState, useCallback } from 'react';
-import { positionLabel } from '../data/readings';
-
-const SNAP_THRESHOLD = 6; // snap to center if within this many units
+import { NO_POSITION, positionLabel } from '../data/readings';
 
 function clamp(val, min, max) {
   return Math.max(min, Math.min(max, val));
@@ -42,9 +40,9 @@ export default function Spectrum({
     const rect = trackRef.current?.getBoundingClientRect();
     if (!rect || rect.width === 0) return 0;
     const x = clamp(clientX - rect.left, 0, rect.width);
-    let raw = Math.round((x / rect.width) * 200 - 100);
-    // Snap to center
-    if (Math.abs(raw) <= SNAP_THRESHOLD) raw = 0;
+    const raw = Math.round((x / rect.width) * 200 - 100);
+    // No snapping to centre: centre means "no position", so a student nudging
+    // one unit off it must keep that unit.
     return clamp(raw, -100, 100);
   }, []);
 
@@ -86,7 +84,7 @@ export default function Spectrum({
   const fillWidth = Math.abs(pct - 50);
 
   // Readable label — the same band names the teacher sees when marking
-  const readout = positionLabel(value) ?? 'Center';
+  const readout = positionLabel(value) ?? NO_POSITION;
 
   return (
     <div className="select-none w-full">

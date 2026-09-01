@@ -44,7 +44,15 @@ export const POSITION_BANDS = [
   { max: 101, label: 'Extreme right' },
 ];
 
+// Dead centre is not a placement: a student has to come down on one side or
+// the other, so 0 reads as "No position" everywhere it is shown.
+export const NO_POSITION = 'No position';
+
 export function positionLabel(value) {
   if (typeof value !== 'number') return null;
+  if (value === 0) return NO_POSITION;
   return POSITION_BANDS.find(b => value < b.max)?.label ?? 'Extreme right';
 }
+
+// A placement counts only once it is off centre.
+export const hasPosition = (value) => typeof value === 'number' && value !== 0;

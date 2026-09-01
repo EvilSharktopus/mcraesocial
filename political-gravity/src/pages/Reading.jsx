@@ -10,7 +10,7 @@ import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useSpeech } from '../hooks/useSpeech';
 import { useTheme } from '../context/ThemeContext';
 import { useReadings } from '../hooks/useReadings';
-import { positionLabel } from '../data/readings';
+import { hasPosition, positionLabel } from '../data/readings';
 
 const needXAxis = (axes) => axes !== 'political';
 const needYAxis = (axes) => axes !== 'economic';
@@ -282,15 +282,17 @@ export default function Reading() {
 
   // During a live seminar a student should be able to move their point on the
   // strength of the discussion, without having to write the reflection first.
-  const movedX = needXAxis(axes) && typeof savedPlot?.positionX === 'number' && positionX !== savedPlot.positionX;
-  const movedY = needYAxis(axes) && typeof savedPlot?.positionY === 'number' && positionY !== savedPlot.positionY;
+  const movedX = needXAxis(axes) && hasPosition(savedPlot?.positionX) && positionX !== savedPlot.positionX;
+  const movedY = needYAxis(axes) && hasPosition(savedPlot?.positionY) && positionY !== savedPlot.positionY;
   const hasMoved = movedX || movedY;
 
   const needX = axes !== 'political';
   const needY = axes !== 'economic';
-  const ready = (!needX || positionX !== null) && (!needY || positionY !== null);
+  const ready = (!needX || hasPosition(positionX)) && (!needY || hasPosition(positionY));
   const summary = !ready
-    ? (needX && needY ? 'Move both markers to record your position' : 'Move the marker to record your position')
+    ? (needX && needY
+        ? 'Move both markers off centre — the middle is not a position'
+        : 'Move the marker off centre — the middle is not a position')
     : [needX && `Economic: ${positionLabel(positionX)}`, needY && `Political: ${positionLabel(positionY)}`]
         .filter(Boolean).join('  ·  ');
 
@@ -658,7 +660,7 @@ export default function Reading() {
           {reflectMode ? (
             <button
               onClick={handleSaveReflection}
-              disabled={!reflection.trim() && !hasMoved}
+              disabled={!ready || (!reflection.trim() && !hasMoved)}
               className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
               style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
               title="Your new position shows on the class board as soon as you save"
