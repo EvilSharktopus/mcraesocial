@@ -47,6 +47,7 @@ export default function StudyPackage() {
   const [activeTab, setActiveTab] = useState('positions'); // 'positions' or 'vault'
   const [plots, setPlots] = useState([]);
   const [flags, setFlags] = useState([]);
+  const [activeTags, setActiveTags] = useState([]);   // empty = show everything
   const [loading, setLoading] = useState(true);
 
   // Fetch student plots and flags
@@ -66,6 +67,22 @@ export default function StudyPackage() {
 
     return () => { unsubPlots(); unsubFlags(); };
   }, [user]);
+
+  // Every tag the student has actually used, most-used first, with counts.
+  const tagCounts = flags.reduce((acc, f) => {
+    (f.tags || []).forEach(t => { acc[t] = (acc[t] || 0) + 1; });
+    return acc;
+  }, {});
+  const tagList = Object.entries(tagCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  // A flag matches if it carries any of the selected tags.
+  const visibleFlags = (activeTags.length
+    ? flags.filter(f => (f.tags || []).some(t => activeTags.includes(t)))
+    : flags
+  ).slice().sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
+
+  const toggleTag = (tag) =>
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
   // Combine plots with reading metadata
   const entries = readings.map(r => {
@@ -240,16 +257,74 @@ export default function StudyPackage() {
                 </p>
               </div>
             )}
-            {flags.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map((flag) => (
+
+            {tagList.length > 0 && (
+              <div className="no-print rounded-2xl p-4" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-xs font-semibold" style={{ color: 'var(--pg-text)' }}>
+                    Filter by tag
+                    {activeTags.length > 0 && (
+                      <span className="font-normal" style={{ color: 'var(--pg-dim)' }}>
+                        {'  ·  '}{visibleFlags.length} of {flags.length} shown
+                      </span>
+                    )}
+                  </p>
+                  {activeTags.length > 0 && (
+                    <button
+                      onClick={() => setActiveTags([])}
+                      className="text-xs font-semibold hover:opacity-80 transition-opacity"
+                      style={{ color: 'var(--pg-primary)' }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {tagList.map(([tag, count]) => {
+                    const on = activeTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-opacity hover:opacity-80"
+                        style={on
+                          ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
+                          : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                      >
+                        {tag} <span style={{ opacity: 0.7 }}>{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {flags.length > 0 && visibleFlags.length === 0 && (
+              <div className="text-center py-10 rounded-2xl" style={{ border: '1px dashed var(--pg-border)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>Nothing tagged that way yet</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--pg-dim)' }}>
+                  Clear the filter to see all {flags.length} of your flagged passages.
+                </p>
+              </div>
+            )}
+
+            {visibleFlags.map((flag) => (
               <div key={flag.id} className="vault-flag-card rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
                 <div className="mb-4 flex flex-wrap gap-2 items-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-primary)' }}>
                     📚 {flag.readingTitle}
                   </span>
                   {flag.tags?.map(tag => (
-                    <span key={tag} className="vault-tag text-[10px] font-semibold px-2 py-1 rounded-md" style={{ border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      title={activeTags.includes(tag) ? `Stop filtering by ${tag}` : `Show only ${tag}`}
+                      className="vault-tag text-[10px] font-semibold px-2 py-1 rounded-md transition-opacity hover:opacity-80"
+                      style={activeTags.includes(tag)
+                        ? { border: '1px solid var(--pg-primary)', color: 'var(--pg-primary)' }
+                        : { border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
                       {tag}
-                    </span>
+                    </button>
                   ))}
                 </div>
                 
