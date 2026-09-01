@@ -8,6 +8,7 @@ import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useSpeech } from '../hooks/useSpeech';
+import { useTheme } from '../context/ThemeContext';
 import { useReadings } from '../hooks/useReadings';
 import { positionLabel } from '../data/readings';
 
@@ -50,6 +51,10 @@ export default function Reading() {
   const [dragging, setDragging] = useState(false);
 
   const speech = useSpeech();
+  const { theme } = useTheme();
+  // Each theme has its own sky. Choosing the file here rather than in CSS means
+  // the browser only ever fetches the one currently on screen.
+  const skyFile = theme === 'dark' ? 'spectrum-sky.png' : 'spectrum-sky-light.png';
 
   // Dragging the divider resizes both panes at once: the reading is flex-1, so
   // setting the writing panel's width is enough.
@@ -345,7 +350,7 @@ export default function Reading() {
           <div
             aria-hidden="true"
             className="spectrum-sky__art"
-            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/spectrum-sky.png)` }}
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/${skyFile})` }}
           />
           <div aria-hidden="true" className="spectrum-sky__scrim" />
           <div className="max-w-3xl mx-auto">

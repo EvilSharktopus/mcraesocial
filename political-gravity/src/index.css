@@ -308,9 +308,9 @@ h1, h2, h3, h4 {
 /* ── Spectrum strip backdrop ──────────────────────────────────────────────
    A starfield behind the spectrum at the top of a reading. The image is
    applied inline in Reading.jsx (it needs BASE_URL to resolve under /gravity/);
-   these rules control how far it comes forward. Dark mode can carry it much
-   more strongly — it is a dark image on a dark ground. In light mode it stays
-   a faint texture so the indigo type keeps its contrast. */
+   these rules control how far it comes forward. Each theme has its own image —
+   a dark sky and a pale one — so both can sit at a similar strength without
+   fighting the text on their own ground. */
 
 .spectrum-sky { position: relative; isolation: isolate; }
 
@@ -319,8 +319,10 @@ h1, h2, h3, h4 {
   inset: 0;
   z-index: -1;
   background-size: cover;
-  background-position: center;
-  opacity: 0.14;
+  /* Sit above centre so the bright band across the image survives the crop —
+     the strip is far wider than it is tall. */
+  background-position: center 35%;
+  opacity: 0.7;
   pointer-events: none;
 }
 
@@ -334,7 +336,16 @@ h1, h2, h3, h4 {
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--pg-surface) 55%, transparent),
-    color-mix(in srgb, var(--pg-surface) 85%, transparent)
+    color-mix(in srgb, var(--pg-surface) 25%, transparent),
+    color-mix(in srgb, var(--pg-surface) 60%, transparent)
+  );
+}
+
+/* The dark sky is busier behind light type, so it needs more veiling. */
+[data-theme="dark"] .spectrum-sky > .spectrum-sky__scrim {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pg-surface) 45%, transparent),
+    color-mix(in srgb, var(--pg-surface) 80%, transparent)
   );
 }
