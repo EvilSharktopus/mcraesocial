@@ -339,9 +339,15 @@ export default function Reading() {
 
         {/* ── Top: both spectrums, spanning the full width ── */}
         <div
-          className="shrink-0 px-6 py-3"
+          className="spectrum-sky shrink-0 px-6 py-3"
           style={{ backgroundColor: 'var(--pg-surface)', borderBottom: '1px solid var(--pg-border)' }}
         >
+          <div
+            aria-hidden="true"
+            className="spectrum-sky__art"
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/spectrum-sky.png)` }}
+          />
+          <div aria-hidden="true" className="spectrum-sky__scrim" />
           <div className="max-w-3xl mx-auto">
             <div className="flex items-baseline justify-between gap-4">
               <button

@@ -304,3 +304,37 @@ h1, h2, h3, h4 {
   text-align: left;
 }
 .reading-content th { background: var(--pg-surface2); font-weight: 600; }
+
+/* ── Spectrum strip backdrop ──────────────────────────────────────────────
+   A starfield behind the spectrum at the top of a reading. The image is
+   applied inline in Reading.jsx (it needs BASE_URL to resolve under /gravity/);
+   these rules control how far it comes forward. Dark mode can carry it much
+   more strongly — it is a dark image on a dark ground. In light mode it stays
+   a faint texture so the indigo type keeps its contrast. */
+
+.spectrum-sky { position: relative; isolation: isolate; }
+
+.spectrum-sky > .spectrum-sky__art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .spectrum-sky > .spectrum-sky__art { opacity: 0.55; }
+
+/* Keep the controls legible over the busiest part of the image */
+.spectrum-sky > .spectrum-sky__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pg-surface) 55%, transparent),
+    color-mix(in srgb, var(--pg-surface) 85%, transparent)
+  );
+}
