@@ -152,7 +152,11 @@ export default function Login() {
 
   // Must come after every hook above: returning earlier changes the number of
   // hooks between renders once auth resolves, which unmounts the whole app.
-  if (user) return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
+  // Wait for the role before redirecting, or a teacher lands on the student
+  // dashboard for a moment first.
+  if (user && isTeacher !== undefined) {
+    return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
+  }
 
   const friendlyError = (code, message) => {
     switch (code) {
@@ -180,11 +184,15 @@ export default function Login() {
       if (mode === 'signin') await signIn(email, password);
       else await signUp(email, password, name);
       navigate('/');
+      // Deliberately leave `loading` set: the profile lookup in AuthContext is
+      // still running, and re-enabling the button here makes the form look idle
+      // while the app is mid-sign-in. This component unmounts on redirect.
     } catch (err) {
       const msg = err.message?.startsWith('Please use')
         ? err.message : friendlyError(err.code, err.message);
       setError(msg);
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }
 
   return (
@@ -278,7 +286,7 @@ export default function Login() {
               className="w-full font-semibold py-2.5 rounded-xl transition-opacity disabled:opacity-40"
               style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
             >
-              {loading ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+              {loading ? 'Signing you in…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
         </div>
@@ -307,7 +315,7 @@ export default function Login() {
           <button onClick={() => setModal('privacy')} className="hover:opacity-80 transition-opacity">Privacy Policy</button>
         </div>
         <p className="text-center text-xs mt-2" style={{ color: 'var(--pg-faint)' }}>
-          Same credentials as your McRae Submit account
+          Same credentials as your Desk account
         </p>
       </div>
 

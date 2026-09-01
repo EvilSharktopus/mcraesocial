@@ -14,10 +14,15 @@ import StudyPackage from './pages/StudyPackage';
 
 function RootRedirect() {
   const { user, isTeacher } = useAuth();
-  if (user === undefined) {
+  // Signed in but the role has not come back yet — hold, don't guess.
+  if (user === undefined || (user && isTeacher === undefined)) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--pg-bg)' }}>
-        <div className="w-8 h-8 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: 'var(--pg-border2)', borderTopColor: 'transparent' }} />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--pg-bg)' }}>
+        <div
+          className="w-8 h-8 rounded-full border-4 animate-spin"
+          style={{ borderColor: 'var(--pg-border2)', borderTopColor: 'var(--pg-primary)' }}
+        />
+        <p className="text-sm" style={{ color: 'var(--pg-muted)' }}>Signing you in…</p>
       </div>
     );
   }

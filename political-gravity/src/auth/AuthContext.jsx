@@ -51,7 +51,10 @@ async function ensureUserDoc(firebaseUser) {
 
       return defaultRole;
     } else {
-      await setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true });
+      // Stamping the login time is bookkeeping — nothing waits on the result,
+      // and awaiting it held the whole sign-in behind a second round trip.
+      setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true })
+        .catch(err => console.warn('[AuthContext] could not stamp lastLoginAt:', err.code));
       return snap.data().role;
     }
   } catch (err) {
@@ -65,13 +68,16 @@ async function ensureUserDoc(firebaseUser) {
 export function AuthProvider({ children }) {
   const [user,      setUser]      = useState(undefined); // undefined = loading
   const [userDoc,   setUserDoc]   = useState(null);
-  const [isTeacher, setIsTeacher] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(undefined); // undefined = role unknown yet
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const role = await ensureUserDoc(firebaseUser);
+        // Publish the user straight away. Waiting for the profile read left the
+        // app looking signed out for the length of a Firestore round trip, which
+        // bounced the router back to the login form mid-sign-in.
         setUser(firebaseUser);
+        const role = await ensureUserDoc(firebaseUser);
         setIsTeacher(role === 'teacher');
         setUserDoc({ uid: firebaseUser.uid, email: firebaseUser.email, role });
       } else {

@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 export default function ProtectedRoute({ children, role }) {
   const { user, isTeacher } = useAuth();
 
-  if (user === undefined) {
+  if (user === undefined || (user && isTeacher === undefined)) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--pg-bg)' }}>
         <div
