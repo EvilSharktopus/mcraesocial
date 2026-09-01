@@ -7,6 +7,7 @@ import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
+import { useSpeech } from '../hooks/useSpeech';
 import { useReadings } from '../hooks/useReadings';
 import { positionLabel } from '../data/readings';
 
@@ -39,6 +40,51 @@ export default function Reading() {
   const [extractorOpen, setExtractorOpen] = useState(false);
   const [extractedText, setExtractedText] = useState('');
   const readingPaneRef = useRef(null);
+  const splitRef = useRef(null);
+
+  // Width of the writing panel in px, draggable and remembered per browser.
+  const [writingWidth, setWritingWidth] = useState(() => {
+    const saved = Number(localStorage.getItem('pg-writing-width'));
+    return Number.isFinite(saved) && saved >= 260 ? saved : 416;
+  });
+  const [dragging, setDragging] = useState(false);
+
+  const speech = useSpeech();
+
+  // Dragging the divider resizes both panes at once: the reading is flex-1, so
+  // setting the writing panel's width is enough.
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const next = Math.round(window.innerWidth - x);
+      const clamped = Math.max(280, Math.min(next, Math.round(window.innerWidth * 0.7)));
+      setWritingWidth(clamped);
+    };
+    const onEnd = () => {
+      setDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onEnd);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [dragging]);
+
+  useEffect(() => {
+    localStorage.setItem('pg-writing-width', String(writingWidth));
+  }, [writingWidth]);
 
   // Panel collapse state, remembered so a student's layout survives a reload.
   const [spectrumOpen, setSpectrumOpen] = useState(
@@ -385,6 +431,41 @@ export default function Reading() {
           >
             <span className="font-semibold" style={{ color: 'var(--pg-text)' }}>{reading.title}</span>
             <div className="flex items-center gap-3">
+              {isPublished && speech.supported && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => speech.speaking
+                      ? speech.togglePause()
+                      : speech.start(readingPaneRef.current?.innerText || '')}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80"
+                    style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+                    title={speech.speaking ? (speech.paused ? 'Resume reading aloud' : 'Pause') : 'Read this aloud'}
+                  >
+                    {speech.speaking ? (speech.paused ? '▶ Resume' : '⏸ Pause') : '🔊 Listen'}
+                  </button>
+                  {speech.speaking && (
+                    <button
+                      onClick={speech.stop}
+                      className="text-xs font-semibold px-2 py-1 rounded-lg transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                      title="Stop"
+                    >
+                      ⏹
+                    </button>
+                  )}
+                  <select
+                    value={speech.rate}
+                    onChange={e => speech.changeRate(Number(e.target.value))}
+                    className="text-xs rounded-lg px-1.5 py-1 focus:outline-none"
+                    style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                    title="Reading speed"
+                  >
+                    {[0.75, 1, 1.25, 1.5].map(r => (
+                      <option key={r} value={r}>{r}×</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {isTeacher && (
                 <a
                   href={reading.url}
@@ -468,6 +549,31 @@ export default function Reading() {
           )}
         </div>
 
+        {/* ── Drag handle ── */}
+        {writingOpen && (
+          <div
+            ref={splitRef}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the reading and writing panels"
+            onMouseDown={(e) => { e.preventDefault(); setDragging(true); }}
+            onTouchStart={() => setDragging(true)}
+            onDoubleClick={() => setWritingWidth(416)}
+            className="shrink-0 relative group"
+            style={{ width: '6px', cursor: 'col-resize', backgroundColor: dragging ? 'var(--pg-primary)' : 'var(--pg-border)' }}
+            title="Drag to resize · double-click to reset"
+          >
+            <div
+              className="absolute top-1/2 left-1/2 rounded-full pointer-events-none"
+              style={{
+                width: '3px', height: '34px',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: dragging ? 'var(--pg-on-primary)' : 'var(--pg-border2)',
+              }}
+            />
+          </div>
+        )}
+
         {/* ── Right: justification, collapsible to a rail ── */}
         {!writingOpen ? (
           <div
@@ -485,8 +591,8 @@ export default function Reading() {
           </div>
         ) : (
         <div
-          className="w-[26rem] shrink-0 flex flex-col overflow-y-auto p-6 gap-4"
-          style={{ backgroundColor: 'var(--pg-surface)' }}
+          className="shrink-0 flex flex-col overflow-y-auto p-6 gap-4"
+          style={{ width: `${writingWidth}px`, backgroundColor: 'var(--pg-surface)' }}
         >
           {/* Justification */}
           <div className="flex-1 flex flex-col">
