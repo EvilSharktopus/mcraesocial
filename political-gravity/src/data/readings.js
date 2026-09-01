@@ -1,4 +1,7 @@
-export const HANDOUT_URL = 'https://docs.google.com/document/d/1WUT8stleZ05QU-Xtw9brweKWBDkV3Aw7cTMSeZ_O3fo/preview';
+// The student field guide — how the project runs and how it is marked.
+// Linked from the dashboard's Handout button and from the login screen, so it
+// lives here rather than being written out at each call site.
+export const HANDOUT_URL = 'https://claude.ai/code/artifact/52c20b43-bf26-4630-aeab-8d81fc3540f3';
 export const RUBRIC_URL = 'https://docs.google.com/document/d/1NRBhYnGlpOh8JExhIAu76EetO8BFQ2gfDJAQKvvMIoI/preview';
 
 export const STANDARD_READINGS = [

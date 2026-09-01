@@ -3,9 +3,7 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
-
-// Student-facing guide to the project. Deliberately reachable before sign-in.
-const OVERVIEW_URL = 'https://claude.ai/code/artifact/52c20b43-bf26-4630-aeab-8d81fc3540f3';
+import { HANDOUT_URL } from '../data/readings';
 
 // ── Policy text ───────────────────────────────────────────────────────────────
 
@@ -294,7 +292,7 @@ export default function Login() {
         {/* Project overview — readable before signing in, so a student can find
             out what this is without an account */}
         <a
-          href={OVERVIEW_URL}
+          href={HANDOUT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"

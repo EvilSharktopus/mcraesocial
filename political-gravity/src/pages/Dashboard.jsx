@@ -102,7 +102,7 @@ export default function Dashboard() {
           style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
           <div>
             <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Project Overview</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>Handout and Rubric documents</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>How the project works, and how it&rsquo;s marked</p>
           </div>
           <div className="flex gap-2">
             <a href={HANDOUT_URL} target="_blank" rel="noreferrer"
