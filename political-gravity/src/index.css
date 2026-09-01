@@ -216,3 +216,91 @@ h1, h2, h3, h4 {
   }
 }
 
+
+/* ── Published reading text ───────────────────────────────────────────────
+   The publish step strips every style and class attribute off the Google Doc
+   export, and Docs keeps all of its spacing in those attributes. Everything
+   below is what puts the shape back: without it the reading arrives as one
+   dense block of prose.
+
+   Flow spacing uses margin-block only, so the one rule that sets the measure
+   and centres each block cannot be overridden by a more specific margin
+   shorthand further down. */
+
+.reading-content > * {
+  /* Root-relative, not ch: a ch is sized by each element's own font, so
+     headings would get a wider column than the paragraphs and hang left. */
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.reading-content > :first-child { margin-block-start: 0; }
+
+.reading-content p { margin-block: 0 1.15em; }
+
+.reading-content h1,
+.reading-content h2,
+.reading-content h3,
+.reading-content h4 {
+  font-family: 'Syne', system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-block: 1.8em 0.6em;
+  color: var(--pg-text);
+}
+.reading-content h1 { font-size: 1.5em; }
+.reading-content h2 { font-size: 1.28em; }
+.reading-content h3 { font-size: 1.12em; }
+.reading-content h4 { font-size: 1em; }
+
+.reading-content ul,
+.reading-content ol {
+  margin-block: 0 1.15em;
+  padding-left: 1.5em;
+}
+.reading-content ul { list-style: disc; }
+.reading-content ol { list-style: decimal; }
+.reading-content li { margin-bottom: 0.4em; }
+
+.reading-content blockquote {
+  margin-block: 1.3em;
+  padding: 0.2em 0 0.2em 1.1em;
+  border-left: 3px solid var(--pg-primary);
+  color: var(--pg-muted);
+}
+
+.reading-content hr {
+  border: none;
+  border-top: 1px solid var(--pg-border);
+  margin-block: 2em;
+}
+
+.reading-content a {
+  color: var(--pg-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.reading-content b,
+.reading-content strong { font-weight: 600; color: var(--pg-text); }
+
+.reading-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin-block: 1.3em;
+}
+
+.reading-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: 1.3em;
+  font-size: 0.95em;
+}
+.reading-content th,
+.reading-content td {
+  border: 1px solid var(--pg-border);
+  padding: 0.5em 0.7em;
+  text-align: left;
+}
+.reading-content th { background: var(--pg-surface2); font-weight: 600; }

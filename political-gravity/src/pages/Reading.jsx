@@ -507,7 +507,7 @@ export default function Reading() {
           {isPublished && (
             <div
               ref={readingPaneRef}
-              className="flex-1 overflow-y-auto px-10 py-8 relative"
+              className="reading-content flex-1 overflow-y-auto px-10 py-8 relative"
               onMouseUp={() => {
                 setTimeout(() => {
                   const sel = window.getSelection();
