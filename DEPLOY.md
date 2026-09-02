@@ -46,6 +46,17 @@ Vercel does **not** serve any slides (they're excluded via `.vercelignore`).
 1. Edit the HTML files in `social-9/`, `social-10/`, `social-20/`, `social-30/`
 2. Run `deploy.ps1` — it deploys to Vercel (`mcraesocial.com`)
 
+## Firestore rules
+
+The rules live **only in the Firebase console** — there is no copy in this
+repo, deliberately:
+https://console.firebase.google.com/project/mcrae-assignments-ca/firestore/rules
+
+A `firestore.rules` file used to sit here and had drifted out of date; anything
+that reintroduces one risks a deploy overwriting the live rules with an older
+version. `firebase.json` declares hosting only, so `firebase deploy` from this
+folder can only publish slides.
+
 ## ⚠️ Do NOT
 
 - **Do NOT relink** `.vercel/` to a different project. It must stay linked to `socialsite`.
