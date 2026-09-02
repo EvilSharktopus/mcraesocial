@@ -699,6 +699,18 @@ body {
   color: var(--accent-hover);
 }
 
+/* Write Assignment buttons are hidden until desk-buttons.js confirms this unit
+   has an open assignment. Hidden is the safe default: a script that fails to
+   load, an endpoint that is down, or a slug that does not match all leave the
+   button absent rather than sending a student to something they cannot open. */
+.desk-write {
+  display: none;
+}
+
+.desk-write.desk-write--open {
+  display: inline-flex;
+}
+
 
 /* â”€â”€ Unit Banner â”€â”€ */
 
