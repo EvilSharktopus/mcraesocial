@@ -146,29 +146,6 @@
       </div>
     </div>
   </section>
-<script>
-(function(){
-  var viewers = {};
-  document.querySelectorAll('.slide-viewer').forEach(function(v){
-    var id = v.id.replace('viewer-','');
-    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
-  });
-  window.slidePrev = function(id){
-    var v = viewers[id]; if(!v) return;
-    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
-    updateViewer(id, v);
-  };
-  window.slideNext = function(id){
-    var v = viewers[id]; if(!v) return;
-    v.idx = (v.idx + 1) % v.slides.length;
-    updateViewer(id, v);
-  };
-  function updateViewer(id, v){
-    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
-    document.getElementById('counter-'+id).textContent = (v.idx+1) + ' / ' + v.slides.length;
-  }
-})();
-</script>
   <section class="unit-section notes-grid-section" style="background: rgba(100,160,140,0.06);">
     <h2 class="unit-section__title">NOTES <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.75em; color:var(--text-dim);">&mdash; hover over the left side for slide controls</span></h2>
     <div class="kn-grid">
@@ -210,6 +187,29 @@
       </div>
     </div>
   </section>
+<script>
+(function(){
+  var viewers = {};
+  document.querySelectorAll('.slide-viewer').forEach(function(v){
+    var id = v.id.replace('viewer-','');
+    viewers[id] = { idx: 0, slides: v.querySelectorAll('.slide-viewer__slide') };
+  });
+  window.slidePrev = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx - 1 + v.slides.length) % v.slides.length;
+    updateViewer(id, v);
+  };
+  window.slideNext = function(id){
+    var v = viewers[id]; if(!v) return;
+    v.idx = (v.idx + 1) % v.slides.length;
+    updateViewer(id, v);
+  };
+  function updateViewer(id, v){
+    document.getElementById('track-'+id).style.transform = 'translateX(-' + (v.idx * 100) + '%)';
+    document.getElementById('counter-'+id).textContent = (v.idx+1) + ' / ' + v.slides.length;
+  }
+})();
+</script>
   <script>
   window.knFullscreen = function(btn) { var tile = btn.closest('.kn-tile'); var target = tile.querySelector('iframe') || tile.querySelector('.slide-viewer'); if (target && target.requestFullscreen) target.requestFullscreen(); else if (target && target.webkitRequestFullscreen) target.webkitRequestFullscreen(); };
   </script>
