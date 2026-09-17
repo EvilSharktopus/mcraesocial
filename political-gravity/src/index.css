@@ -149,11 +149,24 @@ h1, h2, h3, h4 {
   }
 
   /* Hide everything that isn't the vault content */
+  header:not(.vault-print-header),
   nav,
   .no-print,
   [data-no-print] {
     display: none !important;
   }
+
+  /* Printed vault: sections start together with their heading and never
+     split a passage across pages */
+  .vault-print-section { break-inside: auto; margin-bottom: 1.25rem; }
+  .vault-print-section h2 {
+    break-after: avoid;
+    border-bottom: 1px solid #000;
+    padding-bottom: 0.2rem;
+    margin: 1.1rem 0 0.6rem;
+  }
+  .vault-print-passage { break-inside: avoid; }
+  main { padding-top: 0 !important; max-width: none !important; }
 
   /* Only show the vault section, hide the tab switcher */
   .print-vault-only {

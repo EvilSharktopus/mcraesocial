@@ -5,6 +5,8 @@ import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import NavBar from '../components/NavBar';
 import TagPicker from '../components/TagPicker';
+import VaultPrintView from '../components/VaultPrintView';
+import { PRINT_MODES } from '../data/vaultPrint';
 import { useReadings } from '../hooks/useReadings';
 import { positionLabel } from '../data/readings';
 import { dedupeTags, knownTags, tagCounts, tagKey } from '../data/tags';
@@ -79,6 +81,28 @@ export default function StudyPackage() {
 
     return () => { unsubPlots(); unsubRefl(); unsubFlags(); };
   }, [user]);
+
+  // Printing: the chooser, then the mode being printed (null = normal view).
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printMode, setPrintMode] = useState(null);
+  const [printChoice, setPrintChoice] = useState(() => {
+    try { return localStorage.getItem('pg-vault-print') || 'package'; } catch { return 'package'; }
+  });
+
+  // Once the print layout is on screen, open the dialog; come back when it closes.
+  useEffect(() => {
+    if (!printMode) return;
+    const back = () => setPrintMode(null);
+    window.addEventListener('afterprint', back, { once: true });
+    const t = setTimeout(() => window.print(), 80);
+    return () => { clearTimeout(t); window.removeEventListener('afterprint', back); };
+  }, [printMode]);
+
+  function startPrint() {
+    try { localStorage.setItem('pg-vault-print', printChoice); } catch { /* ignore */ }
+    setPrintOpen(false);
+    setPrintMode(printChoice);
+  }
 
   // Editing a flag in place: which one, and its working copy.
   const [editingId,  setEditingId]  = useState(null);
@@ -165,10 +189,64 @@ export default function StudyPackage() {
   const avgX = average(entries.map(e => e.positionX).filter(isNum));
   const avgY = average(entries.map(e => e.positionY).filter(isNum));
   const totalReadings = readings.filter(r => !r.archived).length;
+  const readingIndex = new Map(readings.map((r, i) => [r.id, i]));
+
+  if (printMode) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
+        <NavBar backTo="/dashboard" backLabel="Readings" />
+        <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-10">
+          <VaultPrintView
+            mode={printMode}
+            flags={visibleFlags}
+            readingIndex={readingIndex}
+            studentName={user?.displayName}
+            filtered={activeTags.length > 0}
+            onBack={() => setPrintMode(null)}
+          />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
       <NavBar backTo="/dashboard" backLabel="Readings" />
+
+      {printOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="print-title">
+          <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+            <h2 id="print-title" className="text-xl font-bold font-display mb-1" style={{ color: 'var(--pg-text)' }}>🖨️ Print your Vault</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--pg-dim)' }}>
+              {activeTags.length > 0
+                ? `Only the ${visibleFlags.length} passage${visibleFlags.length === 1 ? '' : 's'} matching your filter will print. Clear the filter first to print everything.`
+                : `All ${flags.length} passage${flags.length === 1 ? '' : 's'} will print.`}
+            </p>
+            <div className="space-y-2 mb-5">
+              {PRINT_MODES.map(m => {
+                const on = printChoice === m.key;
+                return (
+                  <label key={m.key} className="flex gap-3 items-start p-3 rounded-xl cursor-pointer transition-colors"
+                    style={{ border: `1px solid ${on ? 'var(--pg-primary)' : 'var(--pg-border)'}`, backgroundColor: on ? 'var(--pg-surface2)' : 'transparent' }}>
+                    <input type="radio" name="print-mode" value={m.key} checked={on} onChange={() => setPrintChoice(m.key)} className="mt-1" />
+                    <span>
+                      <span className="block text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>{m.label}</span>
+                      <span className="block text-xs mt-0.5" style={{ color: 'var(--pg-muted)' }}>{m.blurb}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setPrintOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium" style={{ color: 'var(--pg-text)' }}>Cancel</button>
+              <button onClick={startPrint} className="px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-10">
         <h1 className="font-display font-bold text-2xl mb-1" style={{ color: 'var(--pg-text)' }}>
@@ -208,7 +286,7 @@ export default function StudyPackage() {
 
           {activeTab === 'vault' && flags.length > 0 && (
             <button
-              onClick={() => window.print()}
+              onClick={() => setPrintOpen(true)}
               className="no-print flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
               style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
             >
@@ -334,12 +412,6 @@ export default function StudyPackage() {
           </>
         ) : (
           <div className="space-y-4">
-            {/* Hidden header that only shows when printing */}
-            <div className="vault-print-header" style={{ display: 'none' }}>
-              <h2 style={{ margin: 0, fontSize: '16pt', fontWeight: 'bold' }}>Diploma Exam Study Guide</h2>
-              <p style={{ margin: '4px 0 0', fontSize: '10pt', color: '#555' }}>Social Studies 30 — Diploma Vault</p>
-            </div>
-
             {flags.length === 0 && (
               <div className="text-center py-12 rounded-2xl" style={{ border: '1px dashed var(--pg-border)' }}>
                 <span className="text-3xl mb-3 block">🔖</span>
