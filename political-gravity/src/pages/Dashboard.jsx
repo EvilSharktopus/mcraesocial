@@ -37,21 +37,23 @@ export default function Dashboard() {
     return () => unsub();
   }, []);
 
-  // Progress is per student: a plot means started, a reflection means done.
-  // Anything stored on the reading itself would be shared by the whole class.
+  // Progress is per student: a plot means started, a submitted reflection
+  // means done. Autosaved reflection drafts (draft: true) are still "in
+  // progress" — the student has not handed them in yet.
   useEffect(() => {
     if (!user) return;
-    const readingIds = snap => new Set(snap.docs.map(d => d.data().readingId));
-    const sub = (name, setter) => onSnapshot(
+    const readingIds = (snap, keep = () => true) =>
+      new Set(snap.docs.filter(d => keep(d.data())).map(d => d.data().readingId));
+    const sub = (name, setter, keep) => onSnapshot(
       query(collection(db, name), where('uid', '==', user.uid)),
-      snap => setter(readingIds(snap)),
+      snap => setter(readingIds(snap, keep)),
       error => {
         console.error(`Error fetching ${name}:`, error);
         setter(new Set());
       },
     );
     const unsubPlots       = sub('plots', setPlotted);
-    const unsubReflections = sub('pg_reflections', setReflected);
+    const unsubReflections = sub('pg_reflections', setReflected, d => d.draft !== true);
     // Marks stream in live, so a grade appears without the student reloading.
     const unsubGrades = onSnapshot(
       query(collection(db, 'pg_grades'), where('uid', '==', user.uid)),

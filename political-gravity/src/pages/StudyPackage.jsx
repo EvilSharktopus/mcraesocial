@@ -5,6 +5,12 @@ import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import NavBar from '../components/NavBar';
 import { useReadings } from '../hooks/useReadings';
+import { positionLabel } from '../data/readings';
+
+const isNum = (v) => typeof v === 'number';
+const average = (values) => values.length
+  ? Math.round(values.reduce((s, v) => s + v, 0) / values.length)
+  : null;
 
 function MiniSpectrum({ value, color = 'var(--pg-primary)' }) {
   const pct = (value + 100) / 2;
@@ -46,26 +52,30 @@ export default function StudyPackage() {
   const { readings } = useReadings();
   const [activeTab, setActiveTab] = useState('positions'); // 'positions' or 'vault'
   const [plots, setPlots] = useState([]);
+  const [reflections, setReflections] = useState([]);
   const [flags, setFlags] = useState([]);
   const [activeTags, setActiveTags] = useState([]);   // empty = show everything
   const [loading, setLoading] = useState(true);
 
-  // Fetch student plots and flags
+  // Fetch student plots, reflections and flags
   useEffect(() => {
     if (!user) return;
-    
+    const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const fail = what => err => console.error(`Could not load ${what}:`, err);
+
     const qPlots = query(collection(db, 'plots'), where('uid', '==', user.uid));
-    const unsubPlots = onSnapshot(qPlots, snap => {
-      setPlots(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    const unsubPlots = onSnapshot(qPlots, snap => setPlots(rows(snap)), fail('positions'));
+
+    const qRefl = query(collection(db, 'pg_reflections'), where('uid', '==', user.uid));
+    const unsubRefl = onSnapshot(qRefl, snap => setReflections(rows(snap)), fail('reflections'));
 
     const qFlags = query(collection(db, 'diplomaFlags'), where('uid', '==', user.uid));
     const unsubFlags = onSnapshot(qFlags, snap => {
-      setFlags(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setFlags(rows(snap));
       setLoading(false);
-    });
+    }, err => { fail('vault')(err); setLoading(false); });
 
-    return () => { unsubPlots(); unsubFlags(); };
+    return () => { unsubPlots(); unsubRefl(); unsubFlags(); };
   }, [user]);
 
   // Every tag the student has actually used, most-used first, with counts.
@@ -84,22 +94,29 @@ export default function StudyPackage() {
   const toggleTag = (tag) =>
     setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
 
-  // Combine plots with reading metadata
-  const entries = readings.map(r => {
+  // Combine plots with reading metadata. A student may have placed themselves
+  // on one spectrum or both, so an entry counts if either axis was set.
+  const entries = readings.filter(r => !r.archived).map(r => {
     const plot = plots.find(p => p.readingId === r.id);
+    const refl = reflections.find(f => f.readingId === r.id);
     return {
       id: r.id,
       title: r.title,
-      positionX: plot?.positionX ?? null,
-      positionY: plot?.positionY ?? null,
-      reflection: plot?.justification || null,
+      positionX: isNum(plot?.positionX) ? plot.positionX : null,
+      positionY: isNum(plot?.positionY) ? plot.positionY : null,
+      justification: plot?.justification || null,
+      reflection: refl?.reflection || null,
+      reflectionDraft: refl?.draft === true,
+      movedToX: isNum(refl?.newPositionX) && refl.newPositionX !== plot?.positionX ? refl.newPositionX : null,
+      movedToY: isNum(refl?.newPositionY) && refl.newPositionY !== plot?.positionY ? refl.newPositionY : null,
       updatedAt: plot?.updatedAt || null,
     };
-  }).filter(e => e.positionX !== null); // Only show completed ones
+  }).filter(e => e.positionX !== null || e.positionY !== null);
 
-  // Averages
-  const avgX = entries.length ? Math.round(entries.reduce((s, e) => s + e.positionX, 0) / entries.length) : 0;
-  const avgY = entries.length ? Math.round(entries.reduce((s, e) => s + e.positionY, 0) / entries.length) : 0;
+  // Averages over the readings that actually used each spectrum
+  const avgX = average(entries.map(e => e.positionX).filter(isNum));
+  const avgY = average(entries.map(e => e.positionY).filter(isNum));
+  const totalReadings = readings.filter(r => !r.archived).length;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
@@ -164,7 +181,7 @@ export default function StudyPackage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {[
                   ['Completed Readings', entries.length],
-                  ['Total Readings', readings.length],
+                  ['Total Readings', totalReadings],
                 ].map(([label, val]) => (
                   <div key={label} className="rounded-xl p-3 text-center" style={{ backgroundColor: 'var(--pg-surface2)' }}>
                     <p className="font-display font-bold text-lg" style={{ color: 'var(--pg-primary)' }}>{val}</p>
@@ -174,20 +191,24 @@ export default function StudyPackage() {
               </div>
               
               <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <p className="text-xs mb-2 text-center font-semibold" style={{ color: 'var(--pg-muted)' }}>Avg Economic</p>
-                  <MiniSpectrum value={avgX} color="#3b82f6" />
-                  <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--pg-faint)' }}>
-                    <span>Collectivism</span><span>Individualism</span>
+                {[
+                  ['Avg Economic',  avgX, '#3b82f6'],
+                  ['Avg Political', avgY, '#8b5cf6'],
+                ].map(([label, avg, color]) => (
+                  <div key={label}>
+                    <p className="text-xs mb-2 text-center font-semibold" style={{ color: 'var(--pg-muted)' }}>{label}</p>
+                    {avg === null ? (
+                      <p className="text-[11px] text-center py-1" style={{ color: 'var(--pg-faint)' }}>Not used yet</p>
+                    ) : (
+                      <>
+                        <MiniSpectrum value={avg} color={color} />
+                        <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--pg-faint)' }}>
+                          <span>Collectivism</span><span>Individualism</span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
-                <div>
-                  <p className="text-xs mb-2 text-center font-semibold" style={{ color: 'var(--pg-muted)' }}>Avg Political</p>
-                  <MiniSpectrum value={avgY} color="#8b5cf6" />
-                  <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--pg-faint)' }}>
-                    <span>Collectivism</span><span>Individualism</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -210,31 +231,54 @@ export default function StudyPackage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-6 mb-4">
-                    <div>
-                      <MiniSpectrum value={e.positionX} color="#3b82f6" />
-                      <div className="flex justify-between text-[9px] mt-1 uppercase tracking-wider" style={{ color: 'var(--pg-faint)' }}>
-                        <span>Col.</span><span>Econ</span><span>Ind.</span>
+                    {e.positionX !== null && (
+                      <div>
+                        <MiniSpectrum value={e.positionX} color="#3b82f6" />
+                        <div className="flex justify-between text-[9px] mt-1 uppercase tracking-wider" style={{ color: 'var(--pg-faint)' }}>
+                          <span>Col.</span><span>Econ · {positionLabel(e.positionX)}</span><span>Ind.</span>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <MiniSpectrum value={e.positionY} color="#8b5cf6" />
-                      <div className="flex justify-between text-[9px] mt-1 uppercase tracking-wider" style={{ color: 'var(--pg-faint)' }}>
-                        <span>Col.</span><span>Pol.</span><span>Ind.</span>
+                    )}
+                    {e.positionY !== null && (
+                      <div>
+                        <MiniSpectrum value={e.positionY} color="#8b5cf6" />
+                        <div className="flex justify-between text-[9px] mt-1 uppercase tracking-wider" style={{ color: 'var(--pg-faint)' }}>
+                          <span>Col.</span><span>Pol. · {positionLabel(e.positionY)}</span><span>Ind.</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  {e.reflection ? (
+                  {e.justification ? (
                     <div className="p-3 rounded-xl mt-4" style={{ backgroundColor: 'var(--pg-surface2)' }}>
                       <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--pg-muted)' }}>Your Justification</p>
-                      <p className="text-xs leading-relaxed" style={{ color: 'var(--pg-text)' }}>
-                        "{e.reflection}"
+                      <p className="text-xs leading-relaxed" style={{ color: 'var(--pg-text)', whiteSpace: 'pre-wrap' }}>
+                        "{e.justification}"
                       </p>
                     </div>
                   ) : (
                     <p className="text-xs italic mt-4" style={{ color: 'var(--pg-faint)' }}>
-                      No reflection provided.
+                      No justification written.
                     </p>
+                  )}
+
+                  {e.reflection && (
+                    <div className="p-3 rounded-xl mt-3" style={{ backgroundColor: 'var(--pg-surface2)' }}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--pg-muted)' }}>
+                        After the seminar{e.reflectionDraft ? ' · draft' : ''}
+                      </p>
+                      {(e.movedToX !== null || e.movedToY !== null) && (
+                        <p className="text-[11px] mb-1" style={{ color: 'var(--pg-dim)' }}>
+                          Moved to {[
+                            e.movedToX !== null && `${positionLabel(e.movedToX)} (economic)`,
+                            e.movedToY !== null && `${positionLabel(e.movedToY)} (political)`,
+                          ].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                      <p className="text-xs leading-relaxed" style={{ color: 'var(--pg-text)', whiteSpace: 'pre-wrap' }}>
+                        "{e.reflection}"
+                      </p>
+                    </div>
                   )}
                 </div>
               ))}

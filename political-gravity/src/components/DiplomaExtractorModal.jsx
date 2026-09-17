@@ -14,6 +14,7 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
   const [selectedTags, setSelectedTags] = useState([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState(null);
 
   if (!isOpen) return null;
 
@@ -37,6 +38,7 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
   async function handleSave() {
     if (!user || (!commentary.trim() && selectedTags.length === 0)) return;
     setSaving(true);
+    setSaveErr(null);
     try {
       const flagId = crypto.randomUUID();
       await setDoc(doc(db, 'diplomaFlags', flagId), {
@@ -53,7 +55,11 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
       setCustomTagInput('');
       onClose();
     } catch (err) {
+      // Keep the modal open with the text intact so nothing is lost.
       console.error('Failed to save diploma flag', err);
+      setSaveErr(err.code === 'permission-denied'
+        ? 'Firestore refused the save (permissions). Nothing was lost — try again or tell Mr. McRae.'
+        : 'Could not reach the server. Nothing was lost — check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -145,6 +151,10 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
             onBlur={e  => e.target.style.borderColor = 'var(--pg-border)'}
           />
         </div>
+
+        {saveErr && (
+          <p className="text-xs mt-3 shrink-0" role="alert" style={{ color: '#ef4444' }}>⚠ {saveErr}</p>
+        )}
 
         <div className="flex justify-end gap-3 mt-4 shrink-0 border-t pt-4" style={{ borderColor: 'var(--pg-border)' }}>
           <button

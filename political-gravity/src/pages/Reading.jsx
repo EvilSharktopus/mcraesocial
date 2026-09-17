@@ -1,6 +1,14 @@
 // src/pages/Reading.jsx
 // Split-screen: reading text on left, Spectrum + justification on right.
-import { useState, useEffect, useRef } from 'react';
+//
+// Nothing a student types is trusted to a single button press:
+//   1. every edit is mirrored to localStorage straight away (a draft),
+//   2. a debounced autosave pushes it to Firestore a moment later,
+//   3. the draft is only cleared once Firestore confirms the write,
+//   4. on return, a draft newer than the saved copy is restored.
+// The Save button still exists because students expect one; it flushes the
+// autosave immediately and, for reflections, marks the piece as submitted.
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -15,6 +23,24 @@ import { hasPosition, positionLabel } from '../data/readings';
 const needXAxis = (axes) => axes !== 'political';
 const needYAxis = (axes) => axes !== 'economic';
 import { useAuth } from '../auth/AuthContext';
+
+const AUTOSAVE_DELAY_MS = 1500;
+const RETRY_DELAY_MS    = 10_000;
+
+// ── Local draft: the on-device copy that survives a crash or a closed tab ──
+const draftKey = (uid, readingId) => `pg-draft:${uid}:${readingId}`;
+function readDraft(key) {
+  try { const raw = key && localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }
+  catch { return null; }
+}
+function writeDraft(key, fields) {
+  try { if (key) localStorage.setItem(key, JSON.stringify({ ...fields, at: Date.now() })); }
+  catch { /* private mode or full — Firestore autosave still runs */ }
+}
+function clearDraft(key) {
+  try { if (key) localStorage.removeItem(key); } catch { /* ignore */ }
+}
+const millis = (ts) => ts?.toMillis?.() ?? 0;
 
 export default function Reading() {
   const { id } = useParams();
@@ -33,8 +59,14 @@ export default function Reading() {
   const [reflectMode,   setReflectMode]   = useState(false);  // teacher-controlled
   const [classPlots,    setClassPlots]    = useState([]);     // everyone's positions
   const [reflection,    setReflection]    = useState('');
-  const [reflectionSaved, setReflectionSaved] = useState(false);
-  const [saved,         setSaved]         = useState(false);
+  const [hadReflection, setHadReflection] = useState(false);  // a pg_reflections doc exists
+  const [reflectionSubmitted, setReflectionSubmitted] = useState(false); // …and it is not a draft
+  const [justSaved,     setJustSaved]     = useState(false);  // button flash after a click
+  // idle | unsaved | saving | saved | error — what the autosave is doing
+  const [saveState,     setSaveState]     = useState('idle');
+  const [savedAt,       setSavedAt]       = useState(null);
+  const [saveError,     setSaveError]     = useState(null);
+  const [restoredDraft, setRestoredDraft] = useState(false);
   const [publishedHtml, setPublishedHtml] = useState(null); // null = still loading
   const [htmlLoading,   setHtmlLoading]   = useState(true);
   const [selection,     setSelection]     = useState(null);
@@ -134,34 +166,190 @@ export default function Reading() {
     };
   }, [publishedHtml]);
 
+  // ── Save engine ───────────────────────────────────────────────────────────
+  // Everything the save code needs, kept in a ref so the debounced flush and
+  // the pagehide handler always see the current values, never a stale closure.
+  const latest = useRef({});
+  useEffect(() => {
+    latest.current = {
+      user, reading, positionX, positionY, axes, justification, reflection,
+      reflectMode, hadSaved, hadReflection, savedPlot,
+      draftKey: user && reading ? draftKey(user.uid, reading.id) : null,
+    };
+  });
+  const editSeq        = useRef(0);     // bumps on every user edit
+  const flushedSeq     = useRef(0);     // the edit a flush last started from
+  const autosaveTimer  = useRef(null);
+  const flushChain     = useRef(Promise.resolve());
+  const flushRef       = useRef(null);  // lets the retry timer call flush without self-reference
+  const skipConsensus  = useRef(false); // a restored draft beats the consensus seed
+  // In reflection mode the reflection loader owns the draft, so the plot
+  // loader must not throw it away as stale.
+  const reflectModeRef = useRef(false);
+  useEffect(() => { reflectModeRef.current = reflectMode; }, [reflectMode]);
+
+  // Write the current form to Firestore. Resolves true when the server has it.
+  const flush = useCallback(({ submit = false } = {}) => {
+    clearTimeout(autosaveTimer.current);
+    const job = async () => {
+      const l = latest.current;
+      if (!l.user || !l.reading) return false;
+      const seq = editSeq.current;
+      flushedSeq.current = seq;
+
+      const needX = needXAxis(l.axes), needY = needYAxis(l.axes);
+      // Centre is "no position" — never store it as one.
+      const px = needX && hasPosition(l.positionX) ? l.positionX : null;
+      const py = needY && hasPosition(l.positionY) ? l.positionY : null;
+
+      try {
+        if (l.reflectMode) {
+          const moved = (needX && hasPosition(l.savedPlot?.positionX) && px !== l.savedPlot.positionX)
+                     || (needY && hasPosition(l.savedPlot?.positionY) && py !== l.savedPlot.positionY);
+          // Don't create an empty reflection doc just because the page opened.
+          if (!l.hadReflection && !submit && !l.reflection.trim() && !moved) { setSaveState('idle'); return false; }
+          setSaveState('saving');
+          const data = {
+            uid: l.user.uid,
+            readingId: l.reading.id,
+            originalPositionX: l.savedPlot?.positionX ?? null,
+            originalPositionY: l.savedPlot?.positionY ?? null,
+            newPositionX: px,
+            newPositionY: py,
+            // Single-axis pair the grading view reads
+            originalPosition: l.savedPlot?.positionX ?? l.savedPlot?.positionY ?? null,
+            newPosition: px ?? py,
+            reflection: l.reflection,
+            updatedAt: serverTimestamp(),
+          };
+          // A draft becomes a submission only when the student says so; an
+          // autosave never flips it either way.
+          if (submit) data.draft = false;
+          else if (!l.hadReflection) data.draft = true;
+          await setDoc(doc(db, 'pg_reflections', `${l.user.uid}_${l.reading.id}`), data, { merge: true });
+          setHadReflection(true);
+          if (submit) setReflectionSubmitted(true);
+        } else {
+          if (!l.hadSaved && !l.justification.trim() && px === null && py === null) { setSaveState('idle'); return false; }
+          setSaveState('saving');
+          const data = {
+            uid: l.user.uid,
+            readingId: l.reading.id,
+            positionX: px,
+            positionY: py,
+            axes: l.axes,
+            justification: l.justification,
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(doc(db, 'plots', `${l.user.uid}_${l.reading.id}`), data, { merge: true });
+          setHadSaved(true);
+          setSavedPlot(prev => ({ ...(prev || {}), ...data }));
+        }
+        // Only drop the on-device copy if nothing was typed while we were saving.
+        if (editSeq.current === seq) {
+          clearDraft(l.draftKey);
+          setSaveState('saved');
+          setSavedAt(new Date());
+          setSaveError(null);
+        }
+        return true;
+      } catch (err) {
+        console.error('Autosave failed', err);
+        setSaveState('error');
+        setSaveError(err.code === 'permission-denied'
+          ? 'Firestore refused the save (permissions). Your work is kept on this device.'
+          : 'Could not reach the server. Your work is kept on this device and will retry.');
+        autosaveTimer.current = setTimeout(() => flushRef.current?.(), RETRY_DELAY_MS);
+        return false;
+      }
+    };
+    // Serialise so a click during an autosave cannot race it.
+    const run = flushChain.current.then(job, job);
+    flushChain.current = run.catch(() => {});
+    return run;
+  }, []);
+  useEffect(() => { flushRef.current = flush; }, [flush]);
+
+  const scheduleAutosave = useCallback(() => {
+    clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => flush(), AUTOSAVE_DELAY_MS);
+  }, [flush]);
+
+  // Every user edit goes through here: mirror to the draft, then autosave.
+  const edited = useCallback((patch) => {
+    editSeq.current += 1;
+    const l = { ...latest.current, ...patch };
+    writeDraft(l.draftKey, {
+      positionX: l.positionX, positionY: l.positionY, axes: l.axes,
+      justification: l.justification, reflection: l.reflection,
+    });
+    setSaveState('unsaved');
+    scheduleAutosave();
+  }, [scheduleAutosave]);
+
+  // Leaving the page — tab closed, phone locked, back button — sends whatever
+  // is still pending. With offline persistence on, the SDK keeps the write
+  // even if the tab is gone before the server answers.
+  useEffect(() => {
+    const onHide = () => { if (editSeq.current !== flushedSeq.current) flush(); };
+    const onVis  = () => { if (document.visibilityState === 'hidden') onHide(); };
+    window.addEventListener('pagehide', onHide);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      document.removeEventListener('visibilitychange', onVis);
+      clearTimeout(autosaveTimer.current);
+      onHide();
+    };
+  }, [flush]);
+
+  // Apply an on-device draft on top of whatever Firestore had.
+  const applyDraft = useCallback((draft, { reflect }) => {
+    if (typeof draft.positionX === 'number') setPositionX(draft.positionX);
+    if (typeof draft.positionY === 'number') setPositionY(draft.positionY);
+    if (draft.axes) setAxes(draft.axes);
+    if (typeof draft.justification === 'string') setJustification(draft.justification);
+    if (reflect && typeof draft.reflection === 'string') setReflection(draft.reflection);
+    skipConsensus.current = true;
+    setRestoredDraft(true);
+    // Treat it as a fresh edit so the autosave pushes it up and, once
+    // confirmed, clears the draft.
+    editSeq.current += 1;
+    setSaveState('unsaved');
+    scheduleAutosave();
+  }, [scheduleAutosave]);
+
   // Reload whatever this student already saved for this reading, so leaving
   // and coming back shows their position and justification rather than a
-  // blank form.
+  // blank form. A draft newer than the saved copy wins.
   useEffect(() => {
     if (!user || !reading) return;
     let cancelled = false;
+    const key = draftKey(user.uid, reading.id);
     (async () => {
+      let d = null;
       try {
         const snap = await getDoc(doc(db, 'plots', `${user.uid}_${reading.id}`));
         if (cancelled) return;
         if (snap.exists()) {
-          const d = snap.data();
+          d = snap.data();
           if (typeof d.positionX === 'number') setPositionX(d.positionX);
           if (typeof d.positionY === 'number') setPositionY(d.positionY);
           if (d.justification) setJustification(d.justification);
           if (d.axes) setAxes(d.axes);
           setSavedPlot(d);
-          setHadSaved(true);
-        } else {
-          setHadSaved(false);
         }
       } catch (err) {
         console.error('Could not load your saved position', err);
-        if (!cancelled) setHadSaved(false);
       }
+      if (cancelled) return;
+      const draft = readDraft(key);
+      if (draft && draft.at > millis(d?.updatedAt)) applyDraft(draft, { reflect: false });
+      else if (draft && !reflectModeRef.current) clearDraft(key); // older than the saved copy — done with it
+      setHadSaved(!!d);
     })();
     return () => { cancelled = true; };
-  }, [user, reading]);
+  }, [user, reading, applyDraft]);
 
   // Reflection mode is a per-reading switch the teacher flips after the seminar.
   useEffect(() => {
@@ -181,27 +369,48 @@ export default function Reading() {
     return () => unsub();
   }, [reflectMode, id]);
 
-  // Restore a reflection already written for this reading.
+  // Restore a reflection already written for this reading — text and, if they
+  // moved, the marker where they moved it to (not back at the original).
   useEffect(() => {
     if (!user || !reading || !reflectMode) return;
     let cancelled = false;
+    const key = draftKey(user.uid, reading.id);
     (async () => {
+      let d = null;
       try {
         const snap = await getDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`));
-        if (!cancelled && snap.exists() && snap.data().reflection) {
-          setReflection(snap.data().reflection);
+        if (cancelled) return;
+        if (snap.exists()) {
+          d = snap.data();
+          if (typeof d.reflection === 'string') setReflection(d.reflection);
+          if (typeof d.newPositionX === 'number') setPositionX(d.newPositionX);
+          if (typeof d.newPositionY === 'number') setPositionY(d.newPositionY);
         }
       } catch (err) {
         console.error('Could not load your reflection', err);
       }
+      if (cancelled) return;
+      setHadReflection(!!d);
+      setReflectionSubmitted(!!d && d.draft !== true);
+      const draft = readDraft(key);
+      if (draft && draft.at > millis(d?.updatedAt)) applyDraft(draft, { reflect: true });
+      else if (draft) clearDraft(key);
     })();
     return () => { cancelled = true; };
-  }, [user, reading, reflectMode]);
+  }, [user, reading, reflectMode, applyDraft]);
+
+  // The "restored" notice only needs a moment.
+  useEffect(() => {
+    if (!restoredDraft) return;
+    const t = setTimeout(() => setRestoredDraft(false), 8000);
+    return () => clearTimeout(t);
+  }, [restoredDraft]);
 
   // Load previous class consensus for initial spectrum position
   useEffect(() => {
     async function loadConsensus() {
       if (hadSaved !== false) return;   // only seed a genuinely blank form
+      if (skipConsensus.current) return; // the student already has a draft here
       if (!readings || readings.length === 0) return;
       const idx = readings.findIndex(r => r.id === id);
       if (idx > 0) {
@@ -222,47 +431,43 @@ export default function Reading() {
     loadConsensus();
   }, [id, readings, hadSaved]);
 
-  async function handleSave() {
+  // The button: flush now, and only say "Saved" once the server agrees.
+  async function handleSaveClick() {
     if (!ready || !user) return;
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    try {
-      await setDoc(doc(db, 'plots', `${user.uid}_${reading.id}`), {
-        uid: user.uid,
-        readingId: reading.id,
-        positionX: needX ? positionX : null,
-        positionY: needY ? positionY : null,
-        axes,
-        justification,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-    } catch (err) {
-      console.error('Failed to save plot', err);
+    const ok = await flush({ submit: reflectMode });
+    if (ok) {
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2500);
     }
   }
 
-  async function handleSaveReflection() {
-    if (!user || !reading || !reflection.trim()) return;
-    setReflectionSaved(true);
-    setTimeout(() => setReflectionSaved(false), 2500);
-    try {
-      await setDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`), {
-        uid: user.uid,
-        readingId: reading.id,
-        originalPositionX: savedPlot?.positionX ?? null,
-        originalPositionY: savedPlot?.positionY ?? null,
-        newPositionX: needX ? positionX : null,
-        newPositionY: needY ? positionY : null,
-        // Single-axis pair the grading view reads
-        originalPosition: savedPlot?.positionX ?? savedPlot?.positionY ?? null,
-        newPosition: (needX ? positionX : null) ?? (needY ? positionY : null),
-        reflection,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    } catch (err) {
-      console.error('Failed to save reflection', err);
+  // User-driven changes — the only ones that count as edits.
+  const changeX = (v) => { setPositionX(v); edited({ positionX: v }); };
+  const changeY = (v) => { setPositionY(v); edited({ positionY: v }); };
+  const changeAxes = (key) => { setAxes(key); edited({ axes: key }); };
+  const changeText = (v) => {
+    if (reflectMode) { setReflection(v);    edited({ reflection: v }); }
+    else             { setJustification(v); edited({ justification: v }); }
+  };
+
+  const fmtTime = (d) => d?.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const saveStatus = (() => {
+    switch (saveState) {
+      case 'saving':  return { text: 'Saving…', color: 'var(--pg-dim)' };
+      case 'unsaved': return { text: 'Unsaved changes', color: 'var(--pg-dim)' };
+      case 'error':   return { text: `⚠ ${saveError}`, color: '#ef4444' };
+      case 'saved':   return {
+        text: reflectMode && hadReflection && !reflectionSubmitted
+          ? `Draft saved ${fmtTime(savedAt)} — not submitted yet`
+          : `Saved ${fmtTime(savedAt)}`,
+        color: 'var(--pg-dim)',
+      };
+      default:
+        if (reflectMode && hadReflection && !reflectionSubmitted) return { text: 'Draft — not submitted yet', color: 'var(--pg-dim)' };
+        if (reflectMode && reflectionSubmitted) return { text: 'Submitted ✓', color: '#22c55e' };
+        return null;
     }
-  }
+  })();
 
   if (readingsLoading) {
     return (
@@ -280,14 +485,10 @@ export default function Reading() {
     .filter(p => p.uid !== user?.uid && typeof p.positionY === 'number')
     .map(p => ({ value: p.positionY, label: 'Classmate' }));
 
-  // During a live seminar a student should be able to move their point on the
-  // strength of the discussion, without having to write the reflection first.
-  const movedX = needXAxis(axes) && hasPosition(savedPlot?.positionX) && positionX !== savedPlot.positionX;
-  const movedY = needYAxis(axes) && hasPosition(savedPlot?.positionY) && positionY !== savedPlot.positionY;
-  const hasMoved = movedX || movedY;
-
-  const needX = axes !== 'political';
-  const needY = axes !== 'economic';
+  // During a live seminar a student moving their point is autosaved as soon
+  // as they stop dragging, so the class board updates without a click.
+  const needX = needXAxis(axes);
+  const needY = needYAxis(axes);
   const ready = (!needX || hasPosition(positionX)) && (!needY || hasPosition(positionY));
   const summary = !ready
     ? (needX && needY
@@ -370,7 +571,7 @@ export default function Reading() {
                   {[['economic','Economic'],['political','Political'],['both','Both']].map(([key, label]) => (
                     <button
                       key={key}
-                      onClick={() => setAxes(key)}
+                      onClick={() => changeAxes(key)}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80"
                       style={axes === key
                         ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
@@ -394,7 +595,7 @@ export default function Reading() {
                   <h3 className="text-center font-bold text-[11px] mb-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Economic Spectrum</h3>
                   <Spectrum
                     value={positionX ?? 0}
-                    onChange={setPositionX}
+                    onChange={changeX}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectMode ? classDotsX : []}
                     secondaryDot={reflectMode && typeof savedPlot?.positionX === 'number'
@@ -415,7 +616,7 @@ export default function Reading() {
                 <>
                   <Spectrum
                     value={positionY ?? 0}
-                    onChange={setPositionY}
+                    onChange={changeY}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectMode ? classDotsY : []}
                     secondaryDot={reflectMode && typeof savedPlot?.positionY === 'number'
@@ -627,9 +828,15 @@ export default function Reading() {
                 ? 'The grey dots are the rest of the class. Move your marker if the seminar changed your mind, then explain what changed and why.'
                 : 'Use at least one piece of evidence from the reading to support your placement.'}
             </p>
+            {restoredDraft && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" role="status"
+                style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}>
+                ↩ Restored unsaved work from this device.
+              </p>
+            )}
             <textarea
               value={reflectMode ? reflection : justification}
-              onChange={e => (reflectMode ? setReflection : setJustification)(e.target.value)}
+              onChange={e => changeText(e.target.value)}
               onPaste={e => { e.preventDefault(); alert('Pasting is not allowed on this site.'); }}
               placeholder={reflectMode ? 'After the seminar I…' : 'The text argues that…'}
               className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px]"
@@ -657,28 +864,37 @@ export default function Reading() {
           )}
 
           {/* Save */}
-          {reflectMode ? (
-            <button
-              onClick={handleSaveReflection}
-              disabled={!ready || (!reflection.trim() && !hasMoved)}
-              className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
-              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
-              title="Your new position shows on the class board as soon as you save"
-            >
-              {reflectionSaved
-                ? '✓ Saved!'
-                : reflection.trim() ? 'Save Reflection' : 'Save New Position'}
-            </button>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={!ready || !justification.trim()}
-              className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
-              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
-            >
-              {saved ? '✓ Saved!' : hadSaved ? 'Update Position' : 'Save Position'}
-            </button>
-          )}
+          <div>
+            {saveStatus && (
+              <p className="text-[11px] mb-2 text-center" role="status" aria-live="polite" style={{ color: saveStatus.color }}>
+                {saveStatus.text}
+              </p>
+            )}
+            {reflectMode ? (
+              <button
+                onClick={handleSaveClick}
+                disabled={!ready || !reflection.trim()}
+                className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                title="Your marker moves on the class board as you drag it; this hands the written reflection in"
+              >
+                {justSaved ? '✓ Submitted!' : reflectionSubmitted ? 'Update Reflection' : 'Submit Reflection'}
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveClick}
+                disabled={!ready || !justification.trim()}
+                className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                title="Your work autosaves as you go; this saves it right now"
+              >
+                {justSaved ? '✓ Saved!' : hadSaved ? 'Update Position' : 'Save Position'}
+              </button>
+            )}
+            <p className="text-[11px] mt-2 text-center" style={{ color: 'var(--pg-faint)' }}>
+              Autosaves as you type. A copy is also kept on this device until the server confirms.
+            </p>
+          </div>
         </div>
         )}
         </div>

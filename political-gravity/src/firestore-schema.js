@@ -1,8 +1,12 @@
 /**
  * firestore-schema.js
  *
- * This file documents the Firestore collection structure for Political Gravity.
- * It is NOT executed — it exists as a reference and for IDE intellisense.
+ * Documents the Firestore collections Political Gravity actually uses.
+ * It is NOT executed — it exists as a reference so nobody guesses field names.
+ *
+ * The security rules live only in the Firebase console (see ../DEPLOY.md).
+ * Every student-work document is keyed `${uid}_${readingId}` so a student can
+ * only ever have one of each per reading and re-saving overwrites in place.
  *
  * Collections:
  * ─────────────────────────────────────────────────────────────────────────────
@@ -12,42 +16,63 @@
  *   email:        string
  *   displayName:  string
  *   role:         'student' | 'teacher'
- *   classCode:    string | null  — links student to a class
+ *   classCode:    string | null
  *   createdAt:    Timestamp
  *   lastLoginAt:  Timestamp
  *
- * readings/{readingId}
- *   title:        string
- *   unit:         string   — e.g. "Unit 1 — Democracy"
- *   body:         string   — HTML or markdown text content
- *   assignedTo:   string[] — array of classCodes this reading is assigned to
- *   createdAt:    Timestamp
- *   createdBy:    string   — teacher uid
- *
- * plots/{plotId}
- *   readingId:    string   — ref to readings/{readingId}
- *   userId:       string   — ref to users/{uid}
- *   x:            number   — -100 to 100 (left = negative, right = positive)
- *   y:            number   — -100 to 100 (auth = positive, lib = negative)
+ * plots/{uid}_{readingId}                         — position + justification
+ *   uid:           string
+ *   readingId:     string   — matches settings/masterReadings.readings[].id
+ *   positionX:     number | null   — economic axis, -100..100; null = not placed
+ *   positionY:     number | null   — political axis; centre (0) is never stored
+ *   axes:          'economic' | 'political' | 'both'
  *   justification: string
- *   submittedAt:  Timestamp
+ *   updatedAt:     Timestamp
+ *   Autosaved as the student works; any doc here shows as "In Progress".
  *
- * reflections/{reflectionId}
- *   readingId:    string
- *   userId:       string
- *   adjustedX:    number | null  — null if position unchanged
- *   adjustedY:    number | null
- *   reflection:   string
- *   submittedAt:  Timestamp
+ * pg_reflections/{uid}_{readingId}               — post-seminar move + reflection
+ *   uid, readingId
+ *   originalPositionX/Y: number | null  — copied from the plot when written
+ *   newPositionX/Y:      number | null  — where they moved to
+ *   originalPosition, newPosition: number | null — single-axis pair the
+ *                                        grading and seminar views read
+ *   reflection:    string
+ *   draft:         boolean  — true while only autosaved; false (or absent, for
+ *                             older docs) once the student pressed Submit.
+ *                             Only non-drafts count as "Submitted".
+ *   updatedAt:     Timestamp
  *
- * seminar_comments/{commentId}
- *   seminarId:    string   — same as readingId (seminars are per-reading)
- *   userId:       string
- *   text:         string
- *   timestamp:    Timestamp
+ * pg_grades/{uid}_{readingId}                    — teacher-only writes
+ *   uid, readingId
+ *   justification: 'P' | 'L' | 'S' | 'Pf' | 'E' | null   (see data/rubric.js)
+ *   reflection:    same
+ *   updatedAt:     Timestamp
  *
- * Suggested indexes:
- *   plots:       (readingId ASC, submittedAt DESC)
- *   reflections: (readingId ASC, submittedAt DESC)
- *   seminar_comments: (seminarId ASC, timestamp ASC)
+ * diplomaFlags/{randomUUID}                      — the student's Diploma Vault
+ *   uid, readingId, readingTitle
+ *   quote:        string   — the highlighted passage
+ *   commentary:   string
+ *   tags:         string[]
+ *   createdAt:    Timestamp
+ *   Never touched by a teacher Reset — these are study notes, not an assignment.
+ *
+ * readingContent/{readingId}
+ *   html:         string   — the published Google Doc, fetched by /api/fetch-reading
+ *   publishedAt:  Timestamp
+ *   publishedBy:  string
+ *   sourceUrl:    string
+ *
+ * settings/masterReadings
+ *   readings: [{ id, title, century, url, archived?, deskAssignmentId? }]
+ * settings/global
+ *   openReadings:    string[]  — ids students can open
+ *   reflectReadings: string[]  — ids currently in reflection mode
+ * settings/consensus
+ *   { [readingId]: { x: number } } — seeds the next reading's starting point
+ * settings/publishedReadings
+ *   { [readingId]: { publishedAt: ISO string, publishedBy } }
+ *
+ * Browser-side only (localStorage):
+ *   pg-draft:{uid}:{readingId} — the on-device copy of unsaved edits, cleared
+ *   once Firestore confirms the write. See pages/Reading.jsx.
  */

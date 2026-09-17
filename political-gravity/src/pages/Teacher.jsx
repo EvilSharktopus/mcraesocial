@@ -3,12 +3,35 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
-import { collection, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, serverTimestamp, where, writeBatch,
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
 import { STANDARD_READINGS, positionLabel } from '../data/readings';
 import { GRADE_SCALE, gradeKey, scoreOf, totalFor } from '../data/rubric';
+import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
+
+// The collections that hold student work for a reading, in the order the
+// Reset confirmation lists them. Diploma Vault flags are deliberately not
+// here: they are the student's own study notes, not an assignment.
+const WORK_COLLECTIONS = [
+  { name: 'plots',          label: 'positions and justifications' },
+  { name: 'pg_reflections', label: 'reflections' },
+  { name: 'pg_grades',      label: 'grades' },
+];
+
+const rowsOf = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+// Firestore caps a batch at 500 operations.
+async function deleteAll(refs) {
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + 400).forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+}
 
 const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Settings'];
 
@@ -72,6 +95,8 @@ function ReadingsTab() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingReading, setEditingReading] = useState(null);
   const [actionErr, setActionErr] = useState(null);
+  const [actionOk,  setActionOk]  = useState(null);
+  const [resetting, setResetting] = useState(null); // reading id mid-reset
   const [collapsedEras, setCollapsedEras] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('pg-collapsed-eras') || '[]')); }
     catch { return new Set(); }
@@ -89,6 +114,7 @@ function ReadingsTab() {
   async function run(what, fn) {
     try {
       setActionErr(null);
+      setActionOk(null);
       await fn();
     } catch (err) {
       console.error(`${what} failed:`, err);
@@ -208,6 +234,41 @@ function ReadingsTab() {
     await run('Loading the standard list', () => saveReadings([...standard, ...leftovers]));
   }
 
+  // Wipe every student's work on one reading so the class can do it again.
+  // A JSON copy of what is about to go is downloaded first, so a wrong click
+  // is recoverable. Diploma Vault flags stay.
+  async function resetReading(r) {
+    setResetting(r.id);
+    try {
+      await run('Resetting student work', async () => {
+        const snaps = await Promise.all(WORK_COLLECTIONS.map(c =>
+          getDocs(query(collection(db, c.name), where('readingId', '==', r.id)))));
+        const total = snaps.reduce((n, s) => n + s.size, 0);
+        if (total === 0) {
+          setActionOk(`Nothing to reset — no student work is stored for “${r.title}”.`);
+          return;
+        }
+        const lines = WORK_COLLECTIONS.map((c, i) => `• ${snaps[i].size} ${c.label}`).join('\n');
+        if (!confirm(
+          `Reset “${r.title}”?\n\nThis permanently deletes:\n${lines}\n\n` +
+          'Every student goes back to Not Started for this time period. ' +
+          'Diploma Vault flags are kept.\n\n' +
+          'A copy of the deleted work is downloaded first, in case this was a mistake.'
+        )) return;
+
+        downloadJson(`political-gravity-${r.id}-before-reset-${dateStamp()}.json`, {
+          exportedAt: new Date().toISOString(),
+          reading: { id: r.id, title: r.title },
+          ...Object.fromEntries(WORK_COLLECTIONS.map((c, i) => [c.name, rowsOf(snaps[i])])),
+        });
+        await deleteAll(snaps.flatMap(s => s.docs.map(d => d.ref)));
+        setActionOk(`Reset “${r.title}” — deleted ${total} item${total === 1 ? '' : 's'}. A copy was downloaded.`);
+      });
+    } finally {
+      setResetting(null);
+    }
+  }
+
   if (loading) {
     return <div className="p-10 text-center" style={{ color: 'var(--pg-dim)' }}>Loading readings...</div>;
   }
@@ -247,6 +308,13 @@ function ReadingsTab() {
           style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid #ef4444', color: 'var(--pg-text)' }}>
           <span>⚠ {actionErr}</span>
           <button onClick={() => setActionErr(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+      {actionOk && (
+        <div className="rounded-2xl p-4 mb-4 text-sm flex items-start justify-between gap-4" role="status"
+          style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid #22c55e', color: 'var(--pg-text)' }}>
+          <span>✓ {actionOk}</span>
+          <button onClick={() => setActionOk(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
         </div>
       )}
 
@@ -390,6 +458,16 @@ function ReadingsTab() {
                         title="Move to the Archive tab — hidden from students, not deleted"
                       >
                         Archive
+                      </button>
+
+                      <button
+                        onClick={() => resetReading(r)}
+                        disabled={resetting === r.id}
+                        className="text-xs hover:opacity-80 transition-opacity font-semibold disabled:opacity-50"
+                        style={{ color: 'var(--pg-error)' }}
+                        title="Delete every student's positions, reflections and grades for this time period so the class can start it fresh"
+                      >
+                        {resetting === r.id ? 'Resetting…' : 'Reset'}
                       </button>
 
                       <button
@@ -613,7 +691,8 @@ function GradingTab() {
         {active.map(r => {
           const subs      = submissionsFor(r.id);
           const isOpen    = expanded === r.id;
-          const nDone     = subs.filter(s => s.reflection).length;
+          // Autosaved drafts are visible below but do not count as handed in.
+          const nDone     = subs.filter(s => s.reflection && s.reflection.draft !== true).length;
 
           return (
             <div key={r.id} className="rounded-2xl p-5" style={cardStyle}>
@@ -754,8 +833,14 @@ function GradingDetail({ view, sub, grade, onGrade }) {
   }
 
   if (view === 'reflections') {
+    const isDraft = sub.reflection?.draft === true;
     return (
       <>
+        {isDraft && (
+          <p className="text-[11px] mb-1 font-semibold" style={{ color: '#f59e0b' }}>
+            Draft — autosaved, not submitted yet
+          </p>
+        )}
         {sub.reflection?.reflection
           ? <p className="text-xs" style={body}>{sub.reflection.reflection}</p>
           : <p className="text-xs" style={dim}>No reflection submitted.</p>}
@@ -775,7 +860,9 @@ function GradingDetail({ view, sub, grade, onGrade }) {
     <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>
       Justification {part(j, sub.plot?.justification ? 'ungraded (0)' : 'not submitted (0)')}
       {'  +  '}
-      Reflection {part(f, sub.reflection?.reflection ? 'ungraded (0)' : 'not submitted (0)')}
+      Reflection {part(f, sub.reflection?.reflection
+        ? (sub.reflection.draft === true ? 'draft, not submitted (0)' : 'ungraded (0)')
+        : 'not submitted (0)')}
       {'  =  '}
       <span style={{ color: 'var(--pg-text)', fontWeight: 600 }}>
         {scoreOf(j) + scoreOf(f)} ÷ 2 = {totalFor(grade)}%
@@ -784,13 +871,78 @@ function GradingDetail({ view, sub, grade, onGrade }) {
   );
 }
 
+// Everything Political Gravity stores, as one JSON file the teacher keeps.
+const BACKUP_COLLECTIONS = ['users', 'plots', 'pg_reflections', 'pg_grades', 'diplomaFlags', 'readingContent'];
+const BACKUP_SETTINGS    = ['global', 'masterReadings', 'consensus', 'publishedReadings'];
+
+async function exportEverything() {
+  const [collections, settings] = await Promise.all([
+    Promise.all(BACKUP_COLLECTIONS.map(name => getDocs(collection(db, name)))),
+    Promise.all(BACKUP_SETTINGS.map(name => getDoc(doc(db, 'settings', name)))),
+  ]);
+  const data = {
+    exportedAt: new Date().toISOString(),
+    project: 'mcrae-assignments-ca',
+    settings: Object.fromEntries(BACKUP_SETTINGS.map((name, i) =>
+      [name, settings[i].exists() ? settings[i].data() : null])),
+    ...Object.fromEntries(BACKUP_COLLECTIONS.map((name, i) => [name, rowsOf(collections[i])])),
+  };
+  const count = collections.reduce((n, s) => n + s.size, 0);
+  downloadJson(`political-gravity-backup-${dateStamp()}.json`, data);
+  return count;
+}
+
 function SettingsTab({ userEmail }) {
+  const [backupState, setBackupState] = useState(null); // { ok, text }
+  const [backingUp,   setBackingUp]   = useState(false);
+
+  async function handleBackup() {
+    setBackingUp(true);
+    setBackupState(null);
+    try {
+      const count = await exportEverything();
+      setBackupState({ ok: true, text: `Downloaded ${count} records. Keep the file somewhere safe — OneDrive is fine.` });
+    } catch (err) {
+      console.error('Backup failed:', err);
+      setBackupState({ ok: false, text: err.code === 'permission-denied'
+        ? 'Firestore refused part of the export (permissions). Nothing was downloaded.'
+        : `Backup failed: ${err.message}` });
+    } finally {
+      setBackingUp(false);
+    }
+  }
+
   return (
     <>
       <h1 className="font-display font-bold text-xl mb-1" style={{ color: 'var(--pg-text)' }}>Settings</h1>
       <p className="text-sm mb-6" style={{ color: 'var(--pg-dim)' }}>Application and role management</p>
 
       <div className="space-y-4">
+        {/* Backup */}
+        <div className="rounded-2xl p-6" style={cardStyle}>
+          <h2 className="font-semibold mb-1" style={{ color: 'var(--pg-text)' }}>💾 Backup</h2>
+          <p className="text-sm mb-4" style={{ color: 'var(--pg-muted)' }}>
+            Download every student’s positions, justifications, reflections, grades and Diploma Vault
+            flags, plus the reading list and published readings, as one JSON file. Do this before a
+            Reset, and every few weeks during the year.
+          </p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              onClick={handleBackup}
+              disabled={backingUp}
+              className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity disabled:opacity-50"
+              style={btnPrimary}
+            >
+              {backingUp ? '⏳ Preparing…' : '⬇ Download backup'}
+            </button>
+            {backupState && (
+              <span className="text-xs" role="status" style={{ color: backupState.ok ? '#22c55e' : '#ef4444' }}>
+                {backupState.ok ? '✓' : '⚠'} {backupState.text}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Role promotion */}
         <div className="rounded-2xl p-6" style={cardStyle}>
           <h2 className="font-semibold mb-1" style={{ color: 'var(--pg-text)' }}>🔑 Co-Teacher Access</h2>

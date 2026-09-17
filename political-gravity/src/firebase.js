@@ -1,7 +1,11 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyB4Yc51IzKEcBzDPqy3B8fA9QSrnhIAzr4",
@@ -15,4 +19,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db   = getFirestore(app);
+
+// Offline persistence: writes made while the school wifi drops are queued in
+// IndexedDB and sent when the connection returns — even if the tab was closed
+// in between. The multi-tab manager lets a student have two tabs open without
+// one of them losing persistence. If IndexedDB is unavailable the SDK logs a
+// warning and falls back to an in-memory cache; nothing breaks.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
