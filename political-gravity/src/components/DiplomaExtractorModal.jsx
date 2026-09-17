@@ -1,39 +1,31 @@
-import { useState } from 'react';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { collection, doc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
-
-const PREDEFINED_TAGS = [
-  'Left', 'Right', 'Economics', 'Politics', 'Illiberalism', 'Imposition', 
-  'Democracy', 'Dictatorship', 'USA', 'Russia', 'Canada', 'Europe', 'China'
-];
+import { dedupeTags, knownTags } from '../data/tags';
+import TagPicker from './TagPicker';
 
 export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, readingId, readingTitle }) {
   const { user } = useAuth();
   const [commentary, setCommentary] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
-  const [customTagInput, setCustomTagInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState(null);
+  // The student's own vault, so the tags they already use are one click away
+  // instead of being retyped (and misspelled) each time.
+  const [myFlags, setMyFlags] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'diplomaFlags'), where('uid', '==', user.uid)),
+      snap => setMyFlags(snap.docs.map(d => d.data())),
+      err => console.error('Could not load your tags:', err),
+    );
+    return () => unsub();
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
-
-  function toggleTag(tag) {
-    setSelectedTags(prev => 
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  }
-
-  function handleAddCustomTag(e) {
-    if (e.key === 'Enter' || e.type === 'click') {
-      e.preventDefault();
-      const tag = customTagInput.trim();
-      if (tag && !selectedTags.includes(tag)) {
-        setSelectedTags(prev => [...prev, tag]);
-      }
-      setCustomTagInput('');
-    }
-  }
 
   async function handleSave() {
     if (!user || (!commentary.trim() && selectedTags.length === 0)) return;
@@ -46,13 +38,12 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
         readingId,
         readingTitle,
         quote: selectedText,
-        commentary,
-        tags: selectedTags,
+        commentary: commentary.trim(),
+        tags: dedupeTags(selectedTags),
         createdAt: serverTimestamp()
       });
       setCommentary('');
       setSelectedTags([]);
-      setCustomTagInput('');
       onClose();
     } catch (err) {
       // Keep the modal open with the text intact so nothing is lost.
@@ -65,21 +56,18 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
     }
   }
 
-  // Combine predefined tags and any custom tags that were added
-  const allTagsToDisplay = Array.from(new Set([...PREDEFINED_TAGS, ...selectedTags]));
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div 
+      <div
         className="w-full max-w-lg rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
         style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}
       >
         <h2 className="text-xl font-bold mb-4 shrink-0 font-display" style={{ color: 'var(--pg-text)' }}>
           🔖 Flag Case Study
         </h2>
-        
+
         <div className="overflow-y-auto pr-2" style={{ marginRight: '-8px' }}>
-          <div 
+          <div
             className="mb-6 p-4 rounded-xl text-sm italic"
             style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-muted)' }}
           >
@@ -90,48 +78,7 @@ export default function DiplomaExtractorModal({ isOpen, onClose, selectedText, r
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--pg-text)' }}>
               Tags (Select all that apply)
             </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {allTagsToDisplay.map(tag => {
-                const isSelected = selectedTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                    style={{
-                      backgroundColor: isSelected ? 'var(--pg-primary)' : 'var(--pg-surface2)',
-                      color: isSelected ? 'var(--pg-on-primary)' : 'var(--pg-text)',
-                      border: `1px solid ${isSelected ? 'var(--pg-primary)' : 'var(--pg-border)'}`
-                    }}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customTagInput}
-                onChange={e => setCustomTagInput(e.target.value)}
-                onKeyDown={handleAddCustomTag}
-                placeholder="Add custom tag... (Press Enter)"
-                className="flex-1 px-3 py-2 rounded-lg text-sm transition-colors"
-                style={{
-                  backgroundColor: 'var(--pg-bg)',
-                  border: '1px solid var(--pg-border)',
-                  color: 'var(--pg-text)',
-                }}
-              />
-              <button
-                onClick={handleAddCustomTag}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-text)', border: '1px solid var(--pg-border)' }}
-              >
-                Add
-              </button>
-            </div>
+            <TagPicker value={selectedTags} onChange={setSelectedTags} suggestions={knownTags(myFlags)} />
           </div>
 
           <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--pg-text)' }}>

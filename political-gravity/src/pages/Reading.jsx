@@ -144,6 +144,33 @@ export default function Reading() {
     return () => unsub();
   }, [id]);
 
+  // Offer "Flag for Diploma" whenever a selection settles inside the reading.
+  // selectionchange covers touch (iPad, touchscreen Chromebook) as well as the
+  // mouse; a mouseup handler alone never fired on touch.
+  useEffect(() => {
+    if (!publishedHtml) return;
+    let timer = null;
+    const check = () => {
+      const pane = readingPaneRef.current;
+      const sel = window.getSelection();
+      const text = sel?.toString().trim() ?? '';
+      if (text.length > 5 && pane && sel.rangeCount > 0 && pane.contains(sel.anchorNode) && pane.contains(sel.focusNode)) {
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        setSelection({
+          text,
+          // Keep the button on screen even for a selection at the very top.
+          top: Math.max(rect.top, 56),
+          left: Math.min(Math.max(rect.left + rect.width / 2, 80), window.innerWidth - 80),
+        });
+      } else {
+        setSelection(null);
+      }
+    };
+    const onChange = () => { clearTimeout(timer); timer = setTimeout(check, 250); };
+    document.addEventListener('selectionchange', onChange);
+    return () => { clearTimeout(timer); document.removeEventListener('selectionchange', onChange); };
+  }, [publishedHtml]);
+
   // Copy protection — block copy/cut/contextmenu/keyboard shortcuts on the reading pane
   useEffect(() => {
     const el = readingPaneRef.current;
@@ -722,23 +749,6 @@ export default function Reading() {
             <div
               ref={readingPaneRef}
               className="reading-content flex-1 overflow-y-auto px-10 py-8 relative"
-              onMouseUp={() => {
-                setTimeout(() => {
-                  const sel = window.getSelection();
-                  const text = sel.toString().trim();
-                  if (text.length > 5 && readingPaneRef.current?.contains(sel.anchorNode)) {
-                    const range = sel.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    setSelection({
-                      text,
-                      top: rect.top,
-                      left: rect.left + rect.width / 2
-                    });
-                  } else {
-                    setSelection(null);
-                  }
-                }, 10);
-              }}
               style={{
                 userSelect: 'text',
                 WebkitUserSelect: 'text',

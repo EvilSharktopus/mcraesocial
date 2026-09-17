@@ -1,11 +1,13 @@
 // src/pages/StudyPackage.jsx
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, where, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../auth/AuthContext';
 import NavBar from '../components/NavBar';
+import TagPicker from '../components/TagPicker';
 import { useReadings } from '../hooks/useReadings';
 import { positionLabel } from '../data/readings';
+import { dedupeTags, knownTags, tagCounts, tagKey } from '../data/tags';
 
 const isNum = (v) => typeof v === 'number';
 const average = (values) => values.length
@@ -78,21 +80,67 @@ export default function StudyPackage() {
     return () => { unsubPlots(); unsubRefl(); unsubFlags(); };
   }, [user]);
 
-  // Every tag the student has actually used, most-used first, with counts.
-  const tagCounts = flags.reduce((acc, f) => {
-    (f.tags || []).forEach(t => { acc[t] = (acc[t] || 0) + 1; });
-    return acc;
-  }, {});
-  const tagList = Object.entries(tagCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  // Editing a flag in place: which one, and its working copy.
+  const [editingId,  setEditingId]  = useState(null);
+  const [editTags,   setEditTags]   = useState([]);
+  const [editText,   setEditText]   = useState('');
+  const [editBusy,   setEditBusy]   = useState(false);
+  const [editErr,    setEditErr]    = useState(null);
 
-  // A flag matches if it carries any of the selected tags.
+  // Every tag the student has actually used, most-used first, with counts.
+  // Spellings that differ only by case or spacing are one tag here.
+  const tagList = tagCounts(flags);            // [[key, { label, count }], …]
+  const suggestions = knownTags(flags);
+
+  // A flag matches if it carries any of the selected tags. activeTags holds keys.
   const visibleFlags = (activeTags.length
-    ? flags.filter(f => (f.tags || []).some(t => activeTags.includes(t)))
+    ? flags.filter(f => (f.tags || []).some(t => activeTags.includes(tagKey(t))))
     : flags
   ).slice().sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0));
 
-  const toggleTag = (tag) =>
-    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  const toggleTag = (tag) => {
+    const k = tagKey(tag);
+    setActiveTags(prev => prev.includes(k) ? prev.filter(t => t !== k) : [...prev, k]);
+  };
+
+  function startEdit(flag) {
+    setEditingId(flag.id);
+    setEditTags(flag.tags || []);
+    setEditText(flag.commentary || '');
+    setEditErr(null);
+  }
+  function cancelEdit() { setEditingId(null); setEditErr(null); }
+
+  async function saveEdit(flag) {
+    setEditBusy(true);
+    setEditErr(null);
+    try {
+      await setDoc(doc(db, 'diplomaFlags', flag.id),
+        { commentary: editText.trim(), tags: dedupeTags(editTags), updatedAt: serverTimestamp() },
+        { merge: true });
+      setEditingId(null);
+    } catch (err) {
+      console.error('Could not update flag:', err);
+      setEditErr(err.code === 'permission-denied'
+        ? 'Firestore refused the change (permissions). Nothing was lost.'
+        : 'Could not reach the server. Nothing was lost — try again.');
+    } finally {
+      setEditBusy(false);
+    }
+  }
+
+  async function removeFlag(flag) {
+    if (!confirm('Remove this passage from your Vault? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db, 'diplomaFlags', flag.id));
+      if (editingId === flag.id) setEditingId(null);
+    } catch (err) {
+      console.error('Could not delete flag:', err);
+      alert(err.code === 'permission-denied'
+        ? 'Firestore refused the delete (permissions).'
+        : 'Could not reach the server — try again.');
+    }
+  }
 
   // Combine plots with reading metadata. A student may have placed themselves
   // on one spectrum or both, so an entry counts if either axis was set.
@@ -324,18 +372,19 @@ export default function StudyPackage() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {tagList.map(([tag, count]) => {
-                    const on = activeTags.includes(tag);
+                  {tagList.map(([key, { label, count }]) => {
+                    const on = activeTags.includes(key);
                     return (
                       <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
+                        key={key}
+                        onClick={() => toggleTag(label)}
+                        aria-pressed={on}
                         className="text-[11px] font-semibold px-2.5 py-1 rounded-md transition-opacity hover:opacity-80"
                         style={on
                           ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
                           : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
                       >
-                        {tag} <span style={{ opacity: 0.7 }}>{count}</span>
+                        {label} <span style={{ opacity: 0.7 }}>{count}</span>
                       </button>
                     );
                   })}
@@ -352,40 +401,75 @@ export default function StudyPackage() {
               </div>
             )}
 
-            {visibleFlags.map((flag) => (
-              <div key={flag.id} className="vault-flag-card rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+            {visibleFlags.map((flag) => {
+              const isEditing = editingId === flag.id;
+              return (
+              <div key={flag.id} className="vault-flag-card rounded-2xl p-5" style={{ backgroundColor: 'var(--pg-surface)', border: `1px solid ${isEditing ? 'var(--pg-primary)' : 'var(--pg-border)'}` }}>
                 <div className="mb-4 flex flex-wrap gap-2 items-center">
                   <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md" style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-primary)' }}>
                     📚 {flag.readingTitle}
                   </span>
-                  {flag.tags?.map(tag => (
+                  {!isEditing && dedupeTags(flag.tags || []).map(tag => (
                     <button
-                      key={tag}
+                      key={tagKey(tag)}
                       onClick={() => toggleTag(tag)}
-                      title={activeTags.includes(tag) ? `Stop filtering by ${tag}` : `Show only ${tag}`}
+                      title={activeTags.includes(tagKey(tag)) ? `Stop filtering by ${tag}` : `Show only ${tag}`}
                       className="vault-tag text-[10px] font-semibold px-2 py-1 rounded-md transition-opacity hover:opacity-80"
-                      style={activeTags.includes(tag)
+                      style={activeTags.includes(tagKey(tag))
                         ? { border: '1px solid var(--pg-primary)', color: 'var(--pg-primary)' }
                         : { border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
                       {tag}
                     </button>
                   ))}
+                  {!isEditing && (
+                    <span className="no-print ml-auto flex gap-3">
+                      <button onClick={() => startEdit(flag)} className="text-[11px] font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--pg-muted)' }}>Edit</button>
+                      <button onClick={() => removeFlag(flag)} className="text-[11px] font-semibold hover:opacity-80 transition-opacity" style={{ color: 'var(--pg-error)' }}>Remove</button>
+                    </span>
+                  )}
                 </div>
-                
+
                 <div className="vault-quote-block mb-4 pl-4 border-l-2" style={{ borderColor: 'var(--pg-primary)' }}>
                   <p className="text-sm italic leading-relaxed" style={{ color: 'var(--pg-muted)' }}>
                     "{flag.quote}"
                   </p>
                 </div>
 
-                <div className="vault-commentary-block p-4 rounded-xl" style={{ backgroundColor: 'var(--pg-surface2)' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pg-muted)' }}>Your Commentary</p>
-                  <p className="text-sm" style={{ color: 'var(--pg-text)' }}>
-                    {flag.commentary}
-                  </p>
-                </div>
+                {isEditing ? (
+                  <div className="no-print">
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pg-muted)' }}>Tags</p>
+                    <TagPicker value={editTags} onChange={setEditTags} suggestions={suggestions} />
+                    <p className="text-[10px] font-bold uppercase tracking-wider mt-4 mb-2" style={{ color: 'var(--pg-muted)' }}>Your Commentary</p>
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      className="w-full resize-none rounded-xl p-3 text-sm focus:outline-none min-h-[90px]"
+                      style={{ backgroundColor: 'var(--pg-bg)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
+                    />
+                    {editErr && <p className="text-xs mt-2" role="alert" style={{ color: '#ef4444' }}>⚠ {editErr}</p>}
+                    <div className="flex justify-end gap-3 mt-3">
+                      <button onClick={cancelEdit} disabled={editBusy} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ color: 'var(--pg-text)' }}>Cancel</button>
+                      <button
+                        onClick={() => saveEdit(flag)}
+                        disabled={editBusy || (!editText.trim() && editTags.length === 0)}
+                        className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                      >
+                        {editBusy ? 'Saving…' : 'Save changes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="vault-commentary-block p-4 rounded-xl" style={{ backgroundColor: 'var(--pg-surface2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--pg-muted)' }}>Your Commentary</p>
+                    <p className="text-sm" style={{ color: 'var(--pg-text)', whiteSpace: 'pre-wrap' }}>
+                      {flag.commentary || <span style={{ color: 'var(--pg-faint)' }}>No commentary yet — Edit to add one.</span>}
+                    </p>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
