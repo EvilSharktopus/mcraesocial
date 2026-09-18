@@ -147,29 +147,75 @@ export default function Reading() {
   // Offer "Flag for Diploma" whenever a selection settles inside the reading.
   // selectionchange covers touch (iPad, touchscreen Chromebook) as well as the
   // mouse; a mouseup handler alone never fired on touch.
+  //
+  // Two things students hit that this has to survive:
+  //  - a drag that ends just outside the text (the header bar, the padding,
+  //    the divider). The selection is still mostly in the reading, so clip it
+  //    to the pane instead of throwing it away.
+  //  - the button vanishing before their tap lands. Pressing anything clears a
+  //    selection on some devices, so the button acts on pointerdown and stays
+  //    up for a grace period after the selection collapses.
   useEffect(() => {
     if (!publishedHtml) return;
-    let timer = null;
+    let settle = null;
+    let hide = null;
     const check = () => {
       const pane = readingPaneRef.current;
       const sel = window.getSelection();
-      const text = sel?.toString().trim() ?? '';
-      if (text.length > 5 && pane && sel.rangeCount > 0 && pane.contains(sel.anchorNode) && pane.contains(sel.focusNode)) {
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-        setSelection({
-          text,
-          // Keep the button on screen even for a selection at the very top.
-          top: Math.max(rect.top, 56),
-          left: Math.min(Math.max(rect.left + rect.width / 2, 80), window.innerWidth - 80),
-        });
-      } else {
-        setSelection(null);
-      }
+      if (!pane || !sel || sel.rangeCount === 0 || sel.isCollapsed) { scheduleHide(); return; }
+      const range = sel.getRangeAt(0).cloneRange();
+      if (!range.intersectsNode(pane)) { scheduleHide(); return; }
+      // Clip to the reading so text from the toolbar or side panel never
+      // sneaks into a flagged quote.
+      const bounds = document.createRange();
+      bounds.selectNodeContents(pane);
+      if (range.compareBoundaryPoints(Range.START_TO_START, bounds) < 0) range.setStart(bounds.startContainer, bounds.startOffset);
+      if (range.compareBoundaryPoints(Range.END_TO_END, bounds) > 0)     range.setEnd(bounds.endContainer, bounds.endOffset);
+      // Range.toString() runs paragraphs together; laying the fragment out
+      // for a moment gives innerText, which keeps a break between blocks.
+      const scratch = document.createElement('div');
+      // (opacity, not visibility:hidden — hidden text is left out of innerText)
+      scratch.style.cssText = 'position:absolute;left:-9999px;top:0;width:600px;opacity:0;pointer-events:none';
+      scratch.appendChild(range.cloneContents());
+      document.body.appendChild(scratch);
+      const text = scratch.innerText.replace(/\s+/g, ' ').trim();
+      scratch.remove();
+      if (text.length <= 5) { scheduleHide(); return; }
+      clearTimeout(hide);
+      const rect = range.getBoundingClientRect();
+      setSelection({
+        text,
+        // Keep the button on screen even for a selection at the very top.
+        top: Math.max(rect.top, 56),
+        left: Math.min(Math.max(rect.left + rect.width / 2, 80), window.innerWidth - 80),
+      });
     };
-    const onChange = () => { clearTimeout(timer); timer = setTimeout(check, 250); };
+    const scheduleHide = () => {
+      clearTimeout(hide);
+      hide = setTimeout(() => setSelection(null), 1500);
+    };
+    const onChange = () => { clearTimeout(settle); settle = setTimeout(check, 200); };
     document.addEventListener('selectionchange', onChange);
-    return () => { clearTimeout(timer); document.removeEventListener('selectionchange', onChange); };
+    // Scrolling the reading moves the highlighted text; keep the button with it.
+    const pane = readingPaneRef.current;
+    pane?.addEventListener('scroll', onChange, { passive: true });
+    return () => {
+      clearTimeout(settle); clearTimeout(hide);
+      document.removeEventListener('selectionchange', onChange);
+      pane?.removeEventListener('scroll', onChange);
+    };
   }, [publishedHtml]);
+
+  // Act on pointerdown, before the press can clear the selection, and stop
+  // the default so it never does.
+  function openExtractor(e) {
+    e?.preventDefault?.();
+    if (!selection) return;
+    setExtractedText(selection.text);
+    setExtractorOpen(true);
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+  }
 
   // Copy protection — block copy/cut/contextmenu/keyboard shortcuts on the reading pane
   useEffect(() => {
@@ -543,13 +589,9 @@ export default function Reading() {
 
       {selection && !extractorOpen && (
         <button
-          onClick={() => {
-            setExtractedText(selection.text);
-            setExtractorOpen(true);
-            setSelection(null);
-            window.getSelection().removeAllRanges();
-          }}
-          className="fixed z-50 px-3 py-1.5 text-sm font-semibold rounded-lg shadow-lg flex items-center gap-1 transition-transform hover:scale-105"
+          onPointerDown={openExtractor}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') openExtractor(e); }}
+          className="fixed z-50 px-3 py-1.5 text-sm font-semibold rounded-lg shadow-lg flex items-center gap-1 transition-transform hover:scale-105 select-none"
           style={{
             top: selection.top - 40,
             left: selection.left,

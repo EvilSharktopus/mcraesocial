@@ -136,7 +136,7 @@ function Field({ label, ...props }) {
 // ── Login Page ────────────────────────────────────────────────────────────────
 
 export default function Login() {
-  const { signIn, signUp, user, isTeacher } = useAuth();
+  const { signIn, signUp, resetPassword, user, isTeacher } = useAuth();
   const navigate = useNavigate();
 
   const [mode,     setMode]     = useState('signin');
@@ -145,7 +145,9 @@ export default function Login() {
   const [name,     setName]     = useState('');
   const [agreed,   setAgreed]   = useState(false);
   const [error,    setError]    = useState('');
+  const [notice,   setNotice]   = useState('');   // good news, e.g. reset email sent
   const [loading,  setLoading]  = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [modal,    setModal]    = useState(null);
 
   // Must come after every hook above: returning earlier changes the number of
@@ -171,8 +173,30 @@ export default function Login() {
   };
 
   function switchMode(m) {
-    setMode(m); setError('');
+    setMode(m); setError(''); setNotice('');
     setEmail(''); setPassword(''); setName(''); setAgreed(false);
+  }
+
+  // Password reset keeps the same account (and so the same vault and marks);
+  // creating a new account would not. Firebase sends the email itself.
+  async function handleForgot() {
+    setError(''); setNotice('');
+    const addr = email.trim();
+    if (!addr) {
+      setError('Type your email address above first, then press “Forgot password?” again.');
+      return;
+    }
+    setResetting(true);
+    try {
+      await resetPassword(addr);
+      setNotice(`Reset link sent to ${addr}. Check your inbox (and junk folder), follow the link, then sign in here with the new password. Your work stays with your account.`);
+    } catch (err) {
+      setError(err.code === 'auth/user-not-found'
+        ? `No account uses ${addr}. Check the spelling, or create an account.`
+        : friendlyError(err.code, err.message));
+    } finally {
+      setResetting(false);
+    }
   }
 
   async function handleSubmit(e) {
@@ -258,6 +282,20 @@ export default function Login() {
             <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" />
             <Field label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
 
+            {mode === 'signin' && (
+              <div className="flex justify-end -mt-2">
+                <button
+                  type="button"
+                  onClick={handleForgot}
+                  disabled={resetting || loading}
+                  className="text-xs font-medium underline underline-offset-2 transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ color: 'var(--pg-primary)' }}
+                >
+                  {resetting ? 'Sending reset link…' : 'Forgot password?'}
+                </button>
+              </div>
+            )}
+
             {mode === 'signup' && (
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
@@ -273,8 +311,13 @@ export default function Login() {
             )}
 
             {error && (
-              <p className="text-sm rounded-xl px-4 py-2.5" style={{ backgroundColor: 'var(--pg-error-bg)', border: '1px solid var(--pg-error-border)', color: 'var(--pg-error)' }}>
+              <p className="text-sm rounded-xl px-4 py-2.5" role="alert" style={{ backgroundColor: 'var(--pg-error-bg)', border: '1px solid var(--pg-error-border)', color: 'var(--pg-error)' }}>
                 {error}
+              </p>
+            )}
+            {notice && (
+              <p className="text-sm rounded-xl px-4 py-2.5" role="status" style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid #22c55e', color: 'var(--pg-text)' }}>
+                ✓ {notice}
               </p>
             )}
 
