@@ -633,7 +633,7 @@ export default function Reading() {
                 style={{ color: 'var(--pg-text)' }}
                 title={spectrumOpen ? 'Hide the spectrums' : 'Show the spectrums'}
               >
-                {spectrumOpen ? '▾' : '▸'} Where do you stand?
+                {spectrumOpen ? '▾' : '▸'} Where is society?
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex gap-1">
