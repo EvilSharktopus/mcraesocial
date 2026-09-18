@@ -10,7 +10,7 @@
 // autosave immediately and, for reflections, marks the piece as submitted.
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
@@ -26,6 +26,45 @@ import { useAuth } from '../auth/AuthContext';
 
 const AUTOSAVE_DELAY_MS = 1500;
 const RETRY_DELAY_MS    = 10_000;
+const LOAD_TIMEOUT_MS   = 8_000;       // how long to wait for the server before using the cache
+const CLOCK_SKEW_MS     = 10 * 60_000; // a draft this much "older" than the save still wins
+
+// Read one document: the server first, and if that is slow or unreachable,
+// whatever offline persistence has. Resolves { snap, source } or throws.
+async function loadDoc(ref) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { code: 'timeout' })), LOAD_TIMEOUT_MS);
+  });
+  try {
+    const snap = await Promise.race([getDoc(ref), timeout]);
+    return { snap, source: 'server' };
+  } catch (err) {
+    try {
+      const snap = await getDocFromCache(ref);
+      return { snap, source: 'cache' };
+    } catch {
+      throw err;
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Same content, ignoring the fields that are not the student's work?
+const sameWork = (a, b, fields) => fields.every(f => (a?.[f] ?? null) === (b?.[f] ?? null));
+
+// What to do with an on-device draft next to the saved copy:
+//   apply — the draft is the newer work, put it on screen
+//   clear — the draft says nothing the save does not
+//   ask   — the draft is older than the save by more than clock error could
+//           explain, yet differs: let the student decide
+function judgeDraft(draft, saved, fields) {
+  if (!draft) return 'clear';
+  if (!saved) return 'apply';
+  if (sameWork(draft, saved, fields)) return 'clear';
+  return draft.at >= millis(saved.updatedAt) - CLOCK_SKEW_MS ? 'apply' : 'ask';
+}
 
 // ── Local draft: the on-device copy that survives a crash or a closed tab ──
 const draftKey = (uid, readingId) => `pg-draft:${uid}:${readingId}`;
@@ -67,6 +106,12 @@ export default function Reading() {
   const [savedAt,       setSavedAt]       = useState(null);
   const [saveError,     setSaveError]     = useState(null);
   const [restoredDraft, setRestoredDraft] = useState(false);
+  // A draft we would not apply on our own (see judgeDraft) — offered instead.
+  const [pendingDraft,  setPendingDraft]  = useState(null);
+  // loading | ready | cached | failed — the form stays locked until the saved
+  // copy is known, so nothing can be typed over it or lost to it.
+  const [loadState,     setLoadState]     = useState('loading');
+  const [loadAttempt,   setLoadAttempt]   = useState(0);
   const [publishedHtml, setPublishedHtml] = useState(null); // null = still loading
   const [htmlLoading,   setHtmlLoading]   = useState(true);
   const [selection,     setSelection]     = useState(null);
@@ -124,15 +169,12 @@ export default function Reading() {
   }, [writingWidth]);
 
   // Panel collapse state, remembered so a student's layout survives a reload.
-  const [spectrumOpen, setSpectrumOpen] = useState(
-    () => localStorage.getItem('pg-panel-spectrum') !== 'closed');
-  const [writingOpen, setWritingOpen] = useState(
-    () => localStorage.getItem('pg-panel-writing') !== 'closed');
-
-  const togglePanel = (which, open, setOpen) => {
-    localStorage.setItem(`pg-panel-${which}`, open ? 'closed' : 'open');
-    setOpen(!open);
-  };
+  // Panel collapse is for this visit only. It used to be remembered, which
+  // meant a stray click on the heading hid the spectrum "permanently" — even
+  // a refresh brought back the same collapsed page.
+  const [spectrumOpen, setSpectrumOpen] = useState(true);
+  const [writingOpen,  setWritingOpen]  = useState(true);
+  const togglePanel = (which, open, setOpen) => setOpen(!open);
 
   // Load published content from Firestore
   useEffect(() => {
@@ -394,18 +436,25 @@ export default function Reading() {
 
   // Reload whatever this student already saved for this reading, so leaving
   // and coming back shows their position and justification rather than a
-  // blank form. A draft newer than the saved copy wins.
+  // blank form. Keyed on ids, not objects: the readings list is replaced once
+  // Firestore answers, and re-running this then would have put the saved text
+  // back over anything typed in the meantime.
+  const uid = user?.uid;
+  const readingId = reading?.id;
   useEffect(() => {
-    if (!user || !reading) return;
+    if (!uid || !readingId) return;
     let cancelled = false;
-    const key = draftKey(user.uid, reading.id);
+    const key = draftKey(uid, readingId);
     (async () => {
+      setLoadState('loading');
       let d = null;
+      let source;
       try {
-        const snap = await getDoc(doc(db, 'plots', `${user.uid}_${reading.id}`));
+        const res = await loadDoc(doc(db, 'plots', `${uid}_${readingId}`));
         if (cancelled) return;
-        if (snap.exists()) {
-          d = snap.data();
+        source = res.source;
+        if (res.snap.exists()) {
+          d = res.snap.data();
           if (typeof d.positionX === 'number') setPositionX(d.positionX);
           if (typeof d.positionY === 'number') setPositionY(d.positionY);
           if (d.justification) setJustification(d.justification);
@@ -413,16 +462,33 @@ export default function Reading() {
           setSavedPlot(d);
         }
       } catch (err) {
+        // Neither the server nor the cache. Keep the form locked rather than
+        // show an empty one that a keystroke would then save over the real work.
         console.error('Could not load your saved position', err);
+        if (!cancelled) setLoadState('failed');
+        return;
       }
       if (cancelled) return;
       const draft = readDraft(key);
-      if (draft && draft.at > millis(d?.updatedAt)) applyDraft(draft, { reflect: false });
-      else if (draft && !reflectModeRef.current) clearDraft(key); // older than the saved copy — done with it
+      const verdict = judgeDraft(draft, d, ['positionX', 'positionY', 'axes', 'justification']);
+      if (verdict === 'apply') applyDraft(draft, { reflect: false });
+      else if (verdict === 'ask') setPendingDraft({ ...draft, reflect: false });
+      else if (draft && !reflectModeRef.current) clearDraft(key);
       setHadSaved(!!d);
+      setLoadState(source === 'cache' ? 'cached' : 'ready');
     })();
     return () => { cancelled = true; };
-  }, [user, reading, applyDraft]);
+  }, [uid, readingId, applyDraft, loadAttempt]);
+
+  const restorePendingDraft = () => {
+    if (!pendingDraft) return;
+    applyDraft(pendingDraft, { reflect: pendingDraft.reflect });
+    setPendingDraft(null);
+  };
+  const discardPendingDraft = () => {
+    clearDraft(latest.current.draftKey);
+    setPendingDraft(null);
+  };
 
   // Reflection mode is a per-reading switch the teacher flips after the seminar.
   useEffect(() => {
@@ -445,32 +511,38 @@ export default function Reading() {
   // Restore a reflection already written for this reading — text and, if they
   // moved, the marker where they moved it to (not back at the original).
   useEffect(() => {
-    if (!user || !reading || !reflectMode) return;
+    if (!uid || !readingId || !reflectMode) return;
     let cancelled = false;
-    const key = draftKey(user.uid, reading.id);
+    const key = draftKey(uid, readingId);
     (async () => {
       let d = null;
       try {
-        const snap = await getDoc(doc(db, 'pg_reflections', `${user.uid}_${reading.id}`));
+        const res = await loadDoc(doc(db, 'pg_reflections', `${uid}_${readingId}`));
         if (cancelled) return;
-        if (snap.exists()) {
-          d = snap.data();
+        if (res.snap.exists()) {
+          d = res.snap.data();
           if (typeof d.reflection === 'string') setReflection(d.reflection);
           if (typeof d.newPositionX === 'number') setPositionX(d.newPositionX);
           if (typeof d.newPositionY === 'number') setPositionY(d.newPositionY);
         }
       } catch (err) {
         console.error('Could not load your reflection', err);
+        if (!cancelled) setLoadState('failed');
+        return;
       }
       if (cancelled) return;
       setHadReflection(!!d);
       setReflectionSubmitted(!!d && d.draft !== true);
       const draft = readDraft(key);
-      if (draft && draft.at > millis(d?.updatedAt)) applyDraft(draft, { reflect: true });
+      // The reflection doc stores the moved marker as newPositionX/Y.
+      const saved = d && { ...d, positionX: d.newPositionX ?? null, positionY: d.newPositionY ?? null };
+      const verdict = judgeDraft(draft, saved, ['positionX', 'positionY', 'reflection']);
+      if (verdict === 'apply') applyDraft(draft, { reflect: true });
+      else if (verdict === 'ask') setPendingDraft({ ...draft, reflect: true });
       else if (draft) clearDraft(key);
     })();
     return () => { cancelled = true; };
-  }, [user, reading, reflectMode, applyDraft]);
+  }, [uid, readingId, reflectMode, applyDraft, loadAttempt]);
 
   // The "restored" notice only needs a moment.
   useEffect(() => {
@@ -562,6 +634,8 @@ export default function Reading() {
   // as they stop dragging, so the class board updates without a click.
   const needX = needXAxis(axes);
   const needY = needYAxis(axes);
+  // Nothing is editable until the saved copy is on screen (or known absent).
+  const formLocked = loadState === 'loading' || loadState === 'failed';
   const ready = (!needX || hasPosition(positionX)) && (!needY || hasPosition(positionY));
   const summary = !ready
     ? (needX && needY
@@ -641,7 +715,8 @@ export default function Reading() {
                     <button
                       key={key}
                       onClick={() => changeAxes(key)}
-                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80"
+                      disabled={formLocked}
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
                       style={axes === key
                         ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
                         : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
@@ -650,9 +725,9 @@ export default function Reading() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs font-medium"
+                <p className="text-xs font-medium" aria-live="polite"
                   style={{ color: ready ? 'var(--pg-dim)' : 'var(--pg-primary)' }}>
-                  {summary}
+                  {loadState === 'loading' ? 'Loading your saved work…' : loadState === 'failed' ? 'Could not load your saved work' : summary}
                 </p>
               </div>
             </div>
@@ -665,6 +740,7 @@ export default function Reading() {
                   <Spectrum
                     value={positionX ?? 0}
                     onChange={changeX}
+                    disabled={formLocked}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectMode ? classDotsX : []}
                     secondaryDot={reflectMode && typeof savedPlot?.positionX === 'number'
@@ -686,6 +762,7 @@ export default function Reading() {
                   <Spectrum
                     value={positionY ?? 0}
                     onChange={changeY}
+                    disabled={formLocked}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectMode ? classDotsY : []}
                     secondaryDot={reflectMode && typeof savedPlot?.positionY === 'number'
@@ -880,18 +957,54 @@ export default function Reading() {
                 ? 'The grey dots are the rest of the class. Move your marker if the seminar changed your mind, then explain what changed and why.'
                 : 'Use at least one piece of evidence from the reading to support your placement.'}
             </p>
+            {loadState === 'failed' && (
+              <div className="text-xs mb-3 px-3 py-2 rounded-lg flex items-center justify-between gap-3" role="alert"
+                style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid #ef4444', color: 'var(--pg-text)' }}>
+                <span>⚠ Couldn’t load your saved work — the form is locked so nothing gets written over it. Check the connection and try again.</span>
+                <button onClick={() => setLoadAttempt(a => a + 1)} className="shrink-0 font-semibold px-2.5 py-1 rounded-md"
+                  style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {loadState === 'cached' && (
+              <p className="text-xs mb-3 px-3 py-2 rounded-lg" role="status"
+                style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                Showing the copy saved on this device — the server was slow to answer. Changes will sync when it does.
+              </p>
+            )}
             {restoredDraft && (
               <p className="text-xs mb-3 px-3 py-2 rounded-lg" role="status"
                 style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}>
                 ↩ Restored unsaved work from this device.
               </p>
             )}
+            {pendingDraft && (
+              <div className="text-xs mb-3 px-3 py-2 rounded-lg" role="status"
+                style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-primary)', color: 'var(--pg-text)' }}>
+                <p className="mb-2">
+                  This device has unsaved text from {new Date(pendingDraft.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} that
+                  differs from what was saved later. Which do you want?
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={restorePendingDraft} className="font-semibold px-2.5 py-1 rounded-md"
+                    style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                    Use the text from this device
+                  </button>
+                  <button onClick={discardPendingDraft} className="font-semibold px-2.5 py-1 rounded-md"
+                    style={{ backgroundColor: 'var(--pg-bg)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                    Keep what’s saved
+                  </button>
+                </div>
+              </div>
+            )}
             <textarea
               value={reflectMode ? reflection : justification}
               onChange={e => changeText(e.target.value)}
               onPaste={e => { e.preventDefault(); alert('Pasting is not allowed on this site.'); }}
-              placeholder={reflectMode ? 'After the seminar I…' : 'The text argues that…'}
-              className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px]"
+              disabled={formLocked}
+              placeholder={loadState === 'loading' ? 'Loading your saved work…' : reflectMode ? 'After the seminar I…' : 'The text argues that…'}
+              className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px] disabled:opacity-60"
               style={{
                 backgroundColor: 'var(--pg-surface2)',
                 border: '1px solid var(--pg-border)',
