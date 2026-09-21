@@ -59,6 +59,23 @@ jobs:
             exit 1
           fi
 
+      # Identify which service account this is. project_id and client_email are
+      # identifiers, not credentials -- the private key is never printed. A 403
+      # from the Hosting API is almost always one of these two being wrong.
+      - name: Identify the credential
+        run: |
+          python3 - "$RUNNER_TEMP/sa.json" <<'EOF'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          print("project_id  :", d.get("project_id"))
+          print("client_email:", d.get("client_email"))
+          print("type        :", d.get("type"))
+          expected = "project-7910201586224417193"
+          if d.get("project_id") != expected:
+              print(f"::error::Key belongs to '{d.get('project_id')}', but the slides live in '{expected}'.")
+              sys.exit(1)
+          EOF
+
       - name: Deploy
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
