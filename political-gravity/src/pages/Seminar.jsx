@@ -2,14 +2,27 @@
 // Live seminar board: every student's position on a shared spectrum, updating
 // as they move during discussion. Projection mode strips the page back to just
 // the spectrums at a size that reads from the back of a classroom.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { collection, doc, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
+import SocietyDrift from '../components/SocietyDrift';
 import { useReadings } from '../hooks/useReadings';
-import { positionLabel } from '../data/readings';
+import { useConsensusLive } from '../hooks/useConsensus';
+import { hasPosition, positionLabel } from '../data/readings';
+import { societyDrift } from '../data/drift';
+
+// Where the class landed is a median, not a mean: one student parked at -100
+// drags a mean of twelve by eight points, and the question is where the middle
+// of the room sat.
+function median(values) {
+  if (values.length === 0) return null;
+  const xs = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(xs.length / 2);
+  return xs.length % 2 ? xs[mid] : Math.round((xs[mid - 1] + xs[mid]) / 2);
+}
 
 // One dot per student, stacked upward where positions collide. Everything is
 // measured from the groove rather than from a percentage of the box, so tall
@@ -135,8 +148,9 @@ function SeminarSpectrum({ students, showNames, big }) {
 export default function Seminar() {
   const { id } = useParams();
   const [params] = useSearchParams();
-  const { readings } = useReadings();
+  const { readings, loading: readingsLoading } = useReadings();
   const reading = readings.find(r => r.id === id);
+  const { consensus, loaded: consensusLoaded } = useConsensusLive();
 
   const [plots,       setPlots]       = useState([]);
   const [reflections, setReflections] = useState([]);
@@ -150,6 +164,13 @@ export default function Seminar() {
   const [consensusX, setConsensusX] = useState(0);
   const [saved,      setSaved]      = useState(false);
   const [saveErr,    setSaveErr]    = useState(null);
+  // The slider is seeded once per reading and then left alone. Spectrum fires
+  // onChange on every mousemove and exposes no drag state, so anything that
+  // re-syncs from snapshot data can land in the middle of a teacher's drag.
+  const [seededFor,  setSeededFor]  = useState(null);
+  const [touchedFor, setTouchedFor] = useState(null);
+  const savedTimer = useRef(null);
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
 
   useEffect(() => {
     if (!id) return;
@@ -192,13 +213,48 @@ export default function Seminar() {
 
   const movedCount = students.filter(s => s.moved).length;
 
+  // Everyone who has actually placed themselves, by the same rule the rest of
+  // the app uses, so this and the "N positions" count can never disagree.
+  const liveCentre = useMemo(
+    () => median(students.map(s => s.to).filter(hasPosition)),
+    [students]);
+
+  const savedX = consensus?.[id]?.x;
+  const isRecorded = hasPosition(savedX);
+
+  // Seed the slider once per reading: what was recorded for this period if
+  // anything, otherwise where the room currently sits. Adjusting state during
+  // render rather than in an effect, so the slider never paints at 0 first and
+  // nothing re-syncs underneath a drag in progress.
+  // Both flags are keyed by reading id, so moving to another period starts the
+  // whole dance over without anything to reset.
+  if (id && consensusLoaded && seededFor !== id && touchedFor !== id) {
+    const seed = isRecorded ? savedX : liveCentre;
+    if (Number.isFinite(seed)) {
+      setSeededFor(id);
+      setConsensusX(seed);
+    }
+  }
+
+  const setConsensusFromDrag = (v) => { setTouchedFor(id); setConsensusX(v); };
+
+  // The trend heading into tonight's discussion — and through it once this
+  // period has been recorded, so the arrow visibly answers the Save.
+  const drift = useMemo(
+    () => (readingsLoading || !consensusLoaded
+      ? null
+      : societyDrift(consensus, readings, { untilId: id, inclusive: isRecorded })),
+    [consensus, readings, id, isRecorded, readingsLoading, consensusLoaded]);
+
   async function saveConsensus() {
+    if (!hasPosition(consensusX)) return;
     try {
       setSaveErr(null);
       await setDoc(doc(db, 'settings', 'consensus'),
         { [id]: { x: consensusX } }, { merge: true });
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error('Failed to save consensus', err);
       setSaveErr(err.code === 'permission-denied'
@@ -242,6 +298,8 @@ export default function Seminar() {
               {movedCount > 0 && ` · ${movedCount} moved during the seminar`}
             </p>
           </div>
+
+          {drift && <SocietyDrift drift={drift} size={projecting ? 'board' : 'chip'} />}
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -302,15 +360,27 @@ export default function Seminar() {
               <div>
                 <h2 className="font-display font-bold text-lg mb-1" style={{ color: 'var(--pg-text)' }}>Class Consensus</h2>
                 <p className="text-xs" style={{ color: 'var(--pg-dim)' }}>
-                  Drag to record where the class landed. This sets the starting point for the next reading.
+                  {isRecorded
+                    ? `Recorded: ${positionLabel(savedX)}. Drag and save again to change it.`
+                    : liveCentre !== null
+                      ? 'Not recorded yet — prefilled with the class median. Drag to adjust, then save.'
+                      : 'Not recorded yet. Drag to record where the class landed.'}
+                  {' '}This sets the starting point for the next reading, and feeds the Society arrow.
                 </p>
+                {isRecorded && consensusX !== savedX && (
+                  <p className="text-[11px] mt-1" style={{ color: 'var(--pg-primary)' }}>
+                    Unsaved change — recorded value is still {positionLabel(savedX)}.
+                  </p>
+                )}
               </div>
               <button
                 onClick={saveConsensus}
-                className="font-semibold px-6 py-2 rounded-xl text-sm transition-opacity hover:opacity-80 shrink-0"
+                disabled={!hasPosition(consensusX)}
+                title={hasPosition(consensusX) ? undefined : 'The middle is not a position — drag the marker off centre'}
+                className="font-semibold px-6 py-2 rounded-xl text-sm transition-opacity hover:opacity-80 shrink-0 disabled:opacity-40"
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
               >
-                {saved ? '✓ Saved' : 'Save Consensus'}
+                {saved ? '✓ Saved' : isRecorded ? 'Update Consensus' : 'Save Consensus'}
               </button>
             </div>
 
@@ -318,7 +388,7 @@ export default function Seminar() {
               <p className="text-xs mb-3" style={{ color: '#ef4444' }}>⚠ {saveErr}</p>
             )}
 
-            <Spectrum value={consensusX} onChange={setConsensusX} leftLabel={null} rightLabel={null} sublabels={[]} showValue />
+            <Spectrum value={consensusX} onChange={setConsensusFromDrag} leftLabel={null} rightLabel={null} sublabels={[]} showValue />
 
             <div className="flex justify-between items-center mt-1 px-1">
               <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)' }}>Left</span>

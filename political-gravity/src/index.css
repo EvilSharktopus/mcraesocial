@@ -362,3 +362,68 @@ h1, h2, h3, h4 {
     color-mix(in srgb, var(--pg-surface) 80%, transparent)
   );
 }
+
+/* ── Society drift arrow ────────────────────────────────────────────────────
+   Which way the class has been placing history. Intensity only is carried by
+   colour and glow; the SIDE is carried by the arrow's direction and the words,
+   because a red/blue scheme means opposite things to a Canadian student and an
+   American website. */
+
+.pg-drift {
+  color: var(--pg-dim);
+  transition: color 0.3s ease;
+}
+.pg-drift--l2 { color: color-mix(in srgb, var(--pg-primary) 65%, var(--pg-dim)); }
+.pg-drift--l3,
+.pg-drift--l4 { color: var(--pg-primary); }
+
+.pg-drift--l3 .pg-drift__arrow {
+  filter: drop-shadow(0 0 4px var(--pg-primary-ring));
+}
+.pg-drift--l4 .pg-drift__arrow {
+  filter:
+    drop-shadow(0 0 6px var(--pg-primary-ring))
+    drop-shadow(0 0 14px var(--pg-primary-ring));
+  animation: drift-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes drift-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.68; }
+}
+
+/* Small pill, for the reading page and the seminar page's normal view */
+.pg-drift--chip {
+  background-color: var(--pg-surface2);
+  border: 1px solid var(--pg-border);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.pg-drift--chip .pg-drift__word { color: var(--pg-text); }
+
+/* Projector */
+.pg-drift--board .pg-drift__word {
+  font-size: clamp(1.5rem, 2.6vw, 2.5rem);
+  color: var(--pg-text);
+}
+.pg-drift--board .pg-drift__caption {
+  font-size: clamp(0.85rem, 1.1vw, 1.1rem);
+  color: var(--pg-dim);
+}
+
+/* ── Motion preferences ─────────────────────────────────────────────────────
+   Nothing in this file honoured prefers-reduced-motion before the drift pulse
+   was added; these are the rest of the app's moving parts. */
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-drift__arrow,
+  .animate-end-bump,
+  .animate-pulse {
+    animation: none !important;
+  }
+  .spectrum-marker--idle,
+  .spectrum-marker--dragging,
+  .spectrum-marker--settling {
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -8,16 +8,19 @@
 //   4. on return, a draft newer than the saved copy is restored.
 // The Save button still exists because students expect one; it flushes the
 // autosave immediately and, for reflections, marks the piece as submitted.
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
+import SocietyDrift from '../components/SocietyDrift';
 import DiplomaExtractorModal from '../components/DiplomaExtractorModal';
 import { useSpeech } from '../hooks/useSpeech';
 import { useTheme } from '../context/ThemeContext';
 import { useReadings } from '../hooks/useReadings';
+import { useConsensus } from '../hooks/useConsensus';
+import { societyDrift } from '../data/drift';
 import { hasPosition, positionLabel } from '../data/readings';
 
 const needXAxis = (axes) => axes !== 'political';
@@ -84,7 +87,12 @@ const millis = (ts) => ts?.toMillis?.() ?? 0;
 export default function Reading() {
   const { id } = useParams();
   const { readings, loading: readingsLoading } = useReadings();
+  const { consensus, loaded: consensusLoaded } = useConsensus();
   const reading = readings.find(r => r.id === id);
+  // Archived periods are not part of the sequence: the drift skips them, and so
+  // must the "previous period" the blank form is seeded from, or a student gets
+  // seeded off a period nobody discussed.
+  const activeReadings = useMemo(() => readings.filter(r => !r.archived), [readings]);
   const { user, isTeacher } = useAuth();
 
   const [positionX,     setPositionX]     = useState(null);
@@ -297,7 +305,10 @@ export default function Reading() {
   const autosaveTimer  = useRef(null);
   const flushChain     = useRef(Promise.resolve());
   const flushRef       = useRef(null);  // lets the retry timer call flush without self-reference
-  const skipConsensus  = useRef(false); // a restored draft beats the consensus seed
+  // A restored draft beats the consensus seed. State, not a ref, because the
+  // seeding decision below is made during render.
+  const [draftApplied, setDraftApplied] = useState(false);
+  const [seededFrom,   setSeededFrom]   = useState(null);
   // In reflection mode the reflection loader owns the draft, so the plot
   // loader must not throw it away as stale.
   const reflectModeRef = useRef(false);
@@ -425,7 +436,7 @@ export default function Reading() {
     if (draft.axes) setAxes(draft.axes);
     if (typeof draft.justification === 'string') setJustification(draft.justification);
     if (reflect && typeof draft.reflection === 'string') setReflection(draft.reflection);
-    skipConsensus.current = true;
+    setDraftApplied(true);
     setRestoredDraft(true);
     // Treat it as a fresh edit so the autosave pushes it up and, once
     // confirmed, clears the draft.
@@ -551,30 +562,29 @@ export default function Reading() {
     return () => clearTimeout(t);
   }, [restoredDraft]);
 
-  // Load previous class consensus for initial spectrum position
-  useEffect(() => {
-    async function loadConsensus() {
-      if (hadSaved !== false) return;   // only seed a genuinely blank form
-      if (skipConsensus.current) return; // the student already has a draft here
-      if (!readings || readings.length === 0) return;
-      const idx = readings.findIndex(r => r.id === id);
-      if (idx > 0) {
-        const prevId = readings[idx - 1].id;
-        const snap = await getDoc(doc(db, 'settings', 'consensus'));
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data[prevId]) {
-            // The seminar consensus is a single value now, so only seed what is
-            // actually there — writing undefined would break the "has the
-            // student placed themselves yet" checks.
-            if (typeof data[prevId].x === 'number') setPositionX(data[prevId].x);
-            if (typeof data[prevId].y === 'number') setPositionY(data[prevId].y);
-          }
-        }
-      }
-    }
-    loadConsensus();
-  }, [id, readings, hadSaved]);
+  // Seed a genuinely blank form from the previous period's class consensus.
+  // Reads it off the same hook the drift arrow uses, so the two can never
+  // disagree about what the document says. Decided during render rather than in
+  // an effect so the marker never paints at centre first.
+  if (consensusLoaded && hadSaved === false && !draftApplied && seededFrom !== id) {
+    setSeededFrom(id);
+    const idx = activeReadings.findIndex(r => r.id === id);
+    const prev = idx > 0 ? consensus?.[activeReadings[idx - 1].id] : null;
+    // The seminar consensus is a single value now, so only seed what is
+    // actually there — writing undefined would break the "has the student
+    // placed themselves yet" checks.
+    if (typeof prev?.x === 'number') setPositionX(prev.x);
+    if (typeof prev?.y === 'number') setPositionY(prev.y);
+  }
+
+  // The class trend heading into this period. Held back until both the reading
+  // list and the consensus have settled — useReadings starts from a hardcoded
+  // list and swaps in the teacher's, so an ungated chip can flash a wrong way.
+  const drift = useMemo(
+    () => (readingsLoading || !consensusLoaded
+      ? null
+      : societyDrift(consensus, activeReadings, { untilId: id })),
+    [consensus, consensusLoaded, activeReadings, readingsLoading, id]);
 
   // The button: flush now, and only say "Saved" once the server agrees.
   async function handleSaveClick() {
@@ -636,6 +646,14 @@ export default function Reading() {
   const needY = needYAxis(axes);
   // Nothing is editable until the saved copy is on screen (or known absent).
   const formLocked = loadState === 'loading' || loadState === 'failed';
+
+  // The class trend is hidden until this student has actually committed to a
+  // position, so it cannot nudge them. Note hadSaved alone is not enough: a
+  // plots doc exists as soon as they type a character of justification, with no
+  // position in it. In reflection mode every classmate's dot is already on the
+  // spectrum, so there is nothing left to anchor.
+  const showDrift = !!drift && (isTeacher || reflectMode
+    || hasPosition(savedPlot?.positionX) || hasPosition(savedPlot?.positionY));
   const ready = (!needX || hasPosition(positionX)) && (!needY || hasPosition(positionY));
   const summary = !ready
     ? (needX && needY
@@ -700,17 +718,18 @@ export default function Reading() {
           />
           <div aria-hidden="true" className="spectrum-sky__scrim" />
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-baseline justify-between gap-4">
+            <div className="flex items-baseline justify-between gap-3">
+              {showDrift && <SocietyDrift drift={drift} size="chip" className="self-center" />}
               <button
                 onClick={() => togglePanel('spectrum', spectrumOpen, setSpectrumOpen)}
-                className="font-display font-bold text-sm hover:opacity-80 transition-opacity"
+                className="font-display font-bold text-sm hover:opacity-80 transition-opacity shrink-0"
                 style={{ color: 'var(--pg-text)' }}
                 title={spectrumOpen ? 'Hide the spectrums' : 'Show the spectrums'}
               >
                 {spectrumOpen ? '▾' : '▸'} Where is society?
               </button>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex gap-1 shrink-0">
                   {[['economic','Economic'],['political','Political'],['both','Both']].map(([key, label]) => (
                     <button
                       key={key}
@@ -725,7 +744,10 @@ export default function Reading() {
                     </button>
                   ))}
                 </div>
-                <p className="text-xs font-medium" aria-live="polite"
+                {/* Truncates rather than squashing the axis pills: each Spectrum
+                    renders this same readout under its own marker anyway. */}
+                <p className="text-xs font-medium min-w-0 truncate" aria-live="polite"
+                  title={summary}
                   style={{ color: ready ? 'var(--pg-dim)' : 'var(--pg-primary)' }}>
                   {loadState === 'loading' ? 'Loading your saved work…' : loadState === 'failed' ? 'Could not load your saved work' : summary}
                 </p>

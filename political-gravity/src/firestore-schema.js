@@ -68,7 +68,11 @@
  *   openReadings:    string[]  — ids students can open
  *   reflectReadings: string[]  — ids currently in reflection mode
  * settings/consensus
- *   { [readingId]: { x: number } } — seeds the next reading's starting point
+ *   { [readingId]: { x: number } } — where the class landed on that period.
+ *   Seeds the next reading's starting point, and feeds the Society drift arrow
+ *   (data/drift.js). x is never 0: dead centre means "not recorded", matching
+ *   hasPosition() everywhere else, so a teacher pressing Save without dragging
+ *   cannot enter a meaningless value.
  * settings/publishedReadings
  *   { [readingId]: { publishedAt: ISO string, publishedBy } }
  *
