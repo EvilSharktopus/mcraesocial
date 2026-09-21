@@ -364,7 +364,8 @@ h1, h2, h3, h4 {
 }
 
 /* ── Society drift arrow ────────────────────────────────────────────────────
-   Which way the class has been placing history. Intensity only is carried by
+   Where the class has already placed history — a record, not a forecast, which
+   is what the small "Previously" label is carrying. Intensity only is carried by
    colour and glow; the SIDE is carried by the arrow's direction and the words,
    because a red/blue scheme means opposite things to a Canadian student and an
    American website. */
@@ -400,6 +401,21 @@ h1, h2, h3, h4 {
   line-height: 1.2;
 }
 .pg-drift--chip .pg-drift__word { color: var(--pg-text); }
+
+/* Subordinate to the wordmark in both sizes: it frames the arrow, it is not
+   the message. */
+.pg-drift__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--pg-dim);
+}
+.pg-drift--chip .pg-drift__eyebrow { font-size: 9px; }
+.pg-drift--board .pg-drift__eyebrow {
+  font-size: clamp(0.7rem, 0.9vw, 0.9rem);
+  letter-spacing: 0.22em;
+  margin-bottom: 0.15rem;
+}
 
 /* Projector */
 .pg-drift--board .pg-drift__word {

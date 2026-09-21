@@ -1,11 +1,12 @@
 // src/data/drift.js
 //
-// "Which way is society moving?" — derived from the Class Consensus the teacher
-// records after each seminar (settings/consensus → { [readingId]: { x } }).
+// "Where has society been?" — derived from the Class Consensus the teacher records
+// after each seminar (settings/consensus → { [readingId]: { x } }).
 //
-// The direction comes from WHICH SIDE each period landed on, not from the change
-// between periods: one period recorded at +40 already means "moving right". Runs of
-// periods on the same side, and periods far from centre, both raise the intensity.
+// This is a record, not a forecast: it reports which SIDE the class put each period
+// on, so a single period recorded at +40 already reads as "previously, on the right".
+// Runs of periods on the same side, and periods far from centre, both raise the
+// intensity of the arrow.
 //
 // Pure — no React, no Firestore — so the rules below can be tested directly.
 //
@@ -70,27 +71,45 @@ export function societyDrift(consensus, readings, { untilId, inclusive = false }
 
   return {
     direction: side > 0 ? 'right' : 'left',
-    value: Math.round(mean),
+    value: Math.round(mean),   // run mean; drives `level`, not the caption
     streak: run.length,
     level: Math.min(4, 1 + magScore + streakScore),
     run,
+    last: run[run.length - 1],  // the most recently recorded period
     prior,
   };
 }
 
-// Every word comes from positionLabel, so the arrow speaks the same vocabulary as
-// the spectrum readout and the teacher's grading view.
+// This reports where the class has already put things, so everything below is
+// past tense and leads with the period it is actually talking about. Every band
+// name comes from positionLabel, so the arrow speaks the same vocabulary as the
+// spectrum readout and the teacher's grading view.
+const sideWord = (x) => (sideOf(x) > 0 ? 'right' : 'left');
+
+// The tail that qualifies a single period: either the run it belongs to, or —
+// when it stands alone after a period on the other side — that fact, so one
+// data point is never dressed up as a trend.
+function driftDetail(drift) {
+  const { streak, prior } = drift;
+  if (streak >= 2) return `${streak} periods running`;
+  if (prior) return `the period before was on the ${sideWord(prior.x)}`;
+  return '';
+}
+
 export function driftCaption(drift) {
   if (!drift) return '';
-  const { direction, streak, value, prior } = drift;
-  const periods = `${streak} ${streak === 1 ? 'period' : 'periods'} on the ${direction}`;
-  // One period on its own says little about a trend; if the class was on the other
-  // side immediately before, say so rather than implying a run of one is a drift.
-  if (streak === 1 && prior) {
-    return `${periods} · the period before was on the ${sideOf(prior.x) > 0 ? 'right' : 'left'}`;
-  }
-  return `${periods} · average ${positionLabel(value)}`;
+  const { last } = drift;
+  const detail = driftDetail(drift);
+  return [last.title, positionLabel(last.x), detail].filter(Boolean).join(' · ');
 }
 
 export const driftHeadline = (drift) =>
-  drift ? `Society has been moving ${drift.direction}` : '';
+  drift ? `Previously, society was on the ${drift.direction}` : '';
+
+// Spoken form for aria-label: the caption's "·" separators read badly aloud.
+export function driftLabel(drift) {
+  if (!drift) return '';
+  const detail = driftDetail(drift);
+  return `${driftHeadline(drift)}. Last recorded period ${drift.last.title}, `
+    + `${positionLabel(drift.last.x)}${detail ? `, ${detail}` : ''}.`;
+}

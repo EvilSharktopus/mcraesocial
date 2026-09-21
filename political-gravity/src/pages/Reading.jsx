@@ -718,16 +718,23 @@ export default function Reading() {
           />
           <div aria-hidden="true" className="spectrum-sky__scrim" />
           <div className="max-w-3xl mx-auto">
-            <div className="flex items-baseline justify-between gap-3">
-              {showDrift && <SocietyDrift drift={drift} size="chip" className="self-center" />}
-              <button
-                onClick={() => togglePanel('spectrum', spectrumOpen, setSpectrumOpen)}
-                className="font-display font-bold text-sm hover:opacity-80 transition-opacity shrink-0"
-                style={{ color: 'var(--pg-text)' }}
-                title={spectrumOpen ? 'Hide the spectrums' : 'Show the spectrums'}
-              >
-                {spectrumOpen ? '▾' : '▸'} Where is society?
-              </button>
+            <div className="flex items-center justify-between gap-3">
+              {/* Chip and collapse caret travel together on the left, or
+                  justify-between would strand the caret mid-row whenever the
+                  chip is hidden. */}
+              <div className="flex items-center gap-2 shrink-0">
+                {showDrift && <SocietyDrift drift={drift} size="chip" />}
+                <button
+                  onClick={() => togglePanel('spectrum', spectrumOpen, setSpectrumOpen)}
+                  className="font-display font-bold text-sm hover:opacity-80 transition-opacity leading-none"
+                  style={{ color: 'var(--pg-text)' }}
+                  aria-expanded={spectrumOpen}
+                  aria-label={spectrumOpen ? 'Hide the spectrum' : 'Show the spectrum'}
+                  title={spectrumOpen ? 'Hide the spectrum' : 'Show the spectrum'}
+                >
+                  {spectrumOpen ? '▾' : '▸'}
+                </button>
+              </div>
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex gap-1 shrink-0">
                   {[['economic','Economic'],['political','Political'],['both','Both']].map(([key, label]) => (

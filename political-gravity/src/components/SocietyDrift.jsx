@@ -1,13 +1,15 @@
 // src/components/SocietyDrift.jsx
 //
-// The arrow that answers "which way is society moving?" — see data/drift.js for
-// how the direction and level are worked out.
+// The arrow that says where the class has already placed history — see
+// data/drift.js for how the direction and level are worked out. Everything here
+// is past tense on purpose: it is a record of periods already discussed, and the
+// "Previously" label is what keeps students reading it that way.
 //
 // Side is carried by the arrow's DIRECTION and the caption's words, never by hue.
 // Red/blue would be actively misleading in an Alberta classroom, where red is the
 // Liberal party (centre-left) — the inverse of the American convention students
 // meet online. One colour, ramped for intensity only.
-import { driftCaption, driftHeadline } from '../data/drift';
+import { driftCaption, driftLabel } from '../data/drift';
 
 // Arrow geometry per level: longer shaft and heavier stroke as the trend firms up.
 const SHAFT = { 1: 26, 2: 34, 3: 44, 4: 54 };
@@ -44,9 +46,9 @@ export default function SocietyDrift({ drift, size = 'chip', className = '' }) {
   if (!drift) return null;
 
   const caption = driftCaption(drift);
-  const headline = driftHeadline(drift);
-  const label = `${headline}. ${caption}.`;
+  const label = driftLabel(drift);
   const root = `pg-drift pg-drift--l${drift.level} no-print ${className}`;
+  const eyebrow = <span className="pg-drift__eyebrow">Previously</span>;
 
   // The arrow leads on the side it points to, so "← Society" and "Society →"
   // both read outward rather than doubling back over the word.
@@ -55,7 +57,8 @@ export default function SocietyDrift({ drift, size = 'chip', className = '' }) {
   if (size === 'board') {
     const arrow = <Arrow direction={drift.direction} level={drift.level} height={40} scale={2.4} />;
     return (
-      <div className={`${root} pg-drift--board flex flex-col items-center gap-1`} role="img" aria-label={label}>
+      <div className={`${root} pg-drift--board flex flex-col items-center`} role="img" aria-label={label}>
+        {eyebrow}
         <div className="flex items-center gap-4">
           {lead && arrow}
           <span className="font-display font-bold tracking-[0.18em] uppercase pg-drift__word">Society</span>
@@ -74,6 +77,7 @@ export default function SocietyDrift({ drift, size = 'chip', className = '' }) {
       aria-label={label}
       title={label}
     >
+      {eyebrow}
       {lead && arrow}
       <span className="font-semibold pg-drift__word">Society</span>
       {!lead && arrow}
