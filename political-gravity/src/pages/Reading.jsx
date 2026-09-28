@@ -8,7 +8,7 @@
 //   4. on return, a draft newer than the saved copy is restored.
 // The Save button still exists because students expect one; it flushes the
 // autosave immediately and, for reflections, marks the piece as submitted.
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -83,6 +83,32 @@ function clearDraft(key) {
   try { if (key) localStorage.removeItem(key); } catch { /* ignore */ }
 }
 const millis = (ts) => ts?.toMillis?.() ?? 0;
+
+// The article, isolated behind memo so it re-renders ONLY when the HTML itself
+// changes. React re-applies dangerouslySetInnerHTML on re-render, which tears
+// out and rebuilds the text nodes — and any selection the student is holding
+// goes with them. The page re-renders constantly (autosave status, the drift
+// chip, every keystroke in the justification box), so before this the
+// highlight died about 200ms after it was made, which read as the highlight
+// "popping off" the moment they reached for the Flag button.
+const ReadingPane = memo(function ReadingPane({ html, paneRef }) {
+  return (
+    <div
+      ref={paneRef}
+      className="reading-content flex-1 overflow-y-auto px-10 py-8 relative"
+      style={{
+        userSelect: 'text',
+        WebkitUserSelect: 'text',
+        MozUserSelect: 'text',
+        msUserSelect: 'text',
+        color: 'var(--pg-text)',
+        lineHeight: '1.8',
+        fontSize: '15px',
+      }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+});
 
 export default function Reading() {
   const { id } = useParams();
@@ -893,22 +919,7 @@ export default function Reading() {
             </div>
           )}
 
-          {isPublished && (
-            <div
-              ref={readingPaneRef}
-              className="reading-content flex-1 overflow-y-auto px-10 py-8 relative"
-              style={{
-                userSelect: 'text',
-                WebkitUserSelect: 'text',
-                MozUserSelect: 'text',
-                msUserSelect: 'text',
-                color: 'var(--pg-text)',
-                lineHeight: '1.8',
-                fontSize: '15px',
-              }}
-              dangerouslySetInnerHTML={{ __html: publishedHtml }}
-            />
-          )}
+          {isPublished && <ReadingPane html={publishedHtml} paneRef={readingPaneRef} />}
 
           {/* Fallback iframe if not yet published */}
           {showIframe && (
