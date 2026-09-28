@@ -145,6 +145,16 @@ function SeminarSpectrum({ students, showNames, big }) {
   );
 }
 
+function AxisEnds({ projecting }) {
+  const style = { color: 'var(--pg-muted)', fontSize: projecting ? '1.05rem' : '0.7rem' };
+  return (
+    <div className="flex justify-between items-center px-1" style={{ marginTop: projecting ? '0.5rem' : '0.25rem' }}>
+      <span className="font-bold uppercase tracking-wider" style={style}>Left</span>
+      <span className="font-bold uppercase tracking-wider" style={style}>Right</span>
+    </div>
+  );
+}
+
 export default function Seminar() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -160,6 +170,9 @@ export default function Seminar() {
   // opens ready for the screen instead of needing a click on the projector.
   const [projecting, setProjecting] = useState(params.get('project') === '1');
   const [showNames,  setShowNames]  = useState(false);
+  // Which spectrum the board is showing. 'combined' keeps the original
+  // behaviour — one dot per student, whichever axis they used.
+  const [axis,       setAxis]       = useState('combined');
 
   const [consensusX, setConsensusX] = useState(0);
   const [saved,      setSaved]      = useState(false);
@@ -188,36 +201,84 @@ export default function Seminar() {
     return () => { unsubPlots(); unsubRefl(); unsubUsers(); };
   }, [id]);
 
-  // One dot per student on one spectrum. Whether they labelled their placement
-  // economic or political does not matter here — the board shows where the room
-  // sits, so take whichever value they actually placed.
-  const students = useMemo(() => {
+  // Everyone who placed anything, with BOTH axes kept so the board can be
+  // filtered without re-reading Firestore. A student who chose "Both" has a
+  // value on each; most have one.
+  const placed = useMemo(() => {
     const moves = new Map(reflections.filter(r => r.uid).map(r => [r.uid, r]));
-    const pick = (a, b) => (typeof a === 'number' ? a : b);
+    // Where they started and where they ended up on one axis. `to` falls back
+    // to `from` when they never moved.
+    const onAxis = (start, afterSeminar) => {
+      const from = hasPosition(start) ? start : null;
+      const to = hasPosition(afterSeminar) ? afterSeminar : from;
+      return { from, to };
+    };
     return plots.filter(p => p.uid).map(p => {
       const m = moves.get(p.uid);
-      const from = pick(p.positionX, p.positionY);
-      const to = pick(
-        typeof m?.newPositionX === 'number' ? m.newPositionX : undefined,
-        typeof m?.newPositionY === 'number' ? m.newPositionY : from,
-      );
       return {
         uid: p.uid,
         name: users[p.uid]?.displayName || users[p.uid]?.email || 'Student',
-        from,
-        to,
-        moved: typeof to === 'number' && typeof from === 'number' && to !== from,
+        econ: onAxis(p.positionX, m?.newPositionX),
+        pol:  onAxis(p.positionY, m?.newPositionY),
       };
     });
   }, [plots, reflections, users]);
 
+  // Shape one axis into the dots SeminarSpectrum draws, dropping anyone who
+  // did not place themselves on it.
+  const dotsFor = (list, which) => list
+    .map(s => {
+      const a = which === 'econ' ? s.econ : s.pol;
+      return {
+        uid: s.uid,
+        name: s.name,
+        from: a.from,
+        to: a.to,
+        moved: a.from !== null && a.to !== null && a.to !== a.from,
+      };
+    })
+    .filter(s => s.to !== null);
+
+  // Students who placed themselves on both spectrums — the ones whose
+  // political read is invisible on the combined board.
+  const bothStudents = useMemo(
+    () => placed.filter(s => s.econ.to !== null && s.pol.to !== null),
+    [placed]);
+
+  const econDots = useMemo(() => dotsFor(placed, 'econ'), [placed]);
+  const polDots  = useMemo(() => dotsFor(placed, 'pol'),  [placed]);
+  const anyoneCount = useMemo(
+    () => placed.filter(s => s.econ.to !== null || s.pol.to !== null).length,
+    [placed]);
+
+  // The original combined view: whichever axis they actually used.
+  const combinedDots = useMemo(() => placed
+    .map(s => {
+      const a = s.econ.to !== null ? s.econ : s.pol;
+      return {
+        uid: s.uid, name: s.name, from: a.from, to: a.to,
+        moved: a.from !== null && a.to !== null && a.to !== a.from,
+      };
+    })
+    .filter(s => s.to !== null), [placed]);
+
+  // What the single board is currently drawing ('both' draws two, below).
+  const students = axis === 'economic' ? econDots
+    : axis === 'political' ? polDots
+    : combinedDots;
   const movedCount = students.filter(s => s.moved).length;
+
+  const axisCaption =
+    axis === 'economic'  ? `${econDots.length} of ${anyoneCount} placed on the economic spectrum`
+    : axis === 'political' ? `${polDots.length} of ${anyoneCount} placed on the political spectrum`
+    : axis === 'both'      ? `${bothStudents.length} of ${anyoneCount} placed on both spectrums`
+    : `${combinedDots.length} ${combinedDots.length === 1 ? 'position' : 'positions'}`;
 
   // Everyone who has actually placed themselves, by the same rule the rest of
   // the app uses, so this and the "N positions" count can never disagree.
   const liveCentre = useMemo(
-    () => median(students.map(s => s.to).filter(hasPosition)),
-    [students]);
+    () => median((axis === 'both' ? econDots : students).map(s => s.to).filter(hasPosition)),
+    [students, econDots, axis]);
 
   const savedX = consensus?.[id]?.x;
   const isRecorded = hasPosition(savedX);
@@ -294,14 +355,34 @@ export default function Seminar() {
               {title}
             </h1>
             <p style={{ color: 'var(--pg-dim)', fontSize: projecting ? '1.125rem' : '0.75rem' }}>
-              {students.length} {students.length === 1 ? 'position' : 'positions'}
-              {movedCount > 0 && ` · ${movedCount} moved during the seminar`}
+              {axisCaption}
+              {axis !== 'both' && movedCount > 0 && ` · ${movedCount} moved during the seminar`}
             </p>
           </div>
 
           {drift && <SocietyDrift drift={drift} size={projecting ? 'board' : 'chip'} />}
 
           <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1">
+              {[['combined', 'Combined'], ['economic', 'Economic'], ['political', 'Political'], ['both', 'Both']].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setAxis(key)}
+                  aria-pressed={axis === key}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                  style={axis === key
+                    ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
+                    : { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                  title={key === 'combined'
+                    ? 'One dot per student, whichever spectrum they used'
+                    : key === 'both'
+                      ? 'Only the students who placed themselves on both spectrums'
+                      : `Only the students who placed themselves on the ${key} spectrum`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setShowNames(v => !v)}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
@@ -331,18 +412,38 @@ export default function Seminar() {
             padding: projecting ? '2rem' : '1.5rem',
           }}
         >
-          {students.length === 0 ? (
+          {axis === 'both' ? (
+            bothStudents.length === 0 ? (
+              <p className="text-center py-10" style={{ color: 'var(--pg-dim)' }}>
+                Nobody placed themselves on both spectrums for this reading.
+              </p>
+            ) : (
+              <>
+                {/* Two boards for the same people, so a student who read the
+                    period as economically right but politically left is
+                    visible as exactly that. */}
+                {[['econ', 'Economic spectrum'], ['pol', 'Political spectrum']].map(([which, heading], i) => (
+                  <div key={which} style={{ marginTop: i === 0 ? 0 : (projecting ? '2rem' : '1.25rem') }}>
+                    <h2 className="text-center font-bold uppercase tracking-wide"
+                      style={{ color: 'var(--pg-text)', fontSize: projecting ? '1.05rem' : '0.7rem' }}>
+                      {heading}
+                    </h2>
+                    <SeminarSpectrum students={dotsFor(bothStudents, which)} showNames={showNames} big={projecting} />
+                    <AxisEnds projecting={projecting} />
+                  </div>
+                ))}
+              </>
+            )
+          ) : students.length === 0 ? (
             <p className="text-center py-10" style={{ color: 'var(--pg-dim)' }}>
-              Nobody has placed themselves on this reading yet. Positions appear here as they arrive.
+              {axis === 'combined'
+                ? 'Nobody has placed themselves on this reading yet. Positions appear here as they arrive.'
+                : `Nobody placed themselves on the ${axis} spectrum for this reading.`}
             </p>
           ) : (
             <>
               <SeminarSpectrum students={students} showNames={showNames} big={projecting} />
-
-              <div className="flex justify-between items-center px-1" style={{ marginTop: projecting ? '0.5rem' : '0.25rem' }}>
-                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '1.05rem' : '0.7rem' }}>Left</span>
-                <span className="font-bold uppercase tracking-wider" style={{ color: 'var(--pg-muted)', fontSize: projecting ? '1.05rem' : '0.7rem' }}>Right</span>
-              </div>
+              <AxisEnds projecting={projecting} />
 
               {movedCount > 0 && (
                 <p className="text-center mt-4" style={{ color: 'var(--pg-dim)', fontSize: projecting ? '0.95rem' : '0.7rem' }}>
