@@ -10,7 +10,7 @@
 // autosave immediately and, for reflections, marks the piece as submitted.
 import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { collection, doc, getDoc, getDocFromCache, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocFromCache, getDocs, getDocsFromCache, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
 import Spectrum from '../components/Spectrum';
@@ -46,6 +46,33 @@ async function loadDoc(ref) {
     try {
       const snap = await getDocFromCache(ref);
       return { snap, source: 'cache' };
+    } catch {
+      throw err;
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Read the first match of a query the same way: server first, then cache.
+// The reflection is loaded through a query scoped to the student's own uid
+// rather than a direct doc get: the security rules check resource.data.uid,
+// and a get on a document that does not exist yet has no resource to check,
+// so Firestore denies it — which read as "could not load your saved work"
+// and locked the form on every reading whose reflection hadn't been started.
+// A query the student is allowed to make simply comes back empty instead.
+async function loadFirst(q) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { code: 'timeout' })), LOAD_TIMEOUT_MS);
+  });
+  try {
+    const snap = await Promise.race([getDocs(q), timeout]);
+    return { data: snap.docs[0]?.data() ?? null, source: 'server' };
+  } catch (err) {
+    try {
+      const snap = await getDocsFromCache(q);
+      return { data: snap.docs[0]?.data() ?? null, source: 'cache' };
     } catch {
       throw err;
     }
@@ -554,10 +581,12 @@ export default function Reading() {
     (async () => {
       let d = null;
       try {
-        const res = await loadDoc(doc(db, 'pg_reflections', `${uid}_${readingId}`));
+        const res = await loadFirst(query(
+          collection(db, 'pg_reflections'),
+          where('uid', '==', uid), where('readingId', '==', readingId), limit(1)));
         if (cancelled) return;
-        if (res.snap.exists()) {
-          d = res.snap.data();
+        if (res.data) {
+          d = res.data;
           if (typeof d.reflection === 'string') setReflection(d.reflection);
           if (typeof d.newPositionX === 'number') setPositionX(d.newPositionX);
           if (typeof d.newPositionY === 'number') setPositionY(d.newPositionY);
