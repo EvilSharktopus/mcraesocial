@@ -7,7 +7,7 @@ export const RUBRIC_URL = 'https://docs.google.com/document/d/1NRBhYnGlpOh8JExhI
 export const STANDARD_READINGS = [
   // 1700s
   { id: '1700-1725', century: '1700s', title: '1700–1725', url: 'https://docs.google.com/document/d/1CxrMoXRj8wcPQAm4MEANORWKs_UxZo8p420xr5DW0Gw/preview' },
-  { id: '1750-1800', century: '1700s', title: '1750–1800', url: 'https://docs.google.com/document/d/1BCi1c3B_nNpGoFmZE0VMPo_mi5istM5ZtBg7ttHOsEM/preview' },
+  { id: '1750-1800', century: '1700s', title: '1750–1800', url: 'https://docs.google.com/document/d/1K8piZBsOtC6IKcU6zbF6hUso6FrGxw-5jXy_c8wGpnc/preview' },
   // 1800s
   { id: '1800-1825', century: '1800s', title: '1800–1825', url: 'https://docs.google.com/document/d/13tNRBn4zX8OmkESGipoggn9excsBTZlZ6Kj-suYWFeg/preview' },
   { id: '1825-1850', century: '1800s', title: '1825–1850', url: 'https://docs.google.com/document/d/1VIAzCE5qDT4V3aNl7H4Y6xU-U6HBrRgoI0d7XNc4T58/preview' },
@@ -26,9 +26,10 @@ export const STANDARD_READINGS = [
 ];
 
 // Older ranges kept for reference — shown on the teacher Archive tab, hidden
-// from students. Several of these documents are reused by the list above.
+// from students. Each id below has its own document; none are shared with the
+// list above. Note these are only defaults: the live list lives in Firestore at
+// settings/masterReadings and always wins (see hooks/useReadings.js).
 export const ARCHIVED_READINGS = [
-  { id: '1725-1750', century: '18th Century', title: '1725 - 1750', url: 'https://docs.google.com/document/d/1K8piZBsOtC6IKcU6zbF6hUso6FrGxw-5jXy_c8wGpnc/preview', archived: true },
   { id: '1775-1800', century: '18th Century', title: '1775 - 1800', url: 'https://docs.google.com/document/d/13HTe8x80iOeC-v2TMTFYSNJuAy5aHpfwjAR9HSS0DwU/preview', archived: true },
   { id: '1875-1900', century: '19th Century', title: '1875 - 1900', url: 'https://docs.google.com/document/d/1KUYp120m1l8Dya6van_5vsFMByo5TL9SoBpWe2uCe4Y/preview', archived: true },
   { id: '2015-2020', century: '21st Century', title: '2015 - 2020', url: 'https://docs.google.com/document/d/1Toigq3iwifWc1CgQCIBOP1VecNdl7Ypw-pND_6cMp3o/preview', archived: true },
