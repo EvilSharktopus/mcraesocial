@@ -140,8 +140,9 @@ function ReadingsTab() {
     return () => { unsub1(); unsub2(); };
   }, []);
 
-  // Reflection mode: students see the whole class's positions and the writing
-  // box becomes a reflection box.
+  // Discussion: the teacher's one click per reading. Students then pace
+  // themselves — submit (final), read classmates' anonymous justifications
+  // from the dots, and reflect on a point they read.
   function toggleReflect(readingId) {
     const current = new Set(reflectReadings);
     current.has(readingId) ? current.delete(readingId) : current.add(readingId);
@@ -421,9 +422,9 @@ function ReadingsTab() {
                         borderColor: isReflect ? 'var(--pg-primary)' : 'var(--pg-border)',
                         backgroundColor: isReflect ? 'var(--pg-surface2)' : 'transparent',
                       }}
-                      title="Show the class their classmates' positions and switch the writing box to a reflection"
+                      title="Open the discussion: students who submit see the class's dots, read classmates' justifications anonymously, and write a reflection"
                     >
-                      {isReflect ? '◆ Reflecting' : '◇ Reflect'}
+                      {isReflect ? '◆ Discussion open' : '◇ Open discussion'}
                     </button>
                   </td>
 
