@@ -27,6 +27,13 @@
  *   positionY:     number | null   — political axis; centre (0) is never stored
  *   axes:          'economic' | 'political' | 'both'
  *   justification: string
+ *   submitted:     boolean   — true once the student pressed Submit Position
+ *                              (final: locks their justification, shows them
+ *                              the class dots, and makes this dot — with its
+ *                              justification, anonymously — readable by
+ *                              classmates). Absent while still working, and on
+ *                              docs from before the student-led flow.
+ *   submittedAt:   Timestamp — set when submitted flips true
  *   updatedAt:     Timestamp
  *   Autosaved as the student works; any doc here shows as "In Progress".
  *
@@ -37,6 +44,10 @@
  *   originalPosition, newPosition: number | null — single-axis pair the
  *                                        grading and seminar views read
  *   reflection:    string
+ *   respondingTo:  { uid, axis: 'economic'|'political', position: number,
+ *                    label: string } | null
+ *                  — the classmate's point the reflection reacts to. Shown to
+ *                    the student anonymously; the uid is kept for grading.
  *   draft:         boolean  — true while only autosaved; false (or absent, for
  *                             older docs) once the student pressed Submit.
  *                             Only non-drafts count as "Submitted".

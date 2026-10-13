@@ -24,7 +24,8 @@ export default function Spectrum({
   disabled   = false,
   showValue  = true,
   secondaryDot = null, // { value, label } — faint "original" dot
-  classDots  = [],     // [{ value, label }] — everyone else's positions
+  classDots  = [],     // [{ value, label, ... }] — everyone else's positions
+  onDotClick = null,   // (dot) => void — makes the class dots tappable
 }) {
   const trackRef   = useRef(null);
   const [phase, setPhase] = useState('idle'); // 'idle' | 'dragging' | 'settling'
@@ -162,8 +163,44 @@ export default function Spectrum({
           );
         })}
 
-        {/* The rest of the class */}
-        {classDots.map((d, i) => (
+        {/* The rest of the class. When onDotClick is given each dot is a real
+            button with a generous hit area, and pressing it must NOT start a
+            drag of the student's own marker — hence the stopPropagation on the
+            pointer-down events the track listens for. */}
+        {classDots.map((d, i) => onDotClick ? (
+          <button
+            key={`${d.value}-${i}`}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onDotClick(d); }}
+            className="absolute rounded-full transition-transform hover:scale-125 focus:scale-125 focus:outline-none"
+            style={{
+              left:   `${(clamp(d.value, -100, 100) + 100) / 2}%`,
+              top:    '50%',
+              width:  '22px',
+              height: '22px',
+              transform: 'translateX(-50%) translateY(-50%)',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+            }}
+            title={d.label ?? 'Classmate — tap to read why'}
+            aria-label={d.label ?? 'Classmate — tap to read why'}
+          >
+            <span
+              className="block rounded-full mx-auto"
+              style={{
+                width:  '12px',
+                height: '12px',
+                backgroundColor: 'var(--pg-primary)',
+                opacity: 0.75,
+                boxShadow: '0 0 0 2px var(--pg-bg)',
+              }}
+            />
+          </button>
+        ) : (
           <div
             key={`${d.value}-${i}`}
             className="absolute rounded-full"

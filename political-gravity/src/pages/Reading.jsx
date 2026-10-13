@@ -169,6 +169,15 @@ export default function Reading() {
   const [restoredDraft, setRestoredDraft] = useState(false);
   // A draft we would not apply on our own (see judgeDraft) — offered instead.
   const [pendingDraft,  setPendingDraft]  = useState(null);
+  // ── Student-led discussion flow ──
+  // The teacher's one switch (reflectMode) opens the discussion; each student
+  // then moves through it at their own pace: submit the justification (final),
+  // see the class dots, read a classmate's point, and only then reflect.
+  const [confirmSubmit, setConfirmSubmit] = useState(false); // "this is final" warning
+  const [openDot,       setOpenDot]       = useState(null);  // classmate popup on screen
+  const [viewedDot,     setViewedDot]     = useState(null);  // last classmate point read
+  const [reflectStarted, setReflectStarted] = useState(false); // they pressed Reflect
+  const [respondingTo,  setRespondingTo]  = useState(null);  // the point the reflection answers
   // loading | ready | cached | failed — the form stays locked until the saved
   // copy is known, so nothing can be typed over it or lost to it.
   const [loadState,     setLoadState]     = useState('loading');
@@ -342,6 +351,18 @@ export default function Reading() {
     };
   }, [publishedHtml]);
 
+  // Where this student is in the flow. Submitting the justification is what
+  // moves THEM forward — the teacher's switch only opens the door.
+  //   justify  → discussion not open, or open but they haven't submitted
+  //   discuss  → submitted: class dots visible, reading classmates' points
+  //   reflect  → they pressed Reflect (or already have a reflection going)
+  // hadReflection covers readings from before the submitted flag existed:
+  // anyone with a reflection on file has plainly been through submit.
+  const plotSubmitted = savedPlot?.submitted === true || hadReflection;
+  const discussionOpen = reflectMode;
+  const reflectPhase = discussionOpen && plotSubmitted;      // saves go to pg_reflections
+  const inReflectUI  = reflectPhase && reflectStarted;        // the reflection box is up
+
   // ── Save engine ───────────────────────────────────────────────────────────
   // Everything the save code needs, kept in a ref so the debounced flush and
   // the pagehide handler always see the current values, never a stale closure.
@@ -349,7 +370,7 @@ export default function Reading() {
   useEffect(() => {
     latest.current = {
       user, reading, positionX, positionY, axes, justification, reflection,
-      reflectMode, hadSaved, hadReflection, savedPlot,
+      reflectPhase, respondingTo, hadSaved, hadReflection, savedPlot,
       draftKey: user && reading ? draftKey(user.uid, reading.id) : null,
     };
   });
@@ -362,10 +383,10 @@ export default function Reading() {
   // seeding decision below is made during render.
   const [draftApplied, setDraftApplied] = useState(false);
   const [seededFrom,   setSeededFrom]   = useState(null);
-  // In reflection mode the reflection loader owns the draft, so the plot
+  // In the reflect phase the reflection loader owns the draft, so the plot
   // loader must not throw it away as stale.
-  const reflectModeRef = useRef(false);
-  useEffect(() => { reflectModeRef.current = reflectMode; }, [reflectMode]);
+  const reflectPhaseRef = useRef(false);
+  useEffect(() => { reflectPhaseRef.current = reflectPhase; }, [reflectPhase]);
 
   // Write the current form to Firestore. Resolves true when the server has it.
   const flush = useCallback(({ submit = false } = {}) => {
@@ -382,7 +403,7 @@ export default function Reading() {
       const py = needY && hasPosition(l.positionY) ? l.positionY : null;
 
       try {
-        if (l.reflectMode) {
+        if (l.reflectPhase) {
           const moved = (needX && hasPosition(l.savedPlot?.positionX) && px !== l.savedPlot.positionX)
                      || (needY && hasPosition(l.savedPlot?.positionY) && py !== l.savedPlot.positionY);
           // Don't create an empty reflection doc just because the page opened.
@@ -399,6 +420,10 @@ export default function Reading() {
             originalPosition: l.savedPlot?.positionX ?? l.savedPlot?.positionY ?? null,
             newPosition: px ?? py,
             reflection: l.reflection,
+            // The classmate's point this reflection answers — shown to the
+            // student anonymously, but the uid is kept so grading can see
+            // what they were actually reacting to.
+            respondingTo: l.respondingTo ?? null,
             updatedAt: serverTimestamp(),
           };
           // A draft becomes a submission only when the student says so; an
@@ -420,6 +445,12 @@ export default function Reading() {
             justification: l.justification,
             updatedAt: serverTimestamp(),
           };
+          // Submitting is final: it locks the justification, reveals the class
+          // dots to this student, and puts their dot on classmates' spectrums.
+          if (submit) {
+            data.submitted = true;
+            data.submittedAt = serverTimestamp();
+          }
           await setDoc(doc(db, 'plots', `${l.user.uid}_${l.reading.id}`), data, { merge: true });
           setHadSaved(true);
           setSavedPlot(prev => ({ ...(prev || {}), ...data }));
@@ -537,7 +568,7 @@ export default function Reading() {
       const verdict = judgeDraft(draft, d, ['positionX', 'positionY', 'axes', 'justification']);
       if (verdict === 'apply') applyDraft(draft, { reflect: false });
       else if (verdict === 'ask') setPendingDraft({ ...draft, reflect: false });
-      else if (draft && !reflectModeRef.current) clearDraft(key);
+      else if (draft && !reflectPhaseRef.current) clearDraft(key);
       setHadSaved(!!d);
       setLoadState(source === 'cache' ? 'cached' : 'ready');
     })();
@@ -554,7 +585,8 @@ export default function Reading() {
     setPendingDraft(null);
   };
 
-  // Reflection mode is a per-reading switch the teacher flips after the seminar.
+  // Discussion is a per-reading switch the teacher flips — one click, and from
+  // there each student paces themselves (see the phase notes above).
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'global'),
       snap => setReflectMode(!!(snap.exists() && (snap.data().reflectReadings || []).includes(id))),
@@ -562,7 +594,9 @@ export default function Reading() {
     return () => unsub();
   }, [id]);
 
-  // In reflection mode the whole class's positions appear on the spectrum.
+  // Once discussion is open, subscribe to the class's positions. They are only
+  // RENDERED after this student has submitted (see reflectPhase), so nobody
+  // gets anchored by the spread before committing their own read.
   useEffect(() => {
     if (!reflectMode || !id) return;
     const unsub = onSnapshot(
@@ -590,6 +624,10 @@ export default function Reading() {
           if (typeof d.reflection === 'string') setReflection(d.reflection);
           if (typeof d.newPositionX === 'number') setPositionX(d.newPositionX);
           if (typeof d.newPositionY === 'number') setPositionY(d.newPositionY);
+          if (d.respondingTo) setRespondingTo(d.respondingTo);
+          // A reflection on file means they have been through Reflect before —
+          // reopen the reflection box rather than making them click a dot again.
+          setReflectStarted(true);
         }
       } catch (err) {
         console.error('Could not load your reflection', err);
@@ -642,22 +680,40 @@ export default function Reading() {
     [consensus, consensusLoaded, activeReadings, readingsLoading, id]);
 
   // The button: flush now, and only say "Saved" once the server agrees.
-  async function handleSaveClick() {
+  // `submit` is final in both phases — it locks the justification, or marks
+  // the reflection as handed in.
+  async function handleSaveClick({ submit = false } = {}) {
     if (!ready || !user) return;
-    const ok = await flush({ submit: reflectMode });
+    const ok = await flush({ submit });
     if (ok) {
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2500);
     }
   }
 
+  // The student read a classmate's point — remember it so Reflect can go live
+  // and the reflection can be tied to it.
+  const viewDot = (d) => { setOpenDot(d); setViewedDot(d); };
+  const startReflection = (dot) => {
+    const d = dot ?? viewedDot;
+    if (!d) return;
+    setRespondingTo({
+      uid: d.uid ?? null,
+      axis: d.axis,
+      position: d.value,
+      label: positionLabel(d.value),
+    });
+    setReflectStarted(true);
+    setOpenDot(null);
+  };
+
   // User-driven changes — the only ones that count as edits.
   const changeX = (v) => { setPositionX(v); edited({ positionX: v }); };
   const changeY = (v) => { setPositionY(v); edited({ positionY: v }); };
   const changeAxes = (key) => { setAxes(key); edited({ axes: key }); };
   const changeText = (v) => {
-    if (reflectMode) { setReflection(v);    edited({ reflection: v }); }
-    else             { setJustification(v); edited({ justification: v }); }
+    if (reflectPhase) { setReflection(v);    edited({ reflection: v }); }
+    else              { setJustification(v); edited({ justification: v }); }
   };
 
   const fmtTime = (d) => d?.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -667,14 +723,14 @@ export default function Reading() {
       case 'unsaved': return { text: 'Unsaved changes', color: 'var(--pg-dim)' };
       case 'error':   return { text: `⚠ ${saveError}`, color: '#ef4444' };
       case 'saved':   return {
-        text: reflectMode && hadReflection && !reflectionSubmitted
+        text: reflectPhase && hadReflection && !reflectionSubmitted
           ? `Draft saved ${fmtTime(savedAt)} — not submitted yet`
           : `Saved ${fmtTime(savedAt)}`,
         color: 'var(--pg-dim)',
       };
       default:
-        if (reflectMode && hadReflection && !reflectionSubmitted) return { text: 'Draft — not submitted yet', color: 'var(--pg-dim)' };
-        if (reflectMode && reflectionSubmitted) return { text: 'Submitted ✓', color: '#22c55e' };
+        if (reflectPhase && hadReflection && !reflectionSubmitted) return { text: 'Draft — not submitted yet', color: 'var(--pg-dim)' };
+        if (reflectPhase && reflectionSubmitted) return { text: 'Submitted ✓', color: '#22c55e' };
         return null;
     }
   })();
@@ -688,12 +744,15 @@ export default function Reading() {
     );
   }
 
-  const classDotsX = classPlots
-    .filter(p => p.uid !== user?.uid && typeof p.positionX === 'number')
-    .map(p => ({ value: p.positionX, label: 'Classmate' }));
-  const classDotsY = classPlots
-    .filter(p => p.uid !== user?.uid && typeof p.positionY === 'number')
-    .map(p => ({ value: p.positionY, label: 'Classmate' }));
+  // Only SUBMITTED classmates appear: nobody's half-written justification is
+  // readable, and every visible dot has a rationale behind it to tap into.
+  const submittedPlots = classPlots.filter(p => p.uid !== user?.uid && p.submitted === true);
+  const classDotsX = submittedPlots
+    .filter(p => typeof p.positionX === 'number')
+    .map(p => ({ value: p.positionX, label: 'Classmate — tap to read why', uid: p.uid, axis: 'economic', justification: p.justification || '' }));
+  const classDotsY = submittedPlots
+    .filter(p => typeof p.positionY === 'number')
+    .map(p => ({ value: p.positionY, label: 'Classmate — tap to read why', uid: p.uid, axis: 'political', justification: p.justification || '' }));
 
   // During a live seminar a student moving their point is autosaved as soon
   // as they stop dragging, so the class board updates without a click.
@@ -707,7 +766,7 @@ export default function Reading() {
   // plots doc exists as soon as they type a character of justification, with no
   // position in it. In reflection mode every classmate's dot is already on the
   // spectrum, so there is nothing left to anchor.
-  const showDrift = !!drift && (isTeacher || reflectMode
+  const showDrift = !!drift && (isTeacher || reflectPhase
     || hasPosition(savedPlot?.positionX) || hasPosition(savedPlot?.positionY));
   const ready = (!needX || hasPosition(positionX)) && (!needY || hasPosition(positionY));
   const summary = !ready
@@ -730,6 +789,10 @@ export default function Reading() {
   const isPublished = !htmlLoading && !!publishedHtml;
   const showIframe  = !htmlLoading && !publishedHtml;
 
+  const panelLabel = inReflectUI ? 'Reflect on your position'
+    : reflectPhase ? 'Class discussion'
+    : 'Justify your position';
+
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
       <NavBar backTo="/dashboard" backLabel="Dashboard" />
@@ -751,13 +814,115 @@ export default function Reading() {
         </button>
       )}
 
-      <DiplomaExtractorModal 
-        isOpen={extractorOpen} 
+      <DiplomaExtractorModal
+        isOpen={extractorOpen}
         onClose={() => setExtractorOpen(false)}
         selectedText={extractedText}
         readingId={reading.id}
         readingTitle={reading.title}
       />
+
+      {/* A classmate's justification — deliberately big, with room to read. */}
+      {openDot && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setOpenDot(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="A classmate's justification"
+            className="flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+            style={{
+              backgroundColor: 'var(--pg-surface)',
+              border: '1px solid var(--pg-border)',
+              width: 'min(92vw, 640px)',
+              maxHeight: '80vh',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 px-6 pt-5 pb-3" style={{ borderBottom: '1px solid var(--pg-border)' }}>
+              <div>
+                <h2 className="font-display font-bold text-base" style={{ color: 'var(--pg-text)' }}>
+                  A classmate's justification
+                </h2>
+                <p className="text-xs mt-1" style={{ color: 'var(--pg-muted)' }}>
+                  They placed themselves at <strong style={{ color: 'var(--pg-primary)' }}>{positionLabel(openDot.value)}</strong> on the {openDot.axis} spectrum
+                </p>
+              </div>
+              <button
+                onClick={() => setOpenDot(null)}
+                className="shrink-0 text-lg leading-none px-2 py-1 rounded-lg hover:opacity-70 transition-opacity"
+                style={{ color: 'var(--pg-muted)' }}
+                aria-label="Close"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4 text-sm whitespace-pre-wrap" style={{ color: 'var(--pg-text)', lineHeight: '1.7' }}>
+              {openDot.justification?.trim() || <em style={{ color: 'var(--pg-dim)' }}>They submitted without writing a justification.</em>}
+            </div>
+            <div className="px-6 py-4" style={{ borderTop: '1px solid var(--pg-border)' }}>
+              <button
+                onClick={() => startReflection(openDot)}
+                className="w-full font-semibold py-2.5 rounded-xl transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+              >
+                ✍ {inReflectUI ? 'Respond to this point instead' : 'Reflect on this point'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Submitting the justification is final — say so before it happens. */}
+      {confirmSubmit && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setConfirmSubmit(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="Submit your position?"
+            className="rounded-2xl shadow-2xl p-6"
+            style={{
+              backgroundColor: 'var(--pg-surface)',
+              border: '1px solid var(--pg-border)',
+              width: 'min(92vw, 440px)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="font-display font-bold text-base mb-2" style={{ color: 'var(--pg-text)' }}>
+              Submit your position?
+            </h2>
+            <p className="text-sm mb-4" style={{ color: 'var(--pg-muted)', lineHeight: '1.6' }}>
+              This is final — you won't be able to edit your position or justification afterwards.
+              You'll then see where the rest of the class landed, and your justification becomes
+              readable (without your name) by classmates.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmSubmit(false)}
+                className="flex-1 font-semibold py-2.5 rounded-xl transition-opacity hover:opacity-80"
+                style={{ backgroundColor: 'var(--pg-bg)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={() => { setConfirmSubmit(false); handleSaveClick({ submit: true }); }}
+                className="flex-1 font-semibold py-2.5 rounded-xl transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+              >
+                Submit — I'm sure
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
@@ -796,7 +961,7 @@ export default function Reading() {
                     <button
                       key={key}
                       onClick={() => changeAxes(key)}
-                      disabled={formLocked}
+                      disabled={formLocked || plotSubmitted}
                       className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
                       style={axes === key
                         ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }
@@ -824,10 +989,11 @@ export default function Reading() {
                   <Spectrum
                     value={positionX ?? 0}
                     onChange={changeX}
-                    disabled={formLocked}
+                    disabled={formLocked || (reflectPhase && !inReflectUI)}
                     leftLabel={null} rightLabel={null} sublabels={[]}
-                    classDots={reflectMode ? classDotsX : []}
-                    secondaryDot={reflectMode && typeof savedPlot?.positionX === 'number'
+                    classDots={reflectPhase ? classDotsX : []}
+                    onDotClick={reflectPhase ? viewDot : null}
+                    secondaryDot={reflectPhase && typeof savedPlot?.positionX === 'number'
                       ? { value: savedPlot.positionX, label: 'Where you started' } : null}
                   />
                 </>
@@ -846,10 +1012,11 @@ export default function Reading() {
                   <Spectrum
                     value={positionY ?? 0}
                     onChange={changeY}
-                    disabled={formLocked}
+                    disabled={formLocked || (reflectPhase && !inReflectUI)}
                     leftLabel={null} rightLabel={null} sublabels={[]}
-                    classDots={reflectMode ? classDotsY : []}
-                    secondaryDot={reflectMode && typeof savedPlot?.positionY === 'number'
+                    classDots={reflectPhase ? classDotsY : []}
+                    onDotClick={reflectPhase ? viewDot : null}
+                    secondaryDot={reflectPhase && typeof savedPlot?.positionY === 'number'
                       ? { value: savedPlot.positionY, label: 'Where you started' } : null}
                   />
                   <h3 className="text-center font-bold text-[11px] mt-1.5 uppercase tracking-wide" style={{ color: 'var(--pg-text)' }}>Political Spectrum</h3>
@@ -998,7 +1165,7 @@ export default function Reading() {
               style={{ color: 'var(--pg-text)', writingMode: 'vertical-rl' }}
               title="Show the writing panel"
             >
-              ◂ {reflectMode ? 'Reflect on your position' : 'Justify your position'}
+              ◂ {panelLabel}
             </button>
           </div>
         ) : (
@@ -1010,7 +1177,7 @@ export default function Reading() {
           <div className="flex-1 flex flex-col">
             <div className="flex items-center justify-between gap-2 mb-2">
               <label className="block text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>
-                {reflectMode ? 'Reflect on your position' : 'Justify your position'}
+                {panelLabel}
               </label>
               <button
                 onClick={() => togglePanel('writing', writingOpen, setWritingOpen)}
@@ -1022,8 +1189,10 @@ export default function Reading() {
               </button>
             </div>
             <p className="text-xs mb-3" style={{ color: 'var(--pg-dim)' }}>
-              {reflectMode
-                ? 'The grey dots are the rest of the class. Move your marker if the seminar changed your mind, then explain what changed and why.'
+              {inReflectUI
+                ? 'Move your marker if reading others changed your mind, then explain what changed and why.'
+                : reflectPhase
+                ? 'The dots are classmates who have submitted. Tap one to read their justification.'
                 : 'Use at least one piece of evidence from the reading to support your placement.'}
             </p>
             {loadState === 'failed' && (
@@ -1067,21 +1236,50 @@ export default function Reading() {
                 </div>
               </div>
             )}
-            <textarea
-              value={reflectMode ? reflection : justification}
-              onChange={e => changeText(e.target.value)}
-              onPaste={e => { e.preventDefault(); alert('Pasting is not allowed on this site.'); }}
-              disabled={formLocked}
-              placeholder={loadState === 'loading' ? 'Loading your saved work…' : reflectMode ? 'After the seminar I…' : 'The text argues that…'}
-              className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px] disabled:opacity-60"
-              style={{
-                backgroundColor: 'var(--pg-surface2)',
-                border: '1px solid var(--pg-border)',
-                color: 'var(--pg-text)',
-              }}
-              onFocus={e => e.target.style.borderColor = 'var(--pg-primary)'}
-              onBlur={e  => e.target.style.borderColor = 'var(--pg-border)'}
-            />
+            {reflectPhase && !inReflectUI ? (
+              /* Between submitting and reflecting: their own words stay on
+                 screen (read-only), and the panel points them at the dots. */
+              <div className="flex-1 flex flex-col gap-3 min-h-0">
+                <div
+                  className="flex-1 overflow-y-auto rounded-xl p-4 text-sm whitespace-pre-wrap min-h-[100px]"
+                  style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--pg-dim)' }}>
+                    Your submitted justification 🔒
+                  </p>
+                  {justification}
+                </div>
+                <p className="text-xs" style={{ color: 'var(--pg-dim)' }}>
+                  {viewedDot
+                    ? 'Read a few more, or press Reflect when you’re ready.'
+                    : 'Tap a classmate’s dot on the spectrum above to read their justification. Reflect unlocks after you’ve read one.'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {inReflectUI && respondingTo && (
+                  <p className="text-xs mb-2 px-3 py-1.5 rounded-lg inline-block" role="status"
+                    style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                    ↩ Responding to a classmate at <strong style={{ color: 'var(--pg-text)' }}>{respondingTo.label}</strong> ({respondingTo.axis})
+                  </p>
+                )}
+                <textarea
+                  value={inReflectUI ? reflection : justification}
+                  onChange={e => changeText(e.target.value)}
+                  onPaste={e => { e.preventDefault(); alert('Pasting is not allowed on this site.'); }}
+                  disabled={formLocked}
+                  placeholder={loadState === 'loading' ? 'Loading your saved work…' : inReflectUI ? 'Reading that classmate’s point, I…' : 'The text argues that…'}
+                  className="flex-1 resize-none rounded-xl p-4 text-sm focus:outline-none transition-colors min-h-[140px] disabled:opacity-60"
+                  style={{
+                    backgroundColor: 'var(--pg-surface2)',
+                    border: '1px solid var(--pg-border)',
+                    color: 'var(--pg-text)',
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'var(--pg-primary)'}
+                  onBlur={e  => e.target.style.borderColor = 'var(--pg-border)'}
+                />
+              </>
+            )}
           </div>
 
           {/* Long-form response lives in Desk when the teacher has linked one */}
@@ -1104,9 +1302,9 @@ export default function Reading() {
                 {saveStatus.text}
               </p>
             )}
-            {reflectMode ? (
+            {inReflectUI ? (
               <button
-                onClick={handleSaveClick}
+                onClick={() => handleSaveClick({ submit: true })}
                 disabled={!ready || !reflection.trim()}
                 className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
@@ -1114,9 +1312,29 @@ export default function Reading() {
               >
                 {justSaved ? '✓ Submitted!' : reflectionSubmitted ? 'Update Reflection' : 'Submit Reflection'}
               </button>
+            ) : reflectPhase ? (
+              <button
+                onClick={() => startReflection()}
+                disabled={!viewedDot}
+                className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                title={viewedDot ? 'Write your reaction to the point you just read' : 'Read a classmate’s justification first'}
+              >
+                ✍ Reflect
+              </button>
+            ) : discussionOpen ? (
+              <button
+                onClick={() => setConfirmSubmit(true)}
+                disabled={!ready || !justification.trim() || formLocked}
+                className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
+                style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+                title="Hands your position and justification in — final — and shows you the rest of the class"
+              >
+                {justSaved ? '✓ Submitted!' : 'Submit Position'}
+              </button>
             ) : (
               <button
-                onClick={handleSaveClick}
+                onClick={() => handleSaveClick()}
                 disabled={!ready || !justification.trim()}
                 className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
@@ -1126,7 +1344,9 @@ export default function Reading() {
               </button>
             )}
             <p className="text-[11px] mt-2 text-center" style={{ color: 'var(--pg-faint)' }}>
-              Autosaves as you type. A copy is also kept on this device until the server confirms.
+              {reflectPhase && !inReflectUI
+                ? 'Your reflection will be tied to the classmate’s point you read most recently.'
+                : 'Autosaves as you type. A copy is also kept on this device until the server confirms.'}
             </p>
           </div>
         </div>
