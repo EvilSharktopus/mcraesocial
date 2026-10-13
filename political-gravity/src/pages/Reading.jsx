@@ -928,15 +928,21 @@ export default function Reading() {
 
         {/* ── Top: both spectrums, spanning the full width ── */}
         <div
-          className="spectrum-sky shrink-0 px-6 py-3"
+          className={`spectrum-sky shrink-0 px-6 ${spectrumOpen ? 'py-3' : 'py-1.5'}`}
           style={{ backgroundColor: 'var(--pg-surface)', borderBottom: '1px solid var(--pg-border)' }}
         >
-          <div
-            aria-hidden="true"
-            className="spectrum-sky__art"
-            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/${skyFile})` }}
-          />
-          <div aria-hidden="true" className="spectrum-sky__scrim" />
+          {/* The sky only paints while the spectrum is open — collapsed, the
+              strip shrinks to a slim plain bar instead of an empty mural. */}
+          {spectrumOpen && (
+            <>
+              <div
+                aria-hidden="true"
+                className="spectrum-sky__art"
+                style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/${skyFile})` }}
+              />
+              <div aria-hidden="true" className="spectrum-sky__scrim" />
+            </>
+          )}
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center justify-between gap-3">
               {/* Chip and collapse caret travel together on the left, or
@@ -946,16 +952,16 @@ export default function Reading() {
                 {showDrift && <SocietyDrift drift={drift} size="chip" />}
                 <button
                   onClick={() => togglePanel('spectrum', spectrumOpen, setSpectrumOpen)}
-                  className="font-display font-bold text-sm hover:opacity-80 transition-opacity leading-none"
-                  style={{ color: 'var(--pg-text)' }}
+                  className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}
                   aria-expanded={spectrumOpen}
-                  aria-label={spectrumOpen ? 'Hide the spectrum' : 'Show the spectrum'}
-                  title={spectrumOpen ? 'Hide the spectrum' : 'Show the spectrum'}
+                  title={spectrumOpen ? 'Collapse the spectrum to give the reading more room' : 'Bring the spectrum back'}
                 >
-                  {spectrumOpen ? '▾' : '▸'}
+                  {spectrumOpen ? '▾ Hide spectrum' : '▸ Show spectrum'}
                 </button>
               </div>
               <div className="flex items-center gap-3 min-w-0">
+                {spectrumOpen && (
                 <div className="flex gap-1 shrink-0">
                   {[['economic','Economic'],['political','Political'],['both','Both']].map(([key, label]) => (
                     <button
@@ -971,6 +977,7 @@ export default function Reading() {
                     </button>
                   ))}
                 </div>
+                )}
                 {/* Truncates rather than squashing the axis pills: each Spectrum
                     renders this same readout under its own marker anyway. */}
                 <p className="text-xs font-medium min-w-0 truncate" aria-live="polite"
