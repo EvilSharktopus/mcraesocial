@@ -23,7 +23,6 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { normalizeCode, codeToEmail, isCodeEmail, studentDisplayName } from '../utils/studentCode';
 
-const LEGACY_DOMAIN    = 'rvschools.ab.ca';
 const DEFAULT_TEACHER  = 'amcrae@rvschools.ab.ca';
 
 const AuthContext = createContext(null);
@@ -77,10 +76,10 @@ export function AuthProvider({ children }) {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        // An old email account that Desk has moved to a code: refused here
-        // too, without touching Firestore. The account stays enabled for
-        // anything else on this project.
-        if (!isTeacherEmail(firebaseUser.email) && String(firebaseUser.email || '').toLowerCase().endsWith(`@${LEGACY_DOMAIN}`)) {
+        // An email account (school or personal): refused here, as on Desk,
+        // without touching Firestore. It stays enabled for anything else on
+        // this project.
+        if (!isTeacherEmail(firebaseUser.email) && !isCodeEmail(firebaseUser.email)) {
           setIsTeacher(false);
           setUserDoc(null);
           return;
@@ -116,9 +115,9 @@ export function AuthProvider({ children }) {
 
   const signOutUser = () => signOut(auth);
 
-  const isLegacyStudent = Boolean(user?.email)
-    && !isTeacherEmail(user.email)
-    && String(user.email).toLowerCase().endsWith(`@${LEGACY_DOMAIN}`);
+  // Any account that is neither the teacher nor a code account: the school
+  // address, or a personal one a student signed up with.
+  const isLegacyStudent = Boolean(user?.email) && !isTeacherEmail(user.email) && !isCodeEmail(user.email);
   const isCodeAccount = isCodeEmail(user?.email);
 
   return (
