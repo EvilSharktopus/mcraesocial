@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import { studentDisplayName, emailToCode } from '../utils/studentCode';
 
 export default function NavBar({ backTo, backLabel, extra }) {
   const { user, isTeacher, signOut } = useAuth();
@@ -61,7 +62,8 @@ export default function NavBar({ backTo, backLabel, extra }) {
               className="text-xs hidden sm:block truncate max-w-[160px]"
               style={{ color: 'var(--pg-dim)' }}
             >
-              {user.email}
+              {/* A student sees their first name and code, never an address. */}
+              {isTeacher ? user.email : `${studentDisplayName(user)}${emailToCode(user.email) ? ` · ${emailToCode(user.email)}` : ''}`}
             </span>
             <button
               onClick={signOut}

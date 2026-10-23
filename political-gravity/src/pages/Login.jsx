@@ -16,7 +16,7 @@ const TERMS_CONTENT = `
 Access is restricted to students currently enrolled in Mr. McRae's Social Studies 30 class and to Mr. McRae in his instructional capacity.
 
 ### Authentication
-Sign-in requires a valid email address.
+Students sign in with a student code issued by Mr. McRae and a password, the same ones used for Desk. No email address is required or stored for students.
 
 ### Acceptable Use
 By signing in, you agree to:
@@ -47,8 +47,8 @@ When you sign in and use this application, the following is collected and stored
 
 | Data | Purpose |
 |---|---|
-| Full name | Identify you in submissions and seminar views |
-| Email address | Authenticate you; link work to your account |
+| First name | Identify you to Mr. McRae and, in seminar view, to classmates |
+| Student code | Sign you in; link work to your account. It is not an email address and is never sent anywhere. |
 | Political compass plots | Record your reading positions |
 | Justifications and reflections | Record your written responses |
 | Seminar comments | Support live backchannel discussion |
@@ -57,7 +57,7 @@ When you sign in and use this application, the following is collected and stored
 This application does not collect passwords, phone numbers, home addresses, photos, microphone or camera data, or location data.
 
 ### Who Can See Your Data
-Your work is visible only to you and Mr. McRae, except during seminar view where all student plots are revealed simultaneously as part of the activity.
+Your work is visible only to you and Mr. McRae, except during seminar view where all student plots are revealed simultaneously, by first name, as part of the activity. Your full name is kept only in Mr. McRae's private class roster.
 
 ### Third-Party Services
 | Service | Provider | Data location |
@@ -68,12 +68,12 @@ Your work is visible only to you and Mr. McRae, except during seminar view where
 All student data is stored in Canada.
 
 ### Data Retention
-Data is retained for the current school year and may be archived by Mr. McRae. You may request access to or deletion of your data by emailing amcrae@rvschools.ab.ca.
+Data is retained for the current school year and may be archived by Mr. McRae. You may request access to or deletion of your data by asking Mr. McRae.
 
 ### POPA Rights (Alberta)
 Under Alberta's Protection of Privacy Act (POPA), you have the right to request access to or correction of your information. Contact Mr. McRae or Rocky View Schools' Privacy Officer (403-945-4000).
 
-_Last updated: May 2026_
+_Last updated: October 2026_
 `;
 
 // ── Policy Modal ──────────────────────────────────────────────────────────────
@@ -134,18 +134,22 @@ function Field({ label, ...props }) {
 }
 
 // ── Login Page ────────────────────────────────────────────────────────────────
+//
+// Students sign in with the code and password Mr. McRae gave them for Desk.
+// There is no sign-up here (accounts are made on Desk's Roster tab) and no
+// student password reset (the teacher does it from the same tab). The
+// teacher signs in with an email address behind the small link below.
 
 export default function Login() {
-  const { signIn, signUp, resetPassword, user, isTeacher } = useAuth();
+  const { signIn, signInWithCode, resetPassword, user, isTeacher, isLegacyStudent } = useAuth();
   const navigate = useNavigate();
 
-  const [mode,     setMode]     = useState('signin');
+  const [who,      setWho]      = useState('student');   // 'student' | 'teacher'
+  const [code,     setCode]     = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [name,     setName]     = useState('');
-  const [agreed,   setAgreed]   = useState(false);
   const [error,    setError]    = useState('');
-  const [notice,   setNotice]   = useState('');   // good news, e.g. reset email sent
+  const [notice,   setNotice]   = useState('');
   const [loading,  setLoading]  = useState(false);
   const [resetting, setResetting] = useState(false);
   const [modal,    setModal]    = useState(null);
@@ -153,47 +157,40 @@ export default function Login() {
   // Must come after every hook above: returning earlier changes the number of
   // hooks between renders once auth resolves, which unmounts the whole app.
   // Wait for the role before redirecting, or a teacher lands on the student
-  // dashboard for a moment first.
-  if (user && isTeacher !== undefined) {
-    return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
+  // dashboard for a moment first. A legacy email account goes to the root,
+  // which shows it the notice.
+  if (user && (isTeacher !== undefined || isLegacyStudent)) {
+    return <Navigate to={isLegacyStudent ? '/' : isTeacher ? '/teacher' : '/dashboard'} replace />;
   }
 
-  const friendlyError = (code, message) => {
-    switch (code) {
+  const friendlyError = (err) => {
+    switch (err?.code) {
+      case 'pg/bad-code':               return err.message;
       case 'auth/invalid-credential':
       case 'auth/user-not-found':
-      case 'auth/wrong-password':       return 'Incorrect email or password.';
-      case 'auth/email-already-in-use': return 'An account with that email already exists.';
-      case 'auth/weak-password':        return 'Password must be at least 6 characters.';
-      case 'auth/invalid-email':        return 'Please enter a valid email address.';
+      case 'auth/wrong-password':       return who === 'student' ? 'That code and password do not match. Check the sheet, or ask Mr. McRae to reset your password.' : 'Incorrect email or password.';
+      case 'auth/invalid-email':        return who === 'student' ? 'That does not look like a student code.' : 'Please enter a valid email address.';
       case 'auth/too-many-requests':    return 'Too many attempts. Please wait a moment and try again.';
       case 'auth/unauthorized-domain':  return 'This domain is not yet authorized — contact Mr. McRae.';
-      default: return `Error (${code ?? 'unknown'}): ${message ?? 'Please try again.'}`;
+      default: return `Error (${err?.code ?? 'unknown'}): ${err?.message ?? 'Please try again.'}`;
     }
   };
 
-  function switchMode(m) {
-    setMode(m); setError(''); setNotice('');
-    setEmail(''); setPassword(''); setName(''); setAgreed(false);
+  function switchWho(w) {
+    setWho(w); setError(''); setNotice('');
+    setCode(''); setEmail(''); setPassword('');
   }
 
-  // Password reset keeps the same account (and so the same vault and marks);
-  // creating a new account would not. Firebase sends the email itself.
   async function handleForgot() {
     setError(''); setNotice('');
     const addr = email.trim();
-    if (!addr) {
-      setError('Type your email address above first, then press “Forgot password?” again.');
-      return;
-    }
+    if (!addr) { setError('Type your email address above first, then press “Forgot password?” again.'); return; }
     setResetting(true);
     try {
       await resetPassword(addr);
-      setNotice(`Reset link sent to ${addr}. Check your inbox (and junk folder), follow the link, then sign in here with the new password. Your work stays with your account.`);
+      setNotice(`Reset link sent to ${addr}.`);
     } catch (err) {
-      setError(err.code === 'auth/user-not-found'
-        ? `No account uses ${addr}. Check the spelling, or create an account.`
-        : friendlyError(err.code, err.message));
+      setError(friendlyError(err));
     } finally {
       setResetting(false);
     }
@@ -203,24 +200,19 @@ export default function Login() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      if (mode === 'signin') await signIn(email, password);
-      else await signUp(email, password, name);
+      if (who === 'student') await signInWithCode(code, password);
+      else await signIn(email, password);
       navigate('/');
-      // Deliberately leave `loading` set: the profile lookup in AuthContext is
-      // still running, and re-enabling the button here makes the form look idle
-      // while the app is mid-sign-in. This component unmounts on redirect.
+      // `loading` stays set on purpose: the profile lookup in AuthContext is
+      // still running, and this component unmounts on redirect.
     } catch (err) {
-      const msg = err.message?.startsWith('Please use')
-        ? err.message : friendlyError(err.code, err.message);
-      setError(msg);
+      setError(friendlyError(err));
       setLoading(false);
     }
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: 'var(--pg-bg)' }}>
-      {/* Faded wordmark art behind the form. Sits under everything else, which
-          is why the layers below it are positioned too. */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
@@ -231,20 +223,17 @@ export default function Login() {
           opacity: 0.14,
         }}
       />
-      {/* Scrim so the form stays readable over the busiest part of the image */}
       <div
         aria-hidden="true"
         className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at center, var(--pg-bg) 0%, transparent 75%)' }}
       />
 
-      {/* Theme toggle — top right */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-sm relative">
-        {/* Wordmark */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
             <span className="text-3xl">⚖️</span>
@@ -257,32 +246,21 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="rounded-2xl p-7 shadow-lg" style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
-          {/* Mode tabs */}
-          <div className="flex rounded-xl p-1 mb-6" style={{ backgroundColor: 'var(--pg-surface2)' }}>
-            {[['signin', 'Sign In'], ['signup', 'Create Account']].map(([m, label]) => (
-              <button
-                key={m}
-                onClick={() => switchMode(m)}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={mode === m
-                  ? { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }
-                  : { color: 'var(--pg-muted)' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <h2 className="font-display font-bold text-lg mb-4" style={{ color: 'var(--pg-text)' }}>
+            {who === 'student' ? 'Sign in with your student code' : 'Teacher sign-in'}
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <Field label="Full name" type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="Firstname Lastname" />
+            {who === 'student' ? (
+              <Field label="Student code" type="text" value={code} onChange={e => setCode(e.target.value)} required
+                placeholder="Like S30-7K4Q" autoComplete="username" autoCapitalize="characters" spellCheck={false} />
+            ) : (
+              <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@rvschools.ab.ca" autoComplete="username" />
             )}
-            <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" />
-            <Field label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
+            <Field label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" autoComplete="current-password" />
 
-            {mode === 'signin' && (
+            {who === 'teacher' && (
               <div className="flex justify-end -mt-2">
                 <button
                   type="button"
@@ -294,20 +272,6 @@ export default function Login() {
                   {resetting ? 'Sending reset link…' : 'Forgot password?'}
                 </button>
               </div>
-            )}
-
-            {mode === 'signup' && (
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 shrink-0 rounded" style={{ accentColor: 'var(--pg-primary)' }} />
-                <span className="text-xs leading-relaxed" style={{ color: 'var(--pg-dim)' }}>
-                  I have read and agree to the{' '}
-                  <button type="button" onClick={() => setModal('terms')} className="underline underline-offset-2 transition-opacity hover:opacity-80" style={{ color: 'var(--pg-primary)' }}>Terms of Use</button>
-                  {' '}and{' '}
-                  <button type="button" onClick={() => setModal('privacy')} className="underline underline-offset-2 transition-opacity hover:opacity-80" style={{ color: 'var(--pg-primary)' }}>Privacy Policy</button>
-                  , and confirm parental consent.
-                </span>
-              </label>
             )}
 
             {error && (
@@ -323,17 +287,21 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading || (mode === 'signup' && !agreed)}
+              disabled={loading}
               className="w-full font-semibold py-2.5 rounded-xl transition-opacity disabled:opacity-40"
               style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
             >
-              {loading ? 'Signing you in…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+              {loading ? 'Signing you in…' : 'Sign In'}
             </button>
           </form>
+
+          {who === 'student' && (
+            <p className="text-xs mt-4 leading-relaxed" style={{ color: 'var(--pg-dim)' }}>
+              Same code and password as Desk. Forgotten it? Ask Mr. McRae for a new password.
+            </p>
+          )}
         </div>
 
-        {/* Project overview — readable before signing in, so a student can find
-            out what this is without an account */}
         <a
           href={HANDOUT_URL}
           target="_blank"
@@ -349,15 +317,15 @@ export default function Login() {
           <span aria-hidden="true" style={{ color: 'var(--pg-dim)' }}>↗</span>
         </a>
 
-        {/* Policy links */}
         <div className="flex items-center justify-center gap-3 mt-5 text-xs" style={{ color: 'var(--pg-faint)' }}>
           <button onClick={() => setModal('terms')} className="hover:opacity-80 transition-opacity">Terms of Use</button>
           <span>·</span>
           <button onClick={() => setModal('privacy')} className="hover:opacity-80 transition-opacity">Privacy Policy</button>
+          <span>·</span>
+          <button onClick={() => switchWho(who === 'student' ? 'teacher' : 'student')} className="hover:opacity-80 transition-opacity">
+            {who === 'student' ? 'Teacher sign-in' : 'Student sign-in'}
+          </button>
         </div>
-        <p className="text-center text-xs mt-2" style={{ color: 'var(--pg-faint)' }}>
-          Same credentials as your Desk account
-        </p>
       </div>
 
       {modal === 'terms'   && <PolicyModal title="Terms of Use"   content={TERMS_CONTENT}   onClose={() => setModal(null)} />}

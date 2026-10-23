@@ -1,9 +1,10 @@
 // src/auth/ProtectedRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import LegacyNotice from '../components/LegacyNotice';
 
 export default function ProtectedRoute({ children, role }) {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, isLegacyStudent } = useAuth();
 
   if (user === undefined || (user && isTeacher === undefined)) {
     return (
@@ -17,6 +18,7 @@ export default function ProtectedRoute({ children, role }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (isLegacyStudent) return <LegacyNotice />;
   if (role === 'teacher' && !isTeacher) return <Navigate to="/dashboard" replace />;
   if (role === 'student' && isTeacher)  return <Navigate to="/teacher"   replace />;
 

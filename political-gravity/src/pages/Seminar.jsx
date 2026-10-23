@@ -217,7 +217,8 @@ export default function Seminar() {
       const m = moves.get(p.uid);
       return {
         uid: p.uid,
-        name: users[p.uid]?.displayName || users[p.uid]?.email || 'Student',
+        // The projector shows this to the whole class: first name only.
+        name: users[p.uid]?.displayName || 'Student',
         econ: onAxis(p.positionX, m?.newPositionX),
         pol:  onAxis(p.positionY, m?.newPositionY),
       };

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './auth/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import LegacyNotice from './components/LegacyNotice';
 
 import Login        from './pages/Login';
 import Dashboard    from './pages/Dashboard';
@@ -13,7 +14,7 @@ import Teacher      from './pages/Teacher';
 import StudyPackage from './pages/StudyPackage';
 
 function RootRedirect() {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, isLegacyStudent } = useAuth();
   // Signed in but the role has not come back yet — hold, don't guess.
   if (user === undefined || (user && isTeacher === undefined)) {
     return (
@@ -27,6 +28,7 @@ function RootRedirect() {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (isLegacyStudent) return <LegacyNotice />;
   return <Navigate to={isTeacher ? '/teacher' : '/dashboard'} replace />;
 }
 

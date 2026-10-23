@@ -1,5 +1,6 @@
 // src/pages/Teacher.jsx
 import { useState, useEffect } from 'react';
+import { useRoster, fullNameFor } from '../hooks/useRoster';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
@@ -617,6 +618,7 @@ function GradingTab() {
   const [plots,       setPlots]       = useState(null);
   const [reflections, setReflections] = useState(null);
   const [users,       setUsers]       = useState({});
+  const roster = useRoster();
   const [grades,      setGrades]      = useState({});
   const [expanded,    setExpanded]    = useState(null);   // reading id
   const [view,        setView]        = useState('plots');
@@ -640,7 +642,9 @@ function GradingTab() {
     return () => { unsubPlots(); unsubReflections(); unsubGrades(); unsubUsers(); };
   }, []);
 
-  const who = (uid) => users[uid]?.displayName || users[uid]?.email || uid;
+  // Full name from Desk's roster when the account has one; the user doc
+  // only carries a first name after the privacy switch.
+  const who = (uid) => fullNameFor(roster, uid, users[uid]?.displayName || users[uid]?.email || uid);
 
   // Clicking the band already set clears it, so a misclick is undoable.
   async function setGrade(uid, readingId, field, code) {

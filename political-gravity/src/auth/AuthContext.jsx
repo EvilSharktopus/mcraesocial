@@ -1,67 +1,70 @@
 // src/auth/AuthContext.jsx
 //
+// Accounts are made in Desk (the Roster tab) and shared through the one
+// Firebase project: a student signs in here with the same code and password
+// as on Desk. There is no sign-up and no password reset for students; the
+// teacher resets a password from Desk. The teacher still signs in with an
+// email address.
+//
 // Role strategy:
-//   On every login / sign-up, we upsert a Firestore doc at users/{uid}.
-//   The doc's `role` field drives access: 'teacher' or 'student'.
-//   On first login, amcrae@rvschools.ab.ca is auto-seeded as 'teacher';
-//   all other @rvschools.ab.ca accounts default to 'student'.
-//   Any existing teacher can later promote a user to 'teacher' via Firestore.
+//   On every login we upsert users/{uid}. The doc's `role` drives access:
+//   'teacher' or 'student'. amcrae@rvschools.ab.ca is seeded as 'teacher';
+//   everyone else is a student. The doc carries the account's first name
+//   and its code address, never a real email or a surname.
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  updateProfile,
   signOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { normalizeCode, codeToEmail, isCodeEmail, studentDisplayName } from '../utils/studentCode';
 
-const ALLOWED_DOMAIN   = 'rvschools.ab.ca';
+const LEGACY_DOMAIN    = 'rvschools.ab.ca';
 const DEFAULT_TEACHER  = 'amcrae@rvschools.ab.ca';
 
 const AuthContext = createContext(null);
 
+function isTeacherEmail(email) {
+  return String(email ?? '').toLowerCase() === DEFAULT_TEACHER;
+}
+
 /**
  * Upserts users/{uid} in Firestore.
  * - On creation: sets role based on email.
- * - On subsequent logins: only updates lastLoginAt; does NOT overwrite role
- *   (so manually promoted teachers stay teachers).
+ * - On subsequent logins: refreshes the display name (a rename on Desk
+ *   lands here) and stamps lastLoginAt; never overwrites role.
  */
 async function ensureUserDoc(firebaseUser) {
   try {
     const ref  = doc(db, 'users', firebaseUser.uid);
     const snap = await getDoc(ref);
+    const teacher = isTeacherEmail(firebaseUser.email);
+    const displayName = teacher ? (firebaseUser.displayName || '') : studentDisplayName(firebaseUser);
 
     if (!snap.exists()) {
-      const defaultRole =
-        firebaseUser.email === DEFAULT_TEACHER ? 'teacher' : 'student';
-
+      const defaultRole = teacher ? 'teacher' : 'student';
       await setDoc(ref, {
         uid:         firebaseUser.uid,
         email:       firebaseUser.email,
-        displayName: firebaseUser.displayName || '',
+        displayName,
         role:        defaultRole,
         classCode:   null,
         createdAt:   serverTimestamp(),
         lastLoginAt: serverTimestamp(),
       });
-
       return defaultRole;
-    } else {
-      // Stamping the login time is bookkeeping — nothing waits on the result,
-      // and awaiting it held the whole sign-in behind a second round trip.
-      setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true })
-        .catch(err => console.warn('[AuthContext] could not stamp lastLoginAt:', err.code));
-      return snap.data().role;
     }
+    // Bookkeeping; nothing waits on it.
+    setDoc(ref, { lastLoginAt: serverTimestamp(), displayName }, { merge: true })
+      .catch(err => console.warn('[AuthContext] could not stamp lastLoginAt:', err.code));
+    return snap.data().role;
   } catch (err) {
-    // Firestore rules not yet configured — fall back to email-based detection.
-    // This is temporary until firestore.rules is updated.
     console.warn('[AuthContext] Firestore unavailable, using email fallback:', err.code);
-    return firebaseUser.email === DEFAULT_TEACHER ? 'teacher' : 'student';
+    return isTeacherEmail(firebaseUser.email) ? 'teacher' : 'student';
   }
 }
 
@@ -73,10 +76,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Publish the user straight away. Waiting for the profile read left the
-        // app looking signed out for the length of a Firestore round trip, which
-        // bounced the router back to the login form mid-sign-in.
         setUser(firebaseUser);
+        // An old email account that Desk has moved to a code: refused here
+        // too, without touching Firestore. The account stays enabled for
+        // anything else on this project.
+        if (!isTeacherEmail(firebaseUser.email) && String(firebaseUser.email || '').toLowerCase().endsWith(`@${LEGACY_DOMAIN}`)) {
+          setIsTeacher(false);
+          setUserDoc(null);
+          return;
+        }
         const role = await ensureUserDoc(firebaseUser);
         setIsTeacher(role === 'teacher');
         setUserDoc({ uid: firebaseUser.uid, email: firebaseUser.email, role });
@@ -88,22 +96,34 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  /** Teacher: email and password. */
   const signIn = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
+    signInWithEmailAndPassword(auth, String(email).trim(), password);
 
-  const signUp = async (email, password, displayName) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    if (displayName) await updateProfile(cred.user, { displayName });
-    return cred;
+  /** Student: code and password. The code is the account's address at a private domain. */
+  const signInWithCode = (code, password) => {
+    const normalized = normalizeCode(code);
+    if (!normalized) {
+      const err = new Error('That does not look like a student code. It looks like S30-7K4Q.');
+      err.code = 'pg/bad-code';
+      throw err;
+    }
+    return signInWithEmailAndPassword(auth, codeToEmail(normalized), password);
   };
 
+  /** Teacher only; a student's password is reset from Desk's Roster tab. */
   const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 
   const signOutUser = () => signOut(auth);
 
+  const isLegacyStudent = Boolean(user?.email)
+    && !isTeacherEmail(user.email)
+    && String(user.email).toLowerCase().endsWith(`@${LEGACY_DOMAIN}`);
+  const isCodeAccount = isCodeEmail(user?.email);
+
   return (
     <AuthContext.Provider
-      value={{ user, userDoc, isTeacher, signIn, signUp, resetPassword, signOut: signOutUser }}
+      value={{ user, userDoc, isTeacher, isLegacyStudent, isCodeAccount, signIn, signInWithCode, resetPassword, signOut: signOutUser }}
     >
       {children}
     </AuthContext.Provider>
