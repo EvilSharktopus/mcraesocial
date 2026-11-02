@@ -1,6 +1,6 @@
 // src/pages/Teacher.jsx
 import { useState, useEffect } from 'react';
-import { useRoster, fullNameFor } from '../hooks/useRoster';
+import { useRoster, nameFor } from '../hooks/useRoster';
 import { useAuth } from '../auth/AuthContext';
 import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
@@ -642,9 +642,9 @@ function GradingTab() {
     return () => { unsubPlots(); unsubReflections(); unsubGrades(); unsubUsers(); };
   }, []);
 
-  // Full name from Desk's roster when the account has one; the user doc
-  // only carries a first name after the privacy switch.
-  const who = (uid) => fullNameFor(roster, uid, users[uid]?.displayName || users[uid]?.email || uid);
+  // First name and code from Desk's roster when the account has one; the
+  // code keys the teacher's spreadsheet of full names.
+  const who = (uid) => nameFor(roster, uid, users[uid]?.displayName || users[uid]?.email || uid);
 
   // Clicking the band already set clears it, so a misclick is undoable.
   async function setGrade(uid, readingId, field, code) {
