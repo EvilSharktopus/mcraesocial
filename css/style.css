@@ -1593,3 +1593,17 @@ details.unit-section--collapsible > summary.unit-section__title:hover {
   .arctic-debate__hub { min-height: 200px; }
   .arctic-debate__title { font-size: 1.25rem; }
 }
+
+/* Section heading that is itself an outbound link (e.g. Student Teacher Drive) */
+.section-heading--link { margin-bottom: 1.75rem; }
+.section-heading--link a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.section-heading--link a:hover {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+}
