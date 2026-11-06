@@ -100,14 +100,27 @@ export function AuthProvider({ children }) {
     signInWithEmailAndPassword(auth, String(email).trim(), password);
 
   /** Student: code and password. The code is the account's address at a private domain. */
-  const signInWithCode = (code, password) => {
+  // A pasted password often arrives with a space or line break on the end
+  // (copied from the email), and a typed one with caps lock on. Issued
+  // passwords are lowercase letters and digits, so the tidy form is tried
+  // when the exact one fails. Same as Desk.
+  const signInWithCode = async (code, password) => {
     const normalized = normalizeCode(code);
     if (!normalized) {
       const err = new Error('That does not look like a student code. It looks like S30-7K4Q.');
       err.code = 'pg/bad-code';
       throw err;
     }
-    return signInWithEmailAndPassword(auth, codeToEmail(normalized), password);
+    const email = codeToEmail(normalized);
+    const raw = String(password ?? '');
+    const tidy = raw.replace(/[\s\u00a0\u200b]+/g, '').toLowerCase();
+    try {
+      return await signInWithEmailAndPassword(auth, email, raw);
+    } catch (err) {
+      const wrong = err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password';
+      if (!wrong || tidy === raw || !tidy) throw err;
+      return signInWithEmailAndPassword(auth, email, tidy);
+    }
   };
 
   /** Teacher only; a student's password is reset from Desk's Roster tab. */
