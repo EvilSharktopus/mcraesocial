@@ -42,6 +42,13 @@
           <input type="file" id="file-input" accept=".csv" />
           <button class="btn-primary" onclick="document.getElementById('file-input').click()">Browse Files</button>
         </div>
+
+        <!-- Question key: the form's columns are often just "#1", "#2"... paste the real questions here -->
+        <div class="question-key">
+          <label for="question-key-input">This year's questions <span>optional &middot; one per line, in form order &middot; "1." numbering is fine</span></label>
+          <textarea id="question-key-input" rows="6" spellcheck="false" placeholder="1. Canada should spend more on the military.&#10;2. Voting should be mandatory.&#10;3. ..."></textarea>
+          <p class="question-key__status" id="question-key-status">Columns named like "#3", "Q3" or "3" will show as question 3's text. Saved in this browser.</p>
+        </div>
       </section>
 
       <!-- Loading State -->
