@@ -50,14 +50,20 @@
           <p class="question-key__status" id="question-key-status">Columns named like "#3", "Q3" or "3" will show as question 3's text. Saved in this browser.</p>
         </div>
 
-        <!-- Live source: an Apps Script web app on the response sheet (see README.md) -->
+        <!-- Live source: one standalone Apps Script web app (see README.md), then any response sheet -->
         <div class="live-source">
-          <label for="live-url-input">Live source <span>optional &middot; refreshes every 30 seconds &middot; questions come from your Google Doc</span></label>
+          <label for="live-sheet-input">Live source <span>optional &middot; refreshes every 30 seconds &middot; questions come from your Google Doc</span></label>
           <div class="live-source__row">
-            <input type="url" id="live-url-input" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
+            <input type="url" id="live-sheet-input" list="live-sheet-recent" spellcheck="false" placeholder="Paste this class's response spreadsheet link">
+            <datalist id="live-sheet-recent"></datalist>
             <button type="button" id="live-load-btn" class="btn-primary">Go live</button>
           </div>
-          <p class="question-key__status" id="live-status">Needs a one-time setup on the response sheet: see <a href="README.md" target="_blank">the setup steps</a>. The URL is saved in this browser.</p>
+          <details class="live-source__setup">
+            <summary>Web app URL <span id="live-url-state">(not set)</span></summary>
+            <input type="url" id="live-url-input" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
+            <p class="question-key__status">One-time: deploy <a href="apps-script.gs" target="_blank">apps-script.gs</a> as a web app and paste its URL here. <a href="README.md" target="_blank">Setup steps</a>. Saved in this browser.</p>
+          </details>
+          <p class="question-key__status" id="live-status">Link each form to a Google Sheet (Responses tab, Sheets icon) and paste that sheet's link above.</p>
         </div>
       </section>
 

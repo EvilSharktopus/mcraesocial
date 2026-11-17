@@ -75,32 +75,76 @@ document.addEventListener('DOMContentLoaded', () => {
     return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  // --- Live source: an Apps Script web app that returns {columns, rows, questions} ---
+  // --- Live source: one standalone Apps Script web app, pointed at any response sheet ---
   const LIVE_URL_STORAGE = 'debate-analyzer-live-url';
+  const LIVE_SHEET_STORAGE = 'debate-analyzer-live-sheet';
+  const LIVE_RECENT_STORAGE = 'debate-analyzer-live-recent';
   const LIVE_INTERVAL_MS = 30000;
   const liveUrlInput = document.getElementById('live-url-input');
+  const liveUrlState = document.getElementById('live-url-state');
+  const liveSheetInput = document.getElementById('live-sheet-input');
+  const liveRecentList = document.getElementById('live-sheet-recent');
   const liveLoadBtn = document.getElementById('live-load-btn');
   const liveStatus = document.getElementById('live-status');
   let liveTimer = null;
   let liveActive = false;
 
-  try {
-    const savedUrl = localStorage.getItem(LIVE_URL_STORAGE);
-    if (savedUrl) liveUrlInput.value = savedUrl;
-  } catch (e) {}
+  const storageGet = (k, d = '') => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+  const storageSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
-  liveUrlInput.addEventListener('input', () => {
-    try { localStorage.setItem(LIVE_URL_STORAGE, liveUrlInput.value.trim()); } catch (e) {}
-  });
+  liveUrlInput.value = storageGet(LIVE_URL_STORAGE);
+  liveSheetInput.value = storageGet(LIVE_SHEET_STORAGE);
+
+  function renderRecent() {
+    let recent = [];
+    try { recent = JSON.parse(storageGet(LIVE_RECENT_STORAGE, '[]')); } catch (e) {}
+    liveRecentList.innerHTML = '';
+    recent.forEach(({ url, label }) => {
+      const opt = document.createElement('option');
+      opt.value = url; opt.label = label || url;
+      liveRecentList.appendChild(opt);
+    });
+  }
+  function rememberSheet(url, label) {
+    let recent = [];
+    try { recent = JSON.parse(storageGet(LIVE_RECENT_STORAGE, '[]')); } catch (e) {}
+    recent = [{ url, label }].concat(recent.filter(r => r.url !== url)).slice(0, 10);
+    storageSet(LIVE_RECENT_STORAGE, JSON.stringify(recent));
+    renderRecent();
+  }
+  function updateUrlState() {
+    liveUrlState.textContent = liveUrlInput.value.trim() ? '(set)' : '(not set)';
+  }
+  renderRecent();
+  updateUrlState();
+
+  liveUrlInput.addEventListener('input', () => { storageSet(LIVE_URL_STORAGE, liveUrlInput.value.trim()); updateUrlState(); });
+  liveSheetInput.addEventListener('input', () => storageSet(LIVE_SHEET_STORAGE, liveSheetInput.value.trim()));
+
+  // A Sheets URL, or a bare ID. Keeps the tab (gid) if the link has one.
+  function parseSheetRef(text) {
+    text = text.trim();
+    const idMatch = text.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    const id = idMatch ? idMatch[1] : (/^[a-zA-Z0-9_-]{20,}$/.test(text) ? text : '');
+    const gidMatch = text.match(/[#&?]gid=(\d+)/);
+    return { id, gid: gidMatch ? gidMatch[1] : '' };
+  }
 
   liveLoadBtn.addEventListener('click', () => {
-    const url = liveUrlInput.value.trim();
-    if (!/^https:\/\/script\.google(?:usercontent)?\.com\//.test(url)) {
-      alert('Paste the web app URL from Apps Script (it starts with https://script.google.com/macros/...).');
+    const webapp = liveUrlInput.value.trim();
+    if (!/^https:\/\/script\.google(?:usercontent)?\.com\//.test(webapp)) {
+      document.querySelector('.live-source__setup').open = true;
+      alert('Set the web app URL first (one-time). It starts with https://script.google.com/macros/... and comes from deploying apps-script.gs.');
       return;
     }
+    const ref = parseSheetRef(liveSheetInput.value);
+    if (!ref.id) {
+      alert('Paste the link to this class\'s response spreadsheet (docs.google.com/spreadsheets/d/...).');
+      return;
+    }
+    const url = webapp + (webapp.includes('?') ? '&' : '?') + 'sheet=' + encodeURIComponent(ref.id) + (ref.gid ? '&gid=' + ref.gid : '');
     showSection(loadingSection);
-    startLive(url);
+    startLive(url, liveSheetInput.value.trim());
   });
 
   async function fetchLive(url) {
@@ -115,10 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return json;
   }
 
-  async function startLive(url) {
+  async function startLive(url, sheetLink) {
     liveActive = true;
     try {
-      await refreshLive(url, true);
+      const json = await refreshLive(url, true);
+      if (sheetLink) rememberSheet(sheetLink, json.sheetName || '');
     } catch (err) {
       liveActive = false;
       alert('Could not load live responses: ' + err.message);
@@ -147,7 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
     liveBadge.textContent = `Live · ${rows.length} responses · updated ${stamp}${qNote}`;
     liveBadge.classList.remove('live-badge--error');
     liveBadge.classList.toggle('live-badge--pulse', !first && rows.length !== previousCount);
-    liveStatus.textContent = `Connected. Refreshing every ${LIVE_INTERVAL_MS / 1000} seconds while results are open.`;
+    liveStatus.textContent = `Connected to ${json.sheetName || 'the sheet'}. Refreshing every ${LIVE_INTERVAL_MS / 1000} seconds while results are open.`;
+    return json;
   }
 
   function stopLive() {
