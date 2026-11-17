@@ -49,6 +49,16 @@
           <textarea id="question-key-input" rows="6" spellcheck="false" placeholder="1. Canada should spend more on the military.&#10;2. Voting should be mandatory.&#10;3. ..."></textarea>
           <p class="question-key__status" id="question-key-status">Columns named like "#3", "Q3" or "3" will show as question 3's text. Saved in this browser.</p>
         </div>
+
+        <!-- Live source: an Apps Script web app on the response sheet (see README.md) -->
+        <div class="live-source">
+          <label for="live-url-input">Live source <span>optional &middot; refreshes every 30 seconds &middot; questions come from your Google Doc</span></label>
+          <div class="live-source__row">
+            <input type="url" id="live-url-input" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec">
+            <button type="button" id="live-load-btn" class="btn-primary">Go live</button>
+          </div>
+          <p class="question-key__status" id="live-status">Needs a one-time setup on the response sheet: see <a href="README.md" target="_blank">the setup steps</a>. The URL is saved in this browser.</p>
+        </div>
       </section>
 
       <!-- Loading State -->
@@ -64,6 +74,7 @@
           <div>
             <h2>Top Divisive Topics</h2>
             <p id="results-meta">Analyzed X responses across Y topics.</p>
+            <p id="live-badge" class="live-badge"></p>
           </div>
           <button id="reset-btn" class="btn-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
