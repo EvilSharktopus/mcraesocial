@@ -1,31 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
-  
+
   const uploadSection = document.getElementById('upload-section');
   const loadingSection = document.getElementById('loading-section');
   const resultsSection = document.getElementById('results-section');
   const resetBtn = document.getElementById('reset-btn');
   const topicCountSelect = document.getElementById('topic-count');
-  
-  let allTopics = [];
+  const liveBadge = document.getElementById('live-badge');
 
-  // --- Question key (paste the real questions; CSV headers are often just "#1", "#2"...) ---
+  let allTopics = [];
+  let lastRows = [];
+
+  // --- Question key: paste the real questions; CSV headers are often just "#1", "#2"... ---
   const QUESTION_KEY_STORAGE = 'debate-analyzer-questions';
   const questionKeyInput = document.getElementById('question-key-input');
   const questionKeyStatus = document.getElementById('question-key-status');
+  // Questions that arrived with live data (from the Google Doc). They win over the box.
+  let liveQuestions = null;
 
   try {
     const saved = localStorage.getItem(QUESTION_KEY_STORAGE);
     if (saved) questionKeyInput.value = saved;
-  } catch (e) { /* storage unavailable: fine, the box still works for this visit */ }
+  } catch (e) { /* storage unavailable: the box still works for this visit */ }
 
-  function parseQuestionKey(text) {
+  function parseQuestionLines(lines) {
     // Returns { byNumber: {1: "text", ...}, list: ["text", ...] }
     const byNumber = {};
     const list = [];
-    text.split(/\r?\n/).forEach(line => {
-      const trimmed = line.trim();
+    lines.forEach(line => {
+      const trimmed = String(line).trim();
       if (!trimmed) return;
       // "1. text", "1) text", "#1 text", "Q1: text", "1 - text"
       const m = trimmed.match(/^(?:#|q(?:uestion)?\s*)?(\d+)\s*[.):\-–]?\s*(.*)$/i);
@@ -36,30 +40,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     return { byNumber, list };
   }
+  const parseQuestionKey = text => parseQuestionLines(text.split(/\r?\n/));
 
   function updateQuestionKeyStatus() {
     const { list } = parseQuestionKey(questionKeyInput.value);
     questionKeyStatus.textContent = list.length
       ? `${list.length} question${list.length === 1 ? '' : 's'} loaded. Columns named like "#3", "Q3" or "3" will show as question 3's text.`
-      : 'Columns named like "#3", "Q3" or "3" will show as question 3\'s text. Saved in this browser.';
+      : 'Columns named like "#3", "Q3" or "3" will show as question 3\'s text. Saved in this browser. Ignored when the live source supplies questions.';
   }
 
   questionKeyInput.addEventListener('input', () => {
     try { localStorage.setItem(QUESTION_KEY_STORAGE, questionKeyInput.value); } catch (e) {}
     updateQuestionKeyStatus();
-    if (allTopics.length) { relabelTopics(); renderTopics(allTopics); }
   });
   updateQuestionKeyStatus();
 
-  // Give each topic a readable title from the pasted key, keeping the raw header as a subtitle.
+  // Give each topic a readable title from the key, keeping the raw header as a subtitle.
   function relabelTopics() {
-    const { byNumber, list } = parseQuestionKey(questionKeyInput.value);
+    const key = liveQuestions && liveQuestions.length
+      ? parseQuestionLines(liveQuestions)
+      : parseQuestionKey(questionKeyInput.value);
     allTopics.forEach(topic => {
       const header = topic.column;
       const numMatch = header.match(/(\d+)/);
       let text = null;
-      if (numMatch && byNumber[parseInt(numMatch[1], 10)]) text = byNumber[parseInt(numMatch[1], 10)];
-      else if (!numMatch && list[topic.columnIndex]) text = list[topic.columnIndex];
+      if (numMatch && key.byNumber[parseInt(numMatch[1], 10)]) text = key.byNumber[parseInt(numMatch[1], 10)];
+      else if (!numMatch && key.list[topic.columnIndex]) text = key.list[topic.columnIndex];
       topic.title = text || header;
       topic.subtitle = text ? header : '';
     });
@@ -69,8 +75,92 @@ document.addEventListener('DOMContentLoaded', () => {
     return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // --- Live source: an Apps Script web app that returns {columns, rows, questions} ---
+  const LIVE_URL_STORAGE = 'debate-analyzer-live-url';
+  const LIVE_INTERVAL_MS = 30000;
+  const liveUrlInput = document.getElementById('live-url-input');
+  const liveLoadBtn = document.getElementById('live-load-btn');
+  const liveStatus = document.getElementById('live-status');
+  let liveTimer = null;
+  let liveActive = false;
+
+  try {
+    const savedUrl = localStorage.getItem(LIVE_URL_STORAGE);
+    if (savedUrl) liveUrlInput.value = savedUrl;
+  } catch (e) {}
+
+  liveUrlInput.addEventListener('input', () => {
+    try { localStorage.setItem(LIVE_URL_STORAGE, liveUrlInput.value.trim()); } catch (e) {}
+  });
+
+  liveLoadBtn.addEventListener('click', () => {
+    const url = liveUrlInput.value.trim();
+    if (!/^https:\/\/script\.google(?:usercontent)?\.com\//.test(url)) {
+      alert('Paste the web app URL from Apps Script (it starts with https://script.google.com/macros/...).');
+      return;
+    }
+    showSection(loadingSection);
+    startLive(url);
+  });
+
+  async function fetchLive(url) {
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) { throw new Error('The URL did not return JSON. Check the deployment is a Web app with access set to Anyone.'); }
+    if (json.error) throw new Error(json.error);
+    if (!Array.isArray(json.columns) || !Array.isArray(json.rows)) throw new Error('Unexpected response shape.');
+    return json;
+  }
+
+  async function startLive(url) {
+    liveActive = true;
+    try {
+      await refreshLive(url, true);
+    } catch (err) {
+      liveActive = false;
+      alert('Could not load live responses: ' + err.message);
+      showSection(uploadSection);
+      return;
+    }
+    clearInterval(liveTimer);
+    liveTimer = setInterval(() => {
+      if (!liveActive) return;
+      refreshLive(url, false).catch(err => {
+        liveBadge.textContent = 'Live · retrying (' + err.message + ')';
+        liveBadge.classList.add('live-badge--error');
+      });
+    }, LIVE_INTERVAL_MS);
+  }
+
+  async function refreshLive(url, first) {
+    const json = await fetchLive(url);
+    liveQuestions = Array.isArray(json.questions) ? json.questions : null;
+    const rows = json.rows.map(r => Object.fromEntries(json.columns.map((c, i) => [c, r[i]])));
+    const previousCount = lastRows.length;
+    processData(rows, json.columns, { live: true });
+    const now = new Date();
+    const stamp = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+    const qNote = liveQuestions && liveQuestions.length ? ` · ${liveQuestions.length} questions from your doc` : (json.questionsError ? ' · questions doc unreadable, using the box' : '');
+    liveBadge.textContent = `Live · ${rows.length} responses · updated ${stamp}${qNote}`;
+    liveBadge.classList.remove('live-badge--error');
+    liveBadge.classList.toggle('live-badge--pulse', !first && rows.length !== previousCount);
+    liveStatus.textContent = `Connected. Refreshing every ${LIVE_INTERVAL_MS / 1000} seconds while results are open.`;
+  }
+
+  function stopLive() {
+    liveActive = false;
+    clearInterval(liveTimer);
+    liveTimer = null;
+    liveQuestions = null;
+    liveBadge.textContent = '';
+    liveBadge.classList.remove('live-badge--error', 'live-badge--pulse');
+  }
+
   // --- Event Listeners ---
-  
+
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('dragover');
@@ -95,9 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   resetBtn.addEventListener('click', () => {
+    stopLive();
     showSection(uploadSection);
     fileInput.value = '';
     allTopics = [];
+    lastRows = [];
   });
 
   topicCountSelect.addEventListener('change', () => {
@@ -117,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    stopLive();
     showSection(loadingSection);
 
     Papa.parse(file, {
@@ -124,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
       skipEmptyLines: true,
       complete: function(results) {
         setTimeout(() => {
-          processData(results.data, results.meta);
+          processData(results.data, results.meta.fields, { live: false });
         }, 500); // Artificial delay for smooth transition
       },
       error: function(err) {
@@ -134,8 +227,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function processData(data, meta) {
-    if (!data.length || !meta.fields.length) {
+  // rows: array of {header: value}; fields: ordered list of headers.
+  function processData(data, fields, { live }) {
+    if (!data.length || !fields || !fields.length) {
+      if (live) {
+        allTopics = []; lastRows = [];
+        document.getElementById('results-meta').textContent = 'No responses yet. Waiting for the first one.';
+        document.getElementById('topics-list').innerHTML = '';
+        showSection(resultsSection);
+        return;
+      }
       alert("CSV appears to be empty or missing headers.");
       showSection(uploadSection);
       return;
@@ -143,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Common metadata columns to ignore
     const skipWords = ['timestamp', 'name', 'email', 'score', 'id', 'class', 'period'];
-    const validColumns = meta.fields.filter(col => {
+    const validColumns = fields.filter(col => {
       const lower = col.toLowerCase();
       return !skipWords.some(skip => lower.includes(skip));
     });
@@ -159,12 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const responses = data
         .map(row => row[col])
         .filter(val => val !== undefined && val !== null && val.toString().trim() !== '');
-      
+
       const topic = analyzeTopic(col, responses);
       topic.column = col;
       topic.columnIndex = columnIndex;
       return topic;
     });
+    lastRows = data;
     relabelTopics();
 
     // Sort by split score descending
@@ -197,20 +299,20 @@ document.addEventListener('DOMContentLoaded', () => {
         numericCount++;
         return numericMap[str];
       }
-      
+
       // Extract number if it starts with one (e.g. "1 - Strongly Disagree")
       const match = str.match(/^(\d+)/);
       if (match) {
         numericCount++;
         return parseInt(match[1]);
       }
-      
+
       return r;
     });
 
     const isNumeric = numericCount > (parsedResponses.length * 0.5);
     const freq = {};
-    
+
     parsedResponses.forEach(r => {
       freq[r] = (freq[r] || 0) + 1;
     });
@@ -225,10 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
         const variance = nums.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / nums.length;
         const stdDev = Math.sqrt(variance);
-        
+
         // A max stdDev for a 1-5 scale is 2.0 (if perfectly split between 1 and 5).
         // Let's normalize it roughly to a 0-100 score.
-        splitScore = stdDev; 
+        splitScore = stdDev;
         scoreDisplay = `Polarization: ${(stdDev / 2 * 100).toFixed(0)}%`;
       }
     } else {
@@ -239,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const p = count / n;
         entropy -= p * Math.log2(p);
       });
-      
+
       splitScore = entropy;
       scoreDisplay = `Entropy: ${entropy.toFixed(2)}`;
     }
@@ -260,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const limitVal = topicCountSelect.value;
     const limit = limitVal === 'all' ? topics.length : parseInt(limitVal);
-    
+
     const displayTopics = topics.slice(0, limit);
 
     displayTopics.forEach((topic, index) => {
@@ -268,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'topic-card';
 
       let rankClass = index < 3 ? `rank-${index + 1}` : '';
-      
+
       // Build visualization
       let chartHtml = '';
       if (topic.isNumeric) {
@@ -291,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chartHtml = `<div class="bar-chart">`;
         sortedEntries.forEach(([label, count]) => {
           const height = (count / maxCount) * 100;
-          const shortLabel = label.length > 8 ? label.substring(0, 6) + '..' : label;
           chartHtml += `<div class="bar" style="height: ${Math.max(5, height)}%" data-tooltip="${escapeHtml(label)}: ${count}"></div>`;
         });
         chartHtml += `</div>`;
