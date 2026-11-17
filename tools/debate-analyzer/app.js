@@ -10,6 +10,65 @@ document.addEventListener('DOMContentLoaded', () => {
   
   let allTopics = [];
 
+  // --- Question key (paste the real questions; CSV headers are often just "#1", "#2"...) ---
+  const QUESTION_KEY_STORAGE = 'debate-analyzer-questions';
+  const questionKeyInput = document.getElementById('question-key-input');
+  const questionKeyStatus = document.getElementById('question-key-status');
+
+  try {
+    const saved = localStorage.getItem(QUESTION_KEY_STORAGE);
+    if (saved) questionKeyInput.value = saved;
+  } catch (e) { /* storage unavailable: fine, the box still works for this visit */ }
+
+  function parseQuestionKey(text) {
+    // Returns { byNumber: {1: "text", ...}, list: ["text", ...] }
+    const byNumber = {};
+    const list = [];
+    text.split(/\r?\n/).forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      // "1. text", "1) text", "#1 text", "Q1: text", "1 - text"
+      const m = trimmed.match(/^(?:#|q(?:uestion)?\s*)?(\d+)\s*[.):\-–]?\s*(.*)$/i);
+      let num = null, body = trimmed;
+      if (m && m[2]) { num = parseInt(m[1], 10); body = m[2].trim(); }
+      list.push(body);
+      byNumber[num !== null ? num : list.length] = body;
+    });
+    return { byNumber, list };
+  }
+
+  function updateQuestionKeyStatus() {
+    const { list } = parseQuestionKey(questionKeyInput.value);
+    questionKeyStatus.textContent = list.length
+      ? `${list.length} question${list.length === 1 ? '' : 's'} loaded. Columns named like "#3", "Q3" or "3" will show as question 3's text.`
+      : 'Columns named like "#3", "Q3" or "3" will show as question 3\'s text. Saved in this browser.';
+  }
+
+  questionKeyInput.addEventListener('input', () => {
+    try { localStorage.setItem(QUESTION_KEY_STORAGE, questionKeyInput.value); } catch (e) {}
+    updateQuestionKeyStatus();
+    if (allTopics.length) { relabelTopics(); renderTopics(allTopics); }
+  });
+  updateQuestionKeyStatus();
+
+  // Give each topic a readable title from the pasted key, keeping the raw header as a subtitle.
+  function relabelTopics() {
+    const { byNumber, list } = parseQuestionKey(questionKeyInput.value);
+    allTopics.forEach(topic => {
+      const header = topic.column;
+      const numMatch = header.match(/(\d+)/);
+      let text = null;
+      if (numMatch && byNumber[parseInt(numMatch[1], 10)]) text = byNumber[parseInt(numMatch[1], 10)];
+      else if (!numMatch && list[topic.columnIndex]) text = list[topic.columnIndex];
+      topic.title = text || header;
+      topic.subtitle = text ? header : '';
+    });
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   // --- Event Listeners ---
   
   dropZone.addEventListener('dragover', (e) => {
@@ -95,14 +154,18 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    allTopics = validColumns.map(col => {
+    allTopics = validColumns.map((col, columnIndex) => {
       // Get all non-empty responses for this column
       const responses = data
         .map(row => row[col])
         .filter(val => val !== undefined && val !== null && val.toString().trim() !== '');
       
-      return analyzeTopic(col, responses);
+      const topic = analyzeTopic(col, responses);
+      topic.column = col;
+      topic.columnIndex = columnIndex;
+      return topic;
     });
+    relabelTopics();
 
     // Sort by split score descending
     allTopics.sort((a, b) => b.splitScore - a.splitScore);
@@ -229,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortedEntries.forEach(([label, count]) => {
           const height = (count / maxCount) * 100;
           const shortLabel = label.length > 8 ? label.substring(0, 6) + '..' : label;
-          chartHtml += `<div class="bar" style="height: ${Math.max(5, height)}%" data-tooltip="${label}: ${count}"></div>`;
+          chartHtml += `<div class="bar" style="height: ${Math.max(5, height)}%" data-tooltip="${escapeHtml(label)}: ${count}"></div>`;
         });
         chartHtml += `</div>`;
       }
@@ -237,7 +300,8 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <div class="topic-rank ${rankClass}">#${index + 1}</div>
         <div class="topic-info">
-          <h3>${topic.title}</h3>
+          <h3>${escapeHtml(topic.title)}</h3>
+          ${topic.subtitle ? `<div class="topic-source">${escapeHtml(topic.subtitle)}</div>` : ''}
           <div class="topic-stats">
             <span class="stat-badge split-score">${topic.scoreDisplay}</span>
             <span class="stat-badge">
