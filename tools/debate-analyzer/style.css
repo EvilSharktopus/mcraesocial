@@ -539,3 +539,24 @@ h2 {
   0% { opacity: 0.2; }
   100% { opacity: 1; }
 }
+
+.live-source__setup {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.live-source__setup summary { cursor: pointer; }
+.live-source__setup summary span { color: var(--accent-primary); }
+.live-source__setup input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+}
+.live-source__setup input:focus { outline: none; border-color: var(--accent-primary); }
