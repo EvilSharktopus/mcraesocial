@@ -14,7 +14,7 @@ import { END_YEAR, SWING_NUMBERS, kindOf, timeOf, whenLabel } from '../data/fina
 // way round as the economic spectrum the class has used all year, with more
 // state on the left and less on the right.
 const W = 760, H = 1000;
-const M = { left: 78, right: 34, top: 96, bottom: 44 };
+const M = { left: 78, right: 34, top: 112, bottom: 44 };
 const PW = W - M.left - M.right, PH = H - M.top - M.bottom;
 const FONT = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
 
@@ -73,7 +73,7 @@ function placeLabels(points, avoid = []) {
   });
 }
 
-export default function FinalMap({ birthYear, swings, selected = null, onSelect, title, svgRef, print = false }) {
+export default function FinalMap({ birthYear, swings, selected = null, onSelect, title, subtitle, svgRef, print = false }) {
   const themed = useThemeColors();
   const c = print ? PRINT : themed;
   const now = new Date();
@@ -84,9 +84,9 @@ export default function FinalMap({ birthYear, swings, selected = null, onSelect,
 
   const points = SWING_NUMBERS
     .map(n => ({ n, s: swings?.[n] }))
-    .filter(({ n, s }) => typeof s?.placement === 'number' && timeOf(s, n) !== null)
+    .filter(({ s }) => typeof s?.placement === 'number' && timeOf(s) !== null)
     .map(({ n, s }) => ({
-      n, s, x: sx(s.placement), y: sy(Math.min(Math.max(timeOf(s, n), t0), t1)),
+      n, s, x: sx(s.placement), y: sy(Math.min(Math.max(timeOf(s), t0), t1)),
       name: clip(s.name || `Swing ${n}`, 30), when: whenLabel(s, n),
     }));
   const todayOnMap = today > t0 && today < t1;
@@ -107,7 +107,10 @@ export default function FinalMap({ birthYear, swings, selected = null, onSelect,
     >
       <rect x="0" y="0" width={W} height={H} fill={c.surface} />
       {title && (
-        <text x={M.left} y="32" fontSize="18" fontWeight="700" fill={c.text} fontFamily={FONT}>{clip(title, 60)}</text>
+        <text x={M.left} y="30" fontSize="18" fontWeight="700" fill={c.text} fontFamily={FONT}>{clip(title, 60)}</text>
+      )}
+      {subtitle && (
+        <text x={M.left} y="48" fontSize="12" fill={c.muted} fontFamily={FONT}>{clip(subtitle, 90)}</text>
       )}
 
       {/* Plot frame and the balanced midline */}

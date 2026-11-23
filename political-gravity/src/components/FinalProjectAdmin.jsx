@@ -1,8 +1,8 @@
 // src/components/FinalProjectAdmin.jsx
 //
 // The teacher's side of the final project: the writing window per class, the
-// class list, custom-topic approvals, the topic list, and any one student's
-// map, entries and integrity signals.
+// class list, topic approvals, the topic list, the wording of the guided
+// questions, and any one student's map, cards and integrity signals.
 //
 // A "class" is the Desk roster's course + stream. Students cannot read the
 // roster, so the writing window is stored as the list of student uids it is
@@ -15,14 +15,16 @@ import { useRoster, nameFor } from '../hooks/useRoster';
 import FinalMap from './FinalMap';
 import FinalEntryView from './FinalEntryView';
 import {
-  COL, SETTINGS_ID, SWING_NUMBERS, SIGNAL_FIELDS, FIELDS, kindOf, isComplete,
-  topicKey, topicText, topicStatus, classKeyOf, STARTER_TOPICS,
+  COL, SETTINGS_ID, SWING_NUMBERS, KINDS, TRACKS, TRACK_IDS, DEFAULT_QUESTIONS, STARTER_TOPICS,
+  SEE_TEACHER_MESSAGE, kindOf, questionsFor, signalFields, isComplete, orderProblem,
+  topicKey, topicText, topicStatus, classKeyOf, trackLabel, normalizeTopic, mapTitle, mapSubtitle,
 } from '../data/finalProject';
 
 const btnPrimary = { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' };
 const btnGhost   = { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' };
 const card       = { backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' };
 const inputStyle = { backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' };
+const innerStyle = { ...inputStyle, backgroundColor: 'var(--pg-bg)' };
 const inputClass = 'rounded-lg px-3 py-1.5 text-sm focus:outline-none';
 
 const STATUS = {
@@ -39,6 +41,10 @@ const fmtTime = (ms) => {
   return s >= 60 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s` : `${s}s`;
 };
 const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+const Flag = ({ text }) => (text ? (
+  <span className="ml-2 text-[11px] font-semibold px-2 py-0.5 rounded-full align-middle whitespace-nowrap"
+    style={{ border: '1px solid var(--pg-primary)', color: 'var(--pg-primary)' }}>{text}</span>
+) : null);
 
 function useCollection(name) {
   const [rows, setRows] = useState(null);
@@ -48,7 +54,7 @@ function useCollection(name) {
   return rows;
 }
 
-// ── Approve / reject a proposed topic ───────────────────────────────────────
+// ── Approve / reject a held topic ───────────────────────────────────────────
 function Verdict({ uid, project, review, run }) {
   const [note, setNote] = useState(review?.forTopic === topicKey(project) ? (review?.note ?? '') : '');
   const decide = (status) => run(status === 'approved' ? 'Approving the topic' : 'Rejecting the topic', () =>
@@ -56,8 +62,12 @@ function Verdict({ uid, project, review, run }) {
       { uid, status, note: note.trim(), forTopic: topicKey(project), decidedAt: serverTimestamp() }, { merge: true }));
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <p className="w-full text-xs whitespace-pre-wrap" style={{ color: project.candidates ? 'var(--pg-muted)' : '#f59e0b' }}>
-        {project.candidates ? `Candidate swings:\n${project.candidates}` : 'No candidate swings given.'}
+      <p className="w-full text-xs whitespace-pre-wrap" style={{ color: project.custom && !project.candidates ? '#f59e0b' : 'var(--pg-muted)' }}>
+        {project.custom
+          ? (project.candidates
+              ? `${project.track === 'big' ? 'Governments to trace' : 'Candidate swings'}:\n${project.candidates}`
+              : 'Proposed by the student, with no candidates given.')
+          : `From your list, marked “see teacher first”.`}
       </p>
       <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Note to the student (optional)"
         className={`${inputClass} flex-1 min-w-[12rem]`} style={inputStyle} />
@@ -68,13 +78,15 @@ function Verdict({ uid, project, review, run }) {
 }
 
 // ── One student's project ───────────────────────────────────────────────────
-function StudentDetail({ uid, name, project, review, swings, signals, run, onClose }) {
+function StudentDetail({ uid, name, project, review, swings, signals, settings, run, onClose }) {
   const [n, setN] = useState(1);
   const status = topicStatus(project, review);
   const birthYear = project?.birthYear;
+  const qFor = (k) => questionsFor(settings, project?.track, kindOf(k));
   const sig = signals?.[n]?.fields || {};
   const swing = swings?.[n];
-  const labels = { name: 'Short name', ...Object.fromEntries(FIELDS[kindOf(n)].map(f => [f.key, f.label])) };
+  const order = orderProblem(swings);
+  const held = project?.custom || project?.seeTeacher;
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label={`${name}'s final project`}
@@ -83,8 +95,10 @@ function StudentDetail({ uid, name, project, review, swings, signals, run, onClo
           <div>
             <h2 className="font-display font-bold text-xl" style={{ color: 'var(--pg-text)' }}>{name}</h2>
             <p className="text-sm mt-1" style={{ color: 'var(--pg-muted)' }}>
-              {project?.topic ? topicText(project) : 'No topic yet'}
-              {project?.custom ? ' (proposed by the student)' : ''}
+              {project?.place ? topicText(project) : 'No topic yet'}
+              <Flag text={project?.flag} />
+              {project?.track ? ` · ${trackLabel(project.track)} track` : ''}
+              {project?.custom ? ' · proposed by the student' : ''}
               {birthYear ? ` · born ${birthYear}` : ''}
               {' · '}<span style={{ color: STATUS[status].color }}>{STATUS[status].text}</span>
             </p>
@@ -92,21 +106,27 @@ function StudentDetail({ uid, name, project, review, swings, signals, run, onClo
           <button onClick={onClose} className="text-lg px-2" style={{ color: 'var(--pg-muted)' }} aria-label="Close">✕</button>
         </div>
 
-        {project?.custom && project?.topic && <Verdict key={topicKey(project)} uid={uid} project={project} review={review} run={run} />}
+        {held && project?.place && <Verdict key={topicKey(project)} uid={uid} project={project} review={review} run={run} />}
 
-        {project?.topic && (
+        {project?.place && (
           <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--pg-muted)' }}>
             <input type="checkbox" checked={!!review?.topicUnlocked}
               onChange={e => run('Changing the topic lock', () =>
                 setDoc(doc(db, COL.reviews, uid), { uid, topicUnlocked: e.target.checked }, { merge: true }))} />
-            Let this student change topic even though they have started writing
+            Let this student change track or topic even though they have started writing
           </label>
+        )}
+
+        {order && (
+          <p className="text-xs" style={{ color: '#f59e0b' }}>
+            Swing {order.n} ({order.year}) is dated before swing {order.before} ({order.beforeYear}); their map stays locked until the six are in order.
+          </p>
         )}
 
         <div className="flex gap-2 flex-wrap">
           {SWING_NUMBERS.map(k => (
             <button key={k} onClick={() => setN(k)} className="text-sm font-semibold px-3.5 py-1.5 rounded-lg" style={n === k ? btnPrimary : btnGhost}>
-              {k}{isComplete(swings?.[k], k, birthYear) ? ' ✓' : ''}
+              {k}{isComplete(swings?.[k], k, birthYear, qFor(k)) ? ' ✓' : ''}
             </button>
           ))}
         </div>
@@ -114,56 +134,177 @@ function StudentDetail({ uid, name, project, review, swings, signals, run, onClo
         <div className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] items-start">
           {birthYear
             ? <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--pg-border)' }}>
-                <FinalMap birthYear={birthYear} swings={swings || {}} title={project?.topic ? topicText(project) : null} selected={n} onSelect={setN} />
+                <FinalMap birthYear={birthYear} swings={swings || {}} title={mapTitle(project)} subtitle={mapSubtitle(project)} selected={n} onSelect={setN} />
               </div>
             : <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No birth year yet, so there is no map to draw.</p>}
           <div className="flex flex-col gap-5 min-w-0">
-          <div className="rounded-xl p-4" style={inputStyle}>
-            {swing ? <FinalEntryView n={n} swing={swing} /> : <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>Nothing written for swing {n} yet.</p>}
-          </div>
-          <div className="rounded-xl p-4" style={inputStyle}>
-            <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--pg-primary)' }}>Integrity signals · swing {n}</p>
-            <p className="text-xs mt-1 mb-3" style={{ color: 'var(--pg-dim)' }}>
-              Recorded by the student's browser, so read them as a prompt for a conversation, not as proof.
-              "Now" is the length of the text as it stands; far more than was typed means it arrived some other way.
-            </p>
-            <table className="w-full text-xs" style={{ color: 'var(--pg-text)' }}>
-              <thead>
-                <tr style={{ color: 'var(--pg-dim)' }}>
-                  <th className="text-left font-semibold pb-1">Field</th>
-                  <th className="text-right font-semibold pb-1">Typed</th>
-                  <th className="text-right font-semibold pb-1">Now</th>
-                  <th className="text-right font-semibold pb-1">Pastes</th>
-                  <th className="text-right font-semibold pb-1">Bulk</th>
-                  <th className="text-right font-semibold pb-1">Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {SIGNAL_FIELDS(kindOf(n)).map(f => {
-                  const s = sig[f] || {};
-                  const now = String(swing?.[f] ?? '').length;
-                  const isSource = FIELDS[kindOf(n)].find(x => x.key === f)?.source;
-                  const odd = !isSource && ((s.pasteCount || 0) > 0 || (s.bulkCount || 0) > 0 || now > (s.typed || 0) * 1.5 + 20);
-                  return (
-                    <tr key={f} style={{ borderTop: '1px solid var(--pg-border)', color: odd ? '#f59e0b' : undefined }}>
-                      <td className="py-1.5 pr-2">{labels[f]}</td>
-                      <td className="py-1.5 text-right">{s.typed || 0}</td>
-                      <td className="py-1.5 text-right">{now}</td>
-                      <td className="py-1.5 text-right" title={`${s.pasteBlocked || 0} of these were refused by the form`}>
-                        {s.pasteCount ? `${s.pasteCount} (${s.pasteChars || 0} ch)` : '—'}
-                      </td>
-                      <td className="py-1.5 text-right" title="Text that arrived many characters at once without a paste: dictation, autofill, an extension">
-                        {s.bulkCount ? `${s.bulkCount} (${s.bulkChars || 0} ch)` : '—'}
-                      </td>
-                      <td className="py-1.5 text-right">{fmtTime(s.activeMs)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            <div className="rounded-xl p-4" style={inputStyle}>
+              {swing ? <FinalEntryView n={n} swing={swing} questions={qFor(n)} /> : <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>Nothing written for swing {n} yet.</p>}
+            </div>
+            <div className="rounded-xl p-4" style={inputStyle}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: 'var(--pg-primary)' }}>Integrity signals · swing {n}</p>
+              <p className="text-xs mt-1 mb-3" style={{ color: 'var(--pg-dim)' }}>
+                Recorded by the student's browser, so read them as a prompt for a conversation, not as proof.
+                "Now" is the length of the text as it stands; far more than was typed means it arrived some other way.
+              </p>
+              <table className="w-full text-xs" style={{ color: 'var(--pg-text)' }}>
+                <thead>
+                  <tr style={{ color: 'var(--pg-dim)' }}>
+                    <th className="text-left font-semibold pb-1">Box</th>
+                    <th className="text-right font-semibold pb-1">Typed</th>
+                    <th className="text-right font-semibold pb-1">Now</th>
+                    <th className="text-right font-semibold pb-1">Pastes</th>
+                    <th className="text-right font-semibold pb-1">Bulk</th>
+                    <th className="text-right font-semibold pb-1">Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signalFields(qFor(n)).map(([f, label]) => {
+                    const s = sig[f] || {};
+                    const now = String(swing?.[f] ?? '').length;
+                    const isSource = f === 'source';
+                    const odd = !isSource && ((s.pasteCount || 0) > 0 || (s.bulkCount || 0) > 0 || now > (s.typed || 0) * 1.5 + 20);
+                    return (
+                      <tr key={f} style={{ borderTop: '1px solid var(--pg-border)', color: odd ? '#f59e0b' : undefined }}>
+                        <td className="py-1.5 pr-2">{label}</td>
+                        <td className="py-1.5 text-right">{s.typed || 0}</td>
+                        <td className="py-1.5 text-right">{now}</td>
+                        <td className="py-1.5 text-right" title={`${s.pasteBlocked || 0} of these were refused by the form`}>
+                          {s.pasteCount ? `${s.pasteCount} (${s.pasteChars || 0} ch)` : '—'}
+                        </td>
+                        <td className="py-1.5 text-right" title="Text that arrived many characters at once without a paste: dictation, autofill, an extension">
+                          {s.bulkCount ? `${s.bulkCount} (${s.bulkChars || 0} ch)` : '—'}
+                        </td>
+                        <td className="py-1.5 text-right">{fmtTime(s.activeMs)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Topic editor ────────────────────────────────────────────────────────────
+const blankTopic = (track) => ({ id: null, track, name: '', place: '', flag: '', seeTeacher: false, start: '', leads: [] });
+
+function TopicForm({ initial, onSave, onCancel }) {
+  const [t, setT] = useState({ ...initial, leadsText: (initial.leads || []).join('\n') });
+  const set = (patch) => setT(prev => ({ ...prev, ...patch }));
+  const big = t.track === 'big';
+  const ok = t.place.trim() && (big || t.name.trim());
+  const cls = `${inputClass} w-full`;
+  const small = (text) => <span className="block text-xs mb-1" style={{ color: 'var(--pg-dim)' }}>{text}</span>;
+  return (
+    <div className="rounded-xl p-3 grid gap-3 sm:grid-cols-2" style={{ ...inputStyle, borderColor: 'var(--pg-primary)' }}>
+      <label className="block">
+        {small('Track')}
+        <select value={t.track} onChange={e => set({ track: e.target.value })} className={cls} style={innerStyle}>
+          {TRACK_IDS.map(id => <option key={id} value={id}>{TRACKS[id].label}</option>)}
+        </select>
+      </label>
+      <label className="block">
+        {small(big ? 'Name (optional — the place is the topic on this track)' : 'Name')}
+        <input type="text" value={t.name} onChange={e => set({ name: e.target.value })} placeholder={big ? '' : 'e.g. Carbon pricing'} className={cls} style={innerStyle} />
+      </label>
+      <label className="block">
+        {small('Place')}
+        <input type="text" value={t.place} onChange={e => set({ place: e.target.value })} placeholder="e.g. Canada" className={cls} style={innerStyle} />
+      </label>
+      <label className="block">
+        {small('Flag (optional short label, shown beside the topic and on the project)')}
+        <input type="text" value={t.flag} onChange={e => set({ flag: e.target.value })} placeholder="e.g. Rejection of liberalism" className={cls} style={innerStyle} />
+      </label>
+      <label className="block sm:col-span-2">
+        {small('A swing to start from (optional, shown before they choose)')}
+        <input type="text" value={t.start} onChange={e => set({ start: e.target.value })} className={cls} style={innerStyle} />
+      </label>
+      <label className="block sm:col-span-2">
+        {small('Leads — one per line. Shown only after they choose, under “Where to look next”.')}
+        <textarea rows={4} value={t.leadsText} onChange={e => set({ leadsText: e.target.value })} className={`${cls} resize-y`} style={innerStyle} />
+      </label>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2" style={{ color: 'var(--pg-text)' }}>
+        <input type="checkbox" checked={t.seeTeacher} onChange={e => set({ seeTeacher: e.target.checked })} />
+        See teacher first — shows “{SEE_TEACHER_MESSAGE}” and holds the choice for your approval
+      </label>
+      <div className="flex gap-2 sm:col-span-2">
+        <button disabled={!ok} className="text-sm font-semibold px-4 py-1.5 rounded-lg disabled:opacity-35" style={btnPrimary}
+          onClick={() => onSave(normalizeTopic({ ...t, id: t.id ?? `t${Date.now().toString(36)}`, leads: t.leadsText.split('\n') }))}>
+          Save topic
+        </button>
+        <button onClick={onCancel} className="text-sm font-semibold px-4 py-1.5 rounded-lg" style={btnGhost}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Question wording ────────────────────────────────────────────────────────
+// Only label and prompt are editable. The set of questions, their order and
+// the extra controls (source, ideology, placement) are fixed in code, because
+// answers are saved under each question's id.
+function QuestionEditor({ settings, run }) {
+  const [draft, setDraft] = useState(() => settings?.questions || {});
+  const [dirty, setDirty] = useState(false);
+  const [savedNote, setSavedNote] = useState(false);
+  const get = (tr, kind, id, field) => draft?.[tr]?.[kind]?.[id]?.[field] ?? '';
+  const set = (tr, kind, id, field, value) => {
+    setDraft(prev => ({
+      ...prev,
+      [tr]: { ...(prev?.[tr] || {}), [kind]: { ...(prev?.[tr]?.[kind] || {}), [id]: { ...(prev?.[tr]?.[kind]?.[id] || {}), [field]: value } } },
+    }));
+    setDirty(true); setSavedNote(false);
+  };
+  const save = () => {
+    // Keep only real rewordings, so a cleared box goes back to the default.
+    const out = {};
+    for (const tr of TRACK_IDS) for (const kind of KINDS) for (const q of DEFAULT_QUESTIONS[tr][kind]) {
+      const label = get(tr, kind, q.id, 'label').trim(), prompt = get(tr, kind, q.id, 'prompt').trim();
+      const o = {};
+      if (label && label !== q.label) o.label = label;
+      if (prompt && prompt !== q.prompt) o.prompt = prompt;
+      if (Object.keys(o).length) ((out[tr] ??= {})[kind] ??= {})[q.id] = o;
+    }
+    return run('Saving the question wording', async () => {
+      await setDoc(settingsRef(), { questions: out }, { mergeFields: ['questions'] });
+      setDraft(out); setDirty(false); setSavedNote(true);
+    });
+  };
+  const cls = `${inputClass} w-full`;
+  return (
+    <div className="flex flex-col gap-3 mt-3">
+      {TRACK_IDS.map(tr => KINDS.map(kind => (
+        <details key={`${tr}-${kind}`} className="rounded-xl px-3 py-2" style={inputStyle}>
+          <summary className="cursor-pointer text-sm font-semibold" style={{ color: 'var(--pg-text)' }}>
+            {TRACKS[tr].label} track · {kind} swing
+            <span className="font-normal" style={{ color: 'var(--pg-dim)' }}> · {DEFAULT_QUESTIONS[tr][kind].length} questions</span>
+          </summary>
+          <div className="flex flex-col gap-3 mt-3">
+            {DEFAULT_QUESTIONS[tr][kind].map((q, i) => (
+              <div key={q.id} className="grid gap-2 sm:grid-cols-[2rem_12rem_1fr] items-start">
+                <span className="text-sm pt-1.5" style={{ color: 'var(--pg-dim)' }}>{i + 1}.</span>
+                <input type="text" value={get(tr, kind, q.id, 'label')} placeholder={q.label}
+                  onChange={e => set(tr, kind, q.id, 'label', e.target.value)} className={cls} style={innerStyle} aria-label={`Label for question ${i + 1}`} />
+                <div>
+                  <textarea rows={2} value={get(tr, kind, q.id, 'prompt')} placeholder={q.prompt}
+                    onChange={e => set(tr, kind, q.id, 'prompt', e.target.value)} className={`${cls} resize-y`} style={innerStyle} aria-label={`Prompt for question ${i + 1}`} />
+                  {(q.source || q.ideology || q.placement) && (
+                    <span className="block text-[11px]" style={{ color: 'var(--pg-dim)' }}>
+                      Also shows {q.source ? 'a pastable source box' : q.ideology ? 'the ideology picker' : 'the placement control'}.
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )))}
+      <div className="flex items-center gap-3">
+        <button onClick={save} disabled={!dirty} className="text-sm font-semibold px-4 py-1.5 rounded-lg disabled:opacity-35" style={btnPrimary}>Save wording</button>
+        {savedNote && <span className="text-xs" style={{ color: '#22c55e' }}>✓ Saved — students see it straight away</span>}
       </div>
     </div>
   );
@@ -180,7 +321,7 @@ export default function FinalProjectAdmin() {
   const [classFilter, setClassFilter] = useState(null);
   const [openUid, setOpenUid] = useState(null);
   const [error, setError] = useState(null);
-  const [draftTopic, setDraftTopic] = useState({ topic: '', country: '', flag: '' });
+  const [editing, setEditing] = useState(null);   // a topic id, or 'new:<track>'
 
   useEffect(() => onSnapshot(settingsRef(),
     s => setSettings(s.exists() ? s.data() : {}),
@@ -216,7 +357,7 @@ export default function FinalProjectAdmin() {
   }, [roster, projects]);
   const classNames = Object.keys(classes).sort();
   const openClasses = useMemo(() => settings?.openClasses || [], [settings]);
-  const topics = settings?.topics || [];
+  const topics = useMemo(() => (settings?.topics || []).map(normalizeTopic), [settings]);
 
   const uidsFor = (names) => [...new Set(names.flatMap(c => classes[c] || []))];
   const setWindow = (name, open) => {
@@ -237,21 +378,20 @@ export default function FinalProjectAdmin() {
   }, [settings, rosterLoaded, openClasses, classes]);
 
   const saveTopics = (next) => run('Saving the topic list', () => setDoc(settingsRef(), { topics: next }, { merge: true }));
-  const addTopic = () => {
-    const t = { topic: draftTopic.topic.trim(), country: draftTopic.country.trim(), flag: draftTopic.flag.trim() };
-    if (!t.topic || !t.country) return;
-    saveTopics([...topics, { id: `t${Date.now().toString(36)}`, ...t }]);
-    setDraftTopic({ topic: '', country: '', flag: '' });
+  const saveTopic = (t) => {
+    saveTopics(topics.some(x => x.id === t.id) ? topics.map(x => (x.id === t.id ? t : x)) : [...topics, t]);
+    setEditing(null);
   };
 
   if (settings === null || projectRows === null) {
     return <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>Loading the final project…</p>;
   }
 
+  const qFor = (p, n) => questionsFor(settings, p?.track, kindOf(n));
   const shownClass = classFilter && classes[classFilter] ? classFilter
     : (classNames.find(c => (classes[c] || []).some(u => projects[u])) ?? classNames[0]);
   const students = (classes[shownClass] || [])
-    .map(uid => ({ uid, name: nameFor(roster, uid, projects[uid]?.uid ? `Student ${uid.slice(0, 5)}` : uid) }))
+    .map(uid => ({ uid, name: nameFor(roster, uid, `Student ${uid.slice(0, 5)}`) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const pending = Object.keys(projects).filter(uid => topicStatus(projects[uid], reviews[uid]) === 'pending');
   const classOf = (uid) => (roster[uid] ? classKeyOf(roster[uid]) : 'No class');
@@ -264,7 +404,7 @@ export default function FinalProjectAdmin() {
       <section className="rounded-2xl p-5" style={card}>
         <h2 className="font-display font-bold text-lg" style={{ color: 'var(--pg-text)' }}>Writing window</h2>
         <p className="text-sm mt-1 mb-3" style={{ color: 'var(--pg-muted)' }}>
-          Setup and topic choice are always available. The six swing entries can only be edited while a class's window is open;
+          Setup and topic choice are always available. The six cards can only be edited while a class's window is open;
           otherwise students see them read-only. It stays as you leave it — nothing closes on a timer.
         </p>
         {classNames.length === 0 && <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No classes on the roster yet.</p>}
@@ -302,7 +442,8 @@ export default function FinalProjectAdmin() {
               <div key={uid} className="px-3 py-2.5 rounded-xl flex flex-col gap-2" style={inputStyle}>
                 <p className="text-sm">
                   <strong>{topicText(projects[uid])}</strong>
-                  <span style={{ color: 'var(--pg-dim)' }}> · {nameFor(roster, uid, 'Unknown student')} · {classOf(uid)}</span>
+                  <Flag text={projects[uid].flag} />
+                  <span style={{ color: 'var(--pg-dim)' }}> · {trackLabel(projects[uid].track)} track · {nameFor(roster, uid, 'Unknown student')} · {classOf(uid)}</span>
                 </p>
                 <Verdict key={topicKey(projects[uid])} uid={uid} project={projects[uid]} review={reviews[uid]} run={run} />
               </div>
@@ -325,9 +466,10 @@ export default function FinalProjectAdmin() {
               <thead>
                 <tr className="text-left text-xs" style={{ color: 'var(--pg-dim)' }}>
                   <th className="font-semibold pb-2">Student</th>
+                  <th className="font-semibold pb-2">Track</th>
                   <th className="font-semibold pb-2">Topic</th>
                   <th className="font-semibold pb-2">Status</th>
-                  <th className="font-semibold pb-2">Entries</th>
+                  <th className="font-semibold pb-2">Cards</th>
                   <th />
                 </tr>
               </thead>
@@ -335,12 +477,13 @@ export default function FinalProjectAdmin() {
                 {students.map(({ uid, name }) => {
                   const p = projects[uid];
                   const status = topicStatus(p, reviews[uid]);
-                  const complete = SWING_NUMBERS.filter(n => isComplete(swings[uid]?.[n], n, p?.birthYear)).length;
+                  const complete = SWING_NUMBERS.filter(n => isComplete(swings[uid]?.[n], n, p?.birthYear, qFor(p, n))).length;
                   const begun = Object.keys(swings[uid] || {}).length;
                   return (
                     <tr key={uid} style={{ borderTop: '1px solid var(--pg-border)' }}>
                       <td className="py-2 pr-3 whitespace-nowrap">{name}</td>
-                      <td className="py-2 pr-3">{p?.topic ? topicText(p) : <span style={{ color: 'var(--pg-dim)' }}>—</span>}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{trackLabel(p?.track) || <span style={{ color: 'var(--pg-dim)' }}>—</span>}</td>
+                      <td className="py-2 pr-3">{p?.place ? <>{topicText(p)}<Flag text={p.flag} /></> : <span style={{ color: 'var(--pg-dim)' }}>—</span>}</td>
                       <td className="py-2 pr-3 whitespace-nowrap" style={{ color: STATUS[status].color }}>{STATUS[status].text}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">
                         <strong>{complete}</strong> / 6 complete
@@ -361,40 +504,63 @@ export default function FinalProjectAdmin() {
 
       {/* Topic list */}
       <section className="rounded-2xl p-5" style={card}>
-        <h2 className="font-display font-bold text-lg" style={{ color: 'var(--pg-text)' }}>Topic list</h2>
+        <h2 className="font-display font-bold text-lg" style={{ color: 'var(--pg-text)' }}>Topics</h2>
         <p className="text-sm mt-1 mb-3" style={{ color: 'var(--pg-muted)' }}>
-          What students choose from in setup. The flag text is shown to them under the topic; topics loaded from the handout also show their starting swing and leads.
-          Removing a topic does not affect students who already chose it.
+          What students choose from in setup, by track. Editing or removing a topic does not change the choice of a student who already made it,
+          except that its leads follow your edits.
         </p>
-        <div className="flex flex-col gap-2">
-          {topics.length === 0 && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No topics yet — students can only propose their own.</p>
-              <button onClick={() => saveTopics(STARTER_TOPICS)} className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={btnPrimary}
-                title="The 18 topics from the Orbit Map handout, each with its starting swing and three leads">
-                Load the handout's {STARTER_TOPICS.length} topics
-              </button>
+        {topics.length === 0 && (
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+            <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No topics yet — students can only propose their own.</p>
+            <button onClick={() => saveTopics(STARTER_TOPICS)} className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={btnPrimary}>
+              Load the starting list ({STARTER_TOPICS.filter(t => t.track === 'sector').length} sector, {STARTER_TOPICS.filter(t => t.track === 'big').length} big picture)
+            </button>
+          </div>
+        )}
+        {TRACK_IDS.map(tr => (
+          <div key={tr} className="mb-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h3 className="text-sm font-bold" style={{ color: 'var(--pg-text)' }}>{TRACKS[tr].label} track</h3>
+              <button onClick={() => setEditing(`new:${tr}`)} className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={btnGhost}>+ Add topic</button>
             </div>
-          )}
-          {topics.map(t => (
-            <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-sm" style={inputStyle}>
-              <span>
-                {topicText(t)}
-                {t.start && <span style={{ color: 'var(--pg-dim)' }}> · starts from: {t.start}</span>}
-                {t.flag && <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>{t.flag}</span>}
-              </span>
-              <button onClick={() => { if (confirm(`Remove "${topicText(t)}" from the list?`)) saveTopics(topics.filter(x => x.id !== t.id)); }}
-                className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={btnGhost}>Remove</button>
+            <div className="flex flex-col gap-2">
+              {editing === `new:${tr}` && <TopicForm initial={blankTopic(tr)} onSave={saveTopic} onCancel={() => setEditing(null)} />}
+              {topics.filter(t => t.track === tr).map(t => (editing === t.id
+                ? <TopicForm key={t.id} initial={t} onSave={saveTopic} onCancel={() => setEditing(null)} />
+                : (
+                  <div key={t.id} className="flex items-start justify-between gap-3 px-3 py-2 rounded-xl text-sm" style={inputStyle}>
+                    <span className="min-w-0">
+                      {topicText(t)}<Flag text={t.flag} />
+                      {t.seeTeacher && <span className="ml-2 text-[11px] font-semibold" style={{ color: '#f59e0b' }}>⚑ see teacher first</span>}
+                      {(t.start || t.leads.length > 0) && (
+                        <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>
+                          {[t.start && `starts from: ${t.start}`, t.leads.length > 0 && `leads: ${t.leads.join(' / ')}`].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex gap-1.5 shrink-0">
+                      <button onClick={() => setEditing(t.id)} className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={btnGhost}>Edit</button>
+                      <button onClick={() => { if (confirm(`Remove "${topicText(t)}" from the list?`)) saveTopics(topics.filter(x => x.id !== t.id)); }}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={btnGhost}>Remove</button>
+                    </span>
+                  </div>
+                )))}
+              {topics.filter(t => t.track === tr).length === 0 && editing !== `new:${tr}` && (
+                <p className="text-xs" style={{ color: 'var(--pg-dim)' }}>Nothing on this track yet.</p>
+              )}
             </div>
-          ))}
-        </div>
-        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] mt-3">
-          <input type="text" value={draftTopic.topic} onChange={e => setDraftTopic({ ...draftTopic, topic: e.target.value })} placeholder="Topic" className={inputClass} style={inputStyle} />
-          <input type="text" value={draftTopic.country} onChange={e => setDraftTopic({ ...draftTopic, country: e.target.value })} placeholder="Country" className={inputClass} style={inputStyle} />
-          <input type="text" value={draftTopic.flag} onChange={e => setDraftTopic({ ...draftTopic, flag: e.target.value })} placeholder="Flag text (optional)" className={inputClass} style={inputStyle} />
-          <button onClick={addTopic} disabled={!draftTopic.topic.trim() || !draftTopic.country.trim()}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg disabled:opacity-35" style={btnPrimary}>Add</button>
-        </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Question wording */}
+      <section className="rounded-2xl p-5" style={card}>
+        <h2 className="font-display font-bold text-lg" style={{ color: 'var(--pg-text)' }}>Questions</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--pg-muted)' }}>
+          Reword any label or prompt. The grey text is the built-in wording; type over it to change it, clear the box to go back.
+          Answers already written stay attached to their question.
+        </p>
+        <QuestionEditor settings={settings} run={run} />
       </section>
 
       {openUid && (
@@ -402,7 +568,7 @@ export default function FinalProjectAdmin() {
           uid={openUid}
           name={nameFor(roster, openUid, 'Student')}
           project={projects[openUid]} review={reviews[openUid]}
-          swings={swings[openUid]} signals={signals[openUid]}
+          swings={swings[openUid]} signals={signals[openUid]} settings={settings}
           run={run} onClose={() => setOpenUid(null)}
         />
       )}

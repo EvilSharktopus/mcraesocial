@@ -61,8 +61,16 @@
  *
  * ── Final project (Social 30-1, "The Orbit Map") — see data/finalProject.js ──
  *
+ * Two tracks, 'sector' and 'big' (big picture). They share everything below;
+ * only the topic list and the guided questions differ.
+ *
  * settings/finalProject                          — teacher writes, all read
- *   topics:       [{ id, topic, country, flag?, start?, leads?: string[] }]
+ *   topics:       [{ id, track, name, place, flag?, seeTeacher?, start?,
+ *                    leads?: string[] }]
+ *   questions:    { [track]: { lived|predicted: { [questionId]:
+ *                    { label?, prompt? } } } }
+ *                 — the teacher's rewording only. The questions themselves,
+ *                   their ids and their defaults are DEFAULT_QUESTIONS.
  *   openClasses:  string[]  — classes (roster course · stream) whose writing
  *                             window is open
  *   openUids:     string[]  — the students those classes contain. This is
@@ -72,38 +80,42 @@
  *
  * pg_final_projects/{uid}                        — setup; always writable by owner
  *   uid, birthYear: number
- *   topic, country: string
- *   custom:       boolean  — proposed by the student (needs approval)
- *   topicId, flag: from the topic list, null on a custom topic
- *   candidates:   string   — custom topics only: four candidate swings
+ *   track:        'sector' | 'big'
+ *   name, place:  string   — name is '' on the big-picture track
+ *   custom:       boolean  — proposed by the student
+ *   seeTeacher:   boolean  — copied from the topic; held like a custom one
+ *   topicId, flag: from the topic list; null / '' on a custom topic
+ *   candidates:   string   — custom only: candidate swings, or governments
  *   updatedAt:    Timestamp
- *   The topic fields freeze once any swing exists (rules), unless the
- *   teacher sets topicUnlocked on the review.
+ *   track/name/place/custom/topicId/flag/seeTeacher freeze once any swing
+ *   exists (rules), unless the teacher sets topicUnlocked on the review.
  *
  * pg_final_reviews/{uid}                         — teacher-only writes
  *   uid
  *   status:       'approved' | 'rejected'
  *   note:         string
- *   forTopic:     string   — topicKey() of the proposal the verdict is for;
- *                            editing the proposal sends it back to pending
+ *   forTopic:     string   — topicKey() of the choice the verdict is for;
+ *                            changing the choice sends it back to pending
  *   topicUnlocked: boolean
  *   decidedAt:    Timestamp
  *
  * pg_final_swings/{uid}_{n}                      — n = 1..6; 1-4 lived, 5-6 predicted
  *   uid, n, kind: 'lived' | 'predicted'
- *   name, year, month (lived, optional), ideology, principle
+ *   name:         string
+ *   year:         number | null — a year only, never a date
  *   placement:    number | null — -100 (most state, left) .. +100 (least
  *                                 state, right); 0 is a real answer here
- *   placementReason
- *   lived:        trigger, decision, source
- *   predicted:    pressure, pressureSource, decision, proofAgainst
- *   updatedAt:    Timestamp
+ *   ideology:     string        — the picker beside the ideology question
+ *   source:       string        — the pastable box beside the evidence question
+ *   [questionId]: string        — one answer per guided question, stored flat
+ *                                 under the question's id
+ *   updatedAt:    Timestamp     — must be the server clock (rules)
  *   Writable by the student only while their writing window is open (rules).
  *
  * pg_final_signals/{uid}_{n}                     — student writes, only teacher reads
  *   uid, n
- *   fields: { [field]: { typed, activeMs, pasteCount, pasteChars,
- *                        pasteBlocked, bulkCount, bulkChars } }
+ *   fields: { [name | source | questionId]: { typed, activeMs, pasteCount,
+ *             pasteChars, pasteBlocked, bulkCount, bulkChars } }
  *   Counters only ever arrive as increments. Client-reported: a prompt for
  *   a conversation, not a record.
  *

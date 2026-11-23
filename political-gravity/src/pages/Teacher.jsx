@@ -878,8 +878,11 @@ function GradingDetail({ view, sub, grade, onGrade }) {
 }
 
 // Everything Political Gravity stores, as one JSON file the teacher keeps.
-const BACKUP_COLLECTIONS = ['users', 'plots', 'pg_reflections', 'pg_grades', 'diplomaFlags', 'readingContent'];
-const BACKUP_SETTINGS    = ['global', 'masterReadings', 'consensus', 'publishedReadings'];
+const BACKUP_COLLECTIONS = [
+  'users', 'plots', 'pg_reflections', 'pg_grades', 'diplomaFlags', 'readingContent',
+  'pg_final_projects', 'pg_final_reviews', 'pg_final_swings', 'pg_final_signals',
+];
+const BACKUP_SETTINGS    = ['global', 'masterReadings', 'consensus', 'publishedReadings', 'finalProject'];
 
 async function exportEverything() {
   const [collections, settings] = await Promise.all([
