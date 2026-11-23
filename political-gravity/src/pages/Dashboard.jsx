@@ -188,8 +188,24 @@ export default function Dashboard() {
         </div>
         )}
 
-        {/* Study package link */}
+        {/* Final project link */}
         <div className="mt-10 rounded-2xl p-5 flex items-center justify-between gap-4"
+          style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
+          <div>
+            <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Final Project</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>Six swings across your lifetime, on one topic in one country</p>
+          </div>
+          <Link
+            to="/final-project"
+            className="shrink-0 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80"
+            style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-muted)', border: '1px solid var(--pg-border)' }}
+          >
+            Open →
+          </Link>
+        </div>
+
+        {/* Study package link */}
+        <div className="mt-4 rounded-2xl p-5 flex items-center justify-between gap-4"
           style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
           <div>
             <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Study Package</p>
