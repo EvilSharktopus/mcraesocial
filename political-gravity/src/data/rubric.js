@@ -20,3 +20,26 @@ export const totalFor = (grade) =>
 export const isGraded = (grade) => !!(grade?.justification || grade?.reflection);
 
 export const gradeKey = (uid, readingId) => `${uid}_${readingId}`;
+
+const mean = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+
+// A student's standing across the readings so far: the average of every
+// piece the teacher has actually marked. Unlike totalFor, a piece with no
+// band yet is left out rather than counted as zero — otherwise a student's
+// overall mark would sink every time a new reading opened and rise again as
+// it was marked. Each justification and each reflection is one piece.
+export function overallFor(grades, uid, readingIds) {
+  const j = [], r = [];
+  let readings = 0;
+  for (const id of readingIds) {
+    const g = grades[gradeKey(uid, id)];
+    if (!isGraded(g)) continue;
+    readings += 1;
+    if (g.justification) j.push(scoreOf(g.justification));
+    if (g.reflection)    r.push(scoreOf(g.reflection));
+  }
+  return {
+    overall: mean([...j, ...r]), justification: mean(j), reflection: mean(r),
+    pieces: j.length + r.length, readings,
+  };
+}

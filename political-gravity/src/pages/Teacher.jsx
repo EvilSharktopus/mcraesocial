@@ -10,10 +10,12 @@ import {
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
 import { STANDARD_READINGS, positionLabel } from '../data/readings';
-import { GRADE_SCALE, gradeKey, scoreOf, totalFor } from '../data/rubric';
+import { GRADE_SCALE, gradeKey, scoreOf, totalFor, overallFor } from '../data/rubric';
+import { classKeyOf } from '../data/finalProject';
 import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 import FinalProjectAdmin from '../components/FinalProjectAdmin';
+import AccountMerge from '../components/AccountMerge';
 
 // The collections that hold student work for a reading, in the order the
 // Reset confirmation lists them. Diploma Vault flags are deliberately not
@@ -614,6 +616,79 @@ const GRADING_VIEWS = [
 
 
 
+// Each student's average across everything marked so far.
+function OverallGrades({ readings, grades, roster, who }) {
+  const [cls, setCls] = useState('all');
+  const ids = readings.map(r => r.id);
+  // Everyone on the roster, plus any marked account that is not on it.
+  const uids = new Set(Object.keys(roster));
+  for (const g of Object.values(grades)) if (g?.uid && ids.includes(g.readingId)) uids.add(g.uid);
+  const classOf = (uid) => (roster[uid] ? classKeyOf(roster[uid]) : 'No class');
+  const classes = [...new Set([...uids].map(classOf))].sort();
+  const rows = [...uids]
+    .filter(uid => cls === 'all' || classOf(uid) === cls)
+    .map(uid => ({ uid, name: who(uid), cls: classOf(uid), ...overallFor(grades, uid, ids) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const marked = rows.filter(r => r.overall !== null);
+  const classAvg = marked.length ? Math.round(marked.reduce((n, r) => n + r.overall, 0) / marked.length) : null;
+  const pct = (v) => (v === null ? <span style={{ color: 'var(--pg-dim)' }}>—</span> : `${v}%`);
+
+  return (
+    <div className="rounded-2xl p-5" style={cardStyle}>
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+        <p className="text-xs max-w-xl" style={{ color: 'var(--pg-dim)' }}>
+          The average of every piece you have marked so far, across the {ids.length} time period{ids.length === 1 ? '' : 's'} on
+          the reading list. Each justification and each reflection counts once. A piece with no mark yet is left out, not counted as zero.
+        </p>
+        <select value={cls} onChange={e => setCls(e.target.value)} className="rounded-lg px-3 py-1.5 text-sm focus:outline-none"
+          style={{ backgroundColor: 'var(--pg-surface2)', border: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}>
+          <option value="all">All classes</option>
+          {classes.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      {rows.length === 0 ? <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No students yet.</p> : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" style={{ color: 'var(--pg-text)' }}>
+            <thead>
+              <tr className="text-left text-xs" style={{ color: 'var(--pg-dim)' }}>
+                <th className="font-semibold pb-2">Student</th>
+                {cls === 'all' && <th className="font-semibold pb-2">Class</th>}
+                <th className="font-semibold pb-2 text-right">Overall</th>
+                <th className="font-semibold pb-2 text-right">Justifications</th>
+                <th className="font-semibold pb-2 text-right">Reflections</th>
+                <th className="font-semibold pb-2 text-right">Marked</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.uid} style={{ borderTop: '1px solid var(--pg-border)' }}>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.name}</td>
+                  {cls === 'all' && <td className="py-2 pr-3 whitespace-nowrap" style={{ color: 'var(--pg-muted)' }}>{r.cls}</td>}
+                  <td className="py-2 pl-3 text-right font-bold">{pct(r.overall)}</td>
+                  <td className="py-2 pl-3 text-right">{pct(r.justification)}</td>
+                  <td className="py-2 pl-3 text-right">{pct(r.reflection)}</td>
+                  <td className="py-2 pl-3 text-right whitespace-nowrap" style={{ color: 'var(--pg-muted)' }}>
+                    {r.pieces ? `${r.pieces} piece${r.pieces === 1 ? '' : 's'} · ${r.readings} period${r.readings === 1 ? '' : 's'}` : 'nothing yet'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {classAvg !== null && (
+              <tfoot>
+                <tr style={{ borderTop: '2px solid var(--pg-border)' }}>
+                  <td className="py-2 pr-3 font-semibold" colSpan={cls === 'all' ? 2 : 1}>Average of {marked.length} marked student{marked.length === 1 ? '' : 's'}</td>
+                  <td className="py-2 pl-3 text-right font-bold">{classAvg}%</td>
+                  <td colSpan={3} />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GradingTab() {
   const { readings, loading } = useReadings();
   const [plots,       setPlots]       = useState(null);
@@ -623,6 +698,7 @@ function GradingTab() {
   const [grades,      setGrades]      = useState({});
   const [expanded,    setExpanded]    = useState(null);   // reading id
   const [view,        setView]        = useState('plots');
+  const [mode,        setMode]        = useState('readings'); // 'readings' | 'overall'
 
   useEffect(() => {
     const rows = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -685,15 +761,27 @@ function GradingTab() {
   return (
     <>
       <h1 className="font-display font-bold text-xl mb-1" style={{ color: 'var(--pg-text)' }}>Grading</h1>
-      <p className="text-sm mb-6" style={{ color: 'var(--pg-dim)' }}>Review student plots, justifications, and reflections</p>
+      <p className="text-sm mb-4" style={{ color: 'var(--pg-dim)' }}>Review student plots, justifications, and reflections</p>
 
-      {active.length === 0 && (
+      <div className="flex gap-2 mb-6">
+        {[['readings', 'By reading'], ['overall', 'Overall grade']].map(([key, label]) => (
+          <button key={key} onClick={() => setMode(key)}
+            className="text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-80 transition-opacity"
+            style={mode === key ? btnPrimary : btnGhost}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'overall' && <OverallGrades readings={active} grades={grades} roster={roster} who={who} />}
+
+      {mode === 'readings' && active.length === 0 && (
         <div style={cardStyle} className="p-6 text-center">
           <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No time periods on the reading list yet.</p>
         </div>
       )}
 
-      <div className="space-y-3">
+      {mode === 'readings' && <div className="space-y-3">
         {active.map(r => {
           const subs      = submissionsFor(r.id);
           const isOpen    = expanded === r.id;
@@ -774,7 +862,7 @@ function GradingTab() {
             </div>
           );
         })}
-      </div>
+      </div>}
     </>
   );
 }
@@ -950,6 +1038,12 @@ function SettingsTab({ userEmail }) {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Merge two accounts */}
+        <div className="rounded-2xl p-6" style={cardStyle}>
+          <h2 className="font-semibold mb-1" style={{ color: 'var(--pg-text)' }}>🔀 Merge two accounts</h2>
+          <AccountMerge />
         </div>
 
         {/* Role promotion */}
