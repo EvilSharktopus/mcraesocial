@@ -23,16 +23,19 @@ export const gradeKey = (uid, readingId) => `${uid}_${readingId}`;
 
 const mean = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
 
-// A student's standing across the readings so far: the average of every
-// piece the teacher has actually marked. Unlike totalFor, a piece with no
-// band yet is left out rather than counted as zero — otherwise a student's
-// overall mark would sink every time a new reading opened and rise again as
-// it was marked. Each justification and each reflection is one piece.
-export function overallFor(grades, uid, readingIds) {
+export const bandName = (code) => GRADE_SCALE.find(g => g.code === code)?.name ?? null;
+
+// A standing across a set of readings: the average of every piece the
+// teacher has actually marked. Unlike totalFor, a piece with no band yet is
+// left out rather than counted as zero — otherwise an overall mark would
+// sink every time a new reading opened and rise again as it was marked.
+// Each justification and each reflection is one piece. Takes the grade
+// documents themselves (missing ones are fine), so the teacher's table and
+// the student's own view run the same sum.
+export function overallOf(gradeDocs) {
   const j = [], r = [];
   let readings = 0;
-  for (const id of readingIds) {
-    const g = grades[gradeKey(uid, id)];
+  for (const g of gradeDocs) {
     if (!isGraded(g)) continue;
     readings += 1;
     if (g.justification) j.push(scoreOf(g.justification));
@@ -43,3 +46,11 @@ export function overallFor(grades, uid, readingIds) {
     pieces: j.length + r.length, readings,
   };
 }
+export const overallFor = (grades, uid, readingIds) =>
+  overallOf(readingIds.map(id => grades[gradeKey(uid, id)]));
+
+// One reading's mark on the same footing: the average of whichever of its
+// two pieces has been marked, or null if neither has.
+export const readingMark = (grade) => overallOf([grade]).overall;
+// Marked in part: one piece has a band and the other is still to come.
+export const partlyMarked = (grade) => isGraded(grade) && !(grade.justification && grade.reflection);
