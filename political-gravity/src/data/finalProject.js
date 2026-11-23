@@ -14,6 +14,8 @@ export const COL = {
   swings:   'pg_final_swings',    // {uid}_{n}  one card each, n = 1..6
   signals:  'pg_final_signals',   // {uid}_{n}  integrity signals, teacher-only read
 };
+// The student handout for the project, linked from the dashboard.
+export const FINAL_HANDOUT_URL = 'https://claude.ai/artifact/EAghhZ4fAL4MMd1BMZtMDk';
 export const SETTINGS_ID = 'finalProject'; // settings/finalProject: topics, questions, writing window
 
 export const END_YEAR = 2040;

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import { useAuth } from '../auth/AuthContext';
 import { HANDOUT_URL, RUBRIC_URL } from '../data/readings';
+import { FINAL_HANDOUT_URL } from '../data/finalProject';
 import { useReadings } from '../hooks/useReadings';
 import { isGraded, totalFor } from '../data/rubric';
 
@@ -92,12 +93,31 @@ export default function Dashboard() {
       <NavBar />
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-5 py-10">
-        <h1 className="font-display font-bold text-2xl mb-1" style={{ color: 'var(--pg-text)' }}>
-          Political Gravity
-        </h1>
-        <p className="text-sm mb-8" style={{ color: 'var(--pg-dim)' }}>
-          Social Studies 30 &nbsp;·&nbsp; Yearlong Project
-        </p>
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 className="font-display font-bold text-2xl mb-1" style={{ color: 'var(--pg-text)' }}>
+              Political Gravity
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>
+              Social Studies 30 &nbsp;·&nbsp; Yearlong Project
+            </p>
+          </div>
+          {/* The final project launches from here, with its handout beneath. */}
+          <div className="shrink-0 flex flex-col items-end gap-1.5">
+            <Link
+              to="/final-project"
+              className="text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80 whitespace-nowrap"
+              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+            >
+              Final Project →
+            </Link>
+            <a href={FINAL_HANDOUT_URL} target="_blank" rel="noreferrer"
+              className="text-xs underline hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--pg-muted)' }}>
+              Open Handout
+            </a>
+          </div>
+        </div>
 
         {/* Project Overview Links */}
         <div className="mb-10 rounded-2xl p-5 flex items-center justify-between gap-4"
@@ -188,24 +208,8 @@ export default function Dashboard() {
         </div>
         )}
 
-        {/* Final project link */}
-        <div className="mt-10 rounded-2xl p-5 flex items-center justify-between gap-4"
-          style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
-          <div>
-            <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Final Project</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>Six swings across your lifetime, on one topic in one country</p>
-          </div>
-          <Link
-            to="/final-project"
-            className="shrink-0 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: 'var(--pg-surface2)', color: 'var(--pg-muted)', border: '1px solid var(--pg-border)' }}
-          >
-            Open →
-          </Link>
-        </div>
-
         {/* Study package link */}
-        <div className="mt-4 rounded-2xl p-5 flex items-center justify-between gap-4"
+        <div className="mt-10 rounded-2xl p-5 flex items-center justify-between gap-4"
           style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)' }}>
           <div>
             <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Study Package</p>
