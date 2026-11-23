@@ -13,6 +13,7 @@ import { STANDARD_READINGS, positionLabel } from '../data/readings';
 import { GRADE_SCALE, gradeKey, scoreOf, totalFor } from '../data/rubric';
 import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
+import FinalProjectAdmin from '../components/FinalProjectAdmin';
 
 // The collections that hold student work for a reading, in the order the
 // Reset confirmation lists them. Diploma Vault flags are deliberately not
@@ -34,7 +35,7 @@ async function deleteAll(refs) {
   }
 }
 
-const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Settings'];
+const NAV_TABS = ['Readings', 'Archive', 'Grading', 'Final Project', 'Settings'];
 
 const ERA_ORDER = ['1700s', '1800s', '1900s', '2000s'];
 
@@ -1022,6 +1023,7 @@ export default function Teacher() {
         {activeTab === 'Readings' && <ReadingsTab />}
         {activeTab === 'Archive'  && <ArchiveTab />}
         {activeTab === 'Grading'  && <GradingTab />}
+        {activeTab === 'Final Project' && <FinalProjectAdmin />}
         {activeTab === 'Settings' && <SettingsTab userEmail={user?.email} />}
       </main>
     </div>

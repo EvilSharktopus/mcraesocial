@@ -26,6 +26,9 @@ export default function Spectrum({
   secondaryDot = null, // { value, label } — faint "original" dot
   classDots  = [],     // [{ value, label, ... }] — everyone else's positions
   onDotClick = null,   // (dot) => void — makes the class dots tappable
+  // (value) => string — replaces the left/right band readout. Given by axes
+  // where the centre is a real answer rather than "no position".
+  formatValue = null,
 }) {
   const trackRef   = useRef(null);
   const [phase, setPhase] = useState('idle'); // 'idle' | 'dragging' | 'settling'
@@ -85,7 +88,7 @@ export default function Spectrum({
   const fillWidth = Math.abs(pct - 50);
 
   // Readable label — the same band names the teacher sees when marking
-  const readout = positionLabel(value) ?? NO_POSITION;
+  const readout = formatValue ? formatValue(value) : (positionLabel(value) ?? NO_POSITION);
 
   return (
     <div className="select-none w-full">
@@ -274,7 +277,7 @@ export default function Spectrum({
             style={{
               backgroundColor: 'var(--pg-surface)',
               borderColor: 'var(--pg-border)',
-              color: value === 0 ? 'var(--pg-dim)' : 'var(--pg-primary)',
+              color: value === 0 && !formatValue ? 'var(--pg-dim)' : 'var(--pg-primary)',
               fontFamily: 'Inter, sans-serif',
               transition: 'color 0.2s ease',
             }}

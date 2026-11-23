@@ -12,6 +12,7 @@ import Reading      from './pages/Reading';
 import Seminar      from './pages/Seminar';
 import Teacher      from './pages/Teacher';
 import StudyPackage from './pages/StudyPackage';
+import FinalProject from './pages/FinalProject';
 
 function RootRedirect() {
   const { user, isTeacher, isLegacyStudent } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/dashboard"     element={<ProtectedRoute role="student"><Dashboard /></ProtectedRoute>} />
               <Route path="/reading/:id"   element={<ProtectedRoute role="student"><Reading /></ProtectedRoute>} />
               <Route path="/study-package" element={<ProtectedRoute role="student"><StudyPackage /></ProtectedRoute>} />
+              <Route path="/final-project" element={<ProtectedRoute role="student"><FinalProject /></ProtectedRoute>} />
               <Route path="/teacher"       element={<ProtectedRoute role="teacher"><Teacher /></ProtectedRoute>} />
               <Route path="/seminar/:id"   element={<ProtectedRoute role="teacher"><Seminar /></ProtectedRoute>} />
               <Route path="*"              element={<Navigate to="/" replace />} />

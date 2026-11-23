@@ -59,6 +59,54 @@
  *   reflection:    same
  *   updatedAt:     Timestamp
  *
+ * ── Final project (Social 30-1, "The Orbit Map") — see data/finalProject.js ──
+ *
+ * settings/finalProject                          — teacher writes, all read
+ *   topics:       [{ id, topic, country, flag?, start?, leads?: string[] }]
+ *   openClasses:  string[]  — classes (roster course · stream) whose writing
+ *                             window is open
+ *   openUids:     string[]  — the students those classes contain. This is
+ *                             what the rules check on every swing write, and
+ *                             what the student page reads: students cannot
+ *                             read the roster to learn their own class.
+ *
+ * pg_final_projects/{uid}                        — setup; always writable by owner
+ *   uid, birthYear: number
+ *   topic, country: string
+ *   custom:       boolean  — proposed by the student (needs approval)
+ *   topicId, flag: from the topic list, null on a custom topic
+ *   candidates:   string   — custom topics only: four candidate swings
+ *   updatedAt:    Timestamp
+ *   The topic fields freeze once any swing exists (rules), unless the
+ *   teacher sets topicUnlocked on the review.
+ *
+ * pg_final_reviews/{uid}                         — teacher-only writes
+ *   uid
+ *   status:       'approved' | 'rejected'
+ *   note:         string
+ *   forTopic:     string   — topicKey() of the proposal the verdict is for;
+ *                            editing the proposal sends it back to pending
+ *   topicUnlocked: boolean
+ *   decidedAt:    Timestamp
+ *
+ * pg_final_swings/{uid}_{n}                      — n = 1..6; 1-4 lived, 5-6 predicted
+ *   uid, n, kind: 'lived' | 'predicted'
+ *   name, year, month (lived, optional), ideology, principle
+ *   placement:    number | null — -100 (most state, left) .. +100 (least
+ *                                 state, right); 0 is a real answer here
+ *   placementReason
+ *   lived:        trigger, decision, source
+ *   predicted:    pressure, pressureSource, decision, proofAgainst
+ *   updatedAt:    Timestamp
+ *   Writable by the student only while their writing window is open (rules).
+ *
+ * pg_final_signals/{uid}_{n}                     — student writes, only teacher reads
+ *   uid, n
+ *   fields: { [field]: { typed, activeMs, pasteCount, pasteChars,
+ *                        pasteBlocked, bulkCount, bulkChars } }
+ *   Counters only ever arrive as increments. Client-reported: a prompt for
+ *   a conversation, not a record.
+ *
  * diplomaFlags/{randomUUID}                      — the student's Diploma Vault
  *   uid, readingId, readingTitle
  *   quote:        string   — the highlighted passage
