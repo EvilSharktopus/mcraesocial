@@ -11,11 +11,6 @@ export const GRADE_SCALE = [
 
 export const scoreOf = (code) => GRADE_SCALE.find(g => g.code === code)?.score ?? 0;
 
-// Justification and reflection each carry half. Anything ungraded or never
-// submitted scores zero, so the total is always out of both halves.
-export const totalFor = (grade) =>
-  Math.round((scoreOf(grade?.justification) + scoreOf(grade?.reflection)) / 2);
-
 // A grade only counts as given once the teacher has actually set a band.
 export const isGraded = (grade) => !!(grade?.justification || grade?.reflection);
 
@@ -26,9 +21,10 @@ const mean = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.
 export const bandName = (code) => GRADE_SCALE.find(g => g.code === code)?.name ?? null;
 
 // A standing across a set of readings: the average of every piece the
-// teacher has actually marked. Unlike totalFor, a piece with no band yet is
-// left out rather than counted as zero — otherwise an overall mark would
-// sink every time a new reading opened and rise again as it was marked.
+// teacher has actually marked. A piece with no band yet is left out rather
+// than counted as zero — otherwise an overall mark would sink every time a
+// new reading opened and rise again as it was marked. Work that was never
+// handed in is marked Poor by the teacher, which is how it comes to count.
 // Each justification and each reflection is one piece. Takes the grade
 // documents themselves (missing ones are fine), so the teacher's table and
 // the student's own view run the same sum.

@@ -10,7 +10,7 @@ import {
 import { db } from '../firebase';
 import { useReadings } from '../hooks/useReadings';
 import { STANDARD_READINGS, positionLabel } from '../data/readings';
-import { GRADE_SCALE, gradeKey, scoreOf, totalFor, overallFor } from '../data/rubric';
+import { GRADE_SCALE, gradeKey, scoreOf, overallFor, readingMark, partlyMarked } from '../data/rubric';
 import { classKeyOf } from '../data/finalProject';
 import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
@@ -616,6 +616,14 @@ const GRADING_VIEWS = [
 
 
 
+// One reading's mark as the teacher and the student both see it: the
+// average of the pieces marked, flagged while one of the two is outstanding.
+function markLabel(grade) {
+  const mark = readingMark(grade);
+  if (mark === null) return 'Not marked';
+  return partlyMarked(grade) ? `${mark}% so far` : `${mark}%`;
+}
+
 // Each student's average across everything marked so far.
 function OverallGrades({ readings, grades, roster, who }) {
   const [cls, setCls] = useState('all');
@@ -845,7 +853,7 @@ function GradingTab() {
                         <span className="font-medium" style={{ color: 'var(--pg-text)' }}>{who(s.uid)}</span>
                         <span className="text-[11px] shrink-0" style={{ color: 'var(--pg-dim)' }}>
                           {view === 'grades'
-                            ? `${totalFor(grades[gradeKey(s.uid, r.id)])}%`
+                            ? markLabel(grades[gradeKey(s.uid, r.id)])
                             : fmtTs((view === 'reflections' ? s.reflection : s.plot)?.updatedAt)}
                         </span>
                       </div>
@@ -944,7 +952,9 @@ function GradingDetail({ view, sub, grade, onGrade }) {
     );
   }
 
-  // grades — the two halves and what they add up to
+  // grades — the two pieces and what they come to. A piece with no band yet
+  // is left out of the sum, not counted as zero: the same figure the student
+  // sees, and the same one the Overall grade view is built from.
   const j = grade?.justification;
   const f = grade?.reflection;
   const part = (code, missing) => code
@@ -952,14 +962,14 @@ function GradingDetail({ view, sub, grade, onGrade }) {
     : missing;
   return (
     <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>
-      Justification {part(j, sub.plot?.justification ? 'ungraded (0)' : 'not submitted (0)')}
+      Justification {part(j, sub.plot?.justification ? 'not marked yet' : 'not submitted, not marked')}
       {'  +  '}
       Reflection {part(f, sub.reflection?.reflection
-        ? (sub.reflection.draft === true ? 'draft, not submitted (0)' : 'ungraded (0)')
-        : 'not submitted (0)')}
+        ? (sub.reflection.draft === true ? 'draft, not marked' : 'not marked yet')
+        : 'not submitted, not marked')}
       {'  =  '}
       <span style={{ color: 'var(--pg-text)', fontWeight: 600 }}>
-        {scoreOf(j) + scoreOf(f)} ÷ 2 = {totalFor(grade)}%
+        {j && f ? `${scoreOf(j) + scoreOf(f)} ÷ 2 = ${readingMark(grade)}%` : markLabel(grade)}
       </span>
     </p>
   );
