@@ -216,7 +216,7 @@ export const timeOf = (swing) => (typeof swing?.year === 'number' ? swing.year +
 
 // The three tests for a swing, shown on every card.
 export const SWING_TESTS = [
-  ['It has a date', 'A law, a budget, a court ruling, an executive order or decree, or an election that changed policy.'],
+  ['It is a real decision', 'A law, a budget, a court ruling, an executive order or decree, or an election that changed policy.'],
   ['It moved something', 'The state took on more, or gave something up, in a way you can point to.'],
   ['It has a cause', 'Pressure built before it, and you can show that pressure with evidence.'],
 ];
