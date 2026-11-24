@@ -311,6 +311,20 @@ export const normalizeTopic = (t) => ({
   leads: (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim()).filter(Boolean),
 });
 
+// ── Leads, card by card ──
+// A topic's hints in the order a student meets them: on the sector track the
+// starting swing and then its leads, on the big-picture track the
+// governments to trace. When that comes to exactly four, they line up with
+// the four lived swings, so each card can point at its own. Any other count
+// (Alberta lists five governments and a note about predictions) cannot be
+// lined up honestly, and the card shows the whole list instead.
+export function leadPlan(topic) {
+  if (!topic) return { pool: [], perCard: false };
+  const pool = (topic.track === 'sector' ? [topic.start, ...(topic.leads || [])] : (topic.leads || []))
+    .map(x => String(x ?? '').trim()).filter(Boolean);
+  return { pool, perCard: pool.length === 4 };
+}
+
 export const SEE_TEACHER_MESSAGE = 'Talk to Mr. McRae before choosing this';
 
 const clean = (x) => String(x ?? '').trim();
