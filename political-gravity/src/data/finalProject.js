@@ -284,6 +284,18 @@ export const startersOutOfDate = (topics) => {
   return live.length > 0 && JSON.stringify(live.map(normalizeTopic)) !== JSON.stringify(STARTER_TOPICS.map(normalizeTopic));
 };
 
+// A topic's fit. One saved before fits existed has no `measures` field at
+// all; if it is one of the built-in topics it takes the built-in fit, so the
+// greying-out works on a list that was loaded earlier and never updated. A
+// list the teacher has saved since always has the field — an empty one is
+// their decision to offer all four, and is left alone.
+let builtInFits = null;
+function fitOf(t) {
+  if (Array.isArray(t.measures)) return t.measures;
+  builtInFits ??= Object.fromEntries(STARTER_TOPICS.map(x => [topicKey(x), x.measures]));
+  return builtInFits[topicKey({ track: TRACKS[t.track] ? t.track : 'sector', name: t.name ?? t.topic, place: t.place ?? t.country })] ?? [];
+}
+
 // A topic as stored, tidied into the shape above. Tolerates a list saved
 // before tracks existed (topic/country, no track).
 export const normalizeTopic = (t) => ({
@@ -294,7 +306,7 @@ export const normalizeTopic = (t) => ({
   flag: String(t.flag ?? '').trim(),
   seeTeacher: !!t.seeTeacher,
   // Which of the four measures suit this topic. Empty = all of them.
-  measures: MEASURES.filter(m => (Array.isArray(t.measures) ? t.measures : []).includes(m)),
+  measures: MEASURES.filter(m => fitOf(t).includes(m)),
   start: String(t.start ?? '').trim(),
   leads: (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim()).filter(Boolean),
 });
