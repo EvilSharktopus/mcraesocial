@@ -26,7 +26,7 @@ import { exportMapPng } from '../utils/exportMapPng';
 import FinalEntryView from '../components/FinalEntryView';
 import {
   COL, SETTINGS_ID, END_YEAR, SWING_NUMBERS, IDEOLOGIES, SWING_TESTS, TRACKS, TRACK_IDS,
-  LATER_SWING_HINT, SEE_TEACHER_MESSAGE, HARDEST_NOTE, IDEOLOGY_NOTE, MEASURES, MEASURE_HELP, measureOf,
+  LATER_SWING_HINT, SEE_TEACHER_MESSAGE, HARDEST_NOTE, IDEOLOGY_NOTE, MEASURES, MEASURE_HELP, MEASURE_NOTE, measuresFor, measureOf,
   kindOf, questionsFor, swingKeys, pickSwing, swingWords, yearProblem, orderProblem, missingFrom,
   isComplete, stateLabel, topicText, topicStatus, setupDone, trackLabel, normalizeTopic,
   mapTitle, mapSubtitle,
@@ -423,7 +423,15 @@ function Setup({ uid, project, review, topics, topicLocked, hasPlacements, onDon
   const savedMeasure = measureOf(project);
   const [measureMode, setMeasureMode] = useState(!savedMeasure ? '' : MEASURES.includes(savedMeasure) ? savedMeasure : 'own');
   const [ownMeasure, setOwnMeasure] = useState(MEASURES.includes(savedMeasure) ? '' : savedMeasure);
-  const measure = measureMode === 'own' ? ownMeasure.trim().toLowerCase() : measureMode;
+  // Which of the four suit the topic in hand: the one being picked, or the
+  // saved one once the topic is locked. A proposal of their own has no list.
+  const topicInHand = topicLocked ? topics.find(t => t.id === project?.topicId)
+    : mode === 'custom' ? null : topics.find(t => t.id === mode && t.track === trackId);
+  const fits = measuresFor(topicInHand);
+  // A choice that does not suit the topic now in hand is no choice: switching
+  // topic after picking a measure must not carry a greyed-out one through.
+  const picked = measureMode === 'own' || fits.includes(measureMode) ? measureMode : '';
+  const measure = picked === 'own' ? ownMeasure.trim().toLowerCase() : picked;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -576,21 +584,32 @@ function Setup({ uid, project, review, topics, topicLocked, hasPlacements, onDon
           {heading('What are you measuring?')}
           <p className="text-xs mb-2" style={{ color: 'var(--pg-muted)' }}>{MEASURE_HELP}</p>
           <div className="flex flex-wrap gap-2">
-            {MEASURES.map(m => (
-              <label key={m} className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl cursor-pointer capitalize" style={choice(measureMode === m)}>
-                <input type="radio" name="measure" checked={measureMode === m} onChange={() => setMeasureMode(m)} />
-                {m}
-              </label>
-            ))}
-            <label className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl cursor-pointer" style={choice(measureMode === 'own')}>
-              <input type="radio" name="measure" checked={measureMode === 'own'} onChange={() => setMeasureMode('own')} />
+            {MEASURES.map(m => {
+              const ok = fits.includes(m);
+              return (
+                <label key={m} className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl capitalize ${ok ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                  style={{ ...choice(picked === m), opacity: ok ? 1 : 0.4 }}
+                  title={ok ? undefined : 'Not a good fit for this topic'}>
+                  <input type="radio" name="measure" disabled={!ok} checked={picked === m} onChange={() => setMeasureMode(m)} />
+                  {m}
+                </label>
+              );
+            })}
+            <label className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl cursor-pointer" style={choice(picked === 'own')}>
+              <input type="radio" name="measure" checked={picked === 'own'} onChange={() => setMeasureMode('own')} />
               In my own words
-              {measureMode === 'own' && (
+              {picked === 'own' && (
                 <input type="text" maxLength={30} value={ownMeasure} onChange={e => setOwnMeasure(e.target.value)} placeholder="e.g. ownership"
                   className="rounded-lg px-2 py-1 text-sm focus:outline-none w-40" style={inner} />
               )}
             </label>
           </div>
+          {fits.length < MEASURES.length && (
+            <p className="text-xs mt-1.5" style={{ color: 'var(--pg-dim)' }}>
+              The greyed-out measures are not a good fit for this topic.
+            </p>
+          )}
+          <p className="text-xs mt-1.5" style={{ color: 'var(--pg-muted)' }}>{MEASURE_NOTE}</p>
           <p className="text-xs mt-1.5" style={{ color: 'var(--pg-dim)' }}>
             One measure for all six swings. It labels your map: “More state ({measure || '…'})” and “Less state ({measure || '…'})”.
           </p>

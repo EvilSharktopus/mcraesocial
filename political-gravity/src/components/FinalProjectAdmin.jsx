@@ -17,7 +17,7 @@ import FinalMap from './FinalMap';
 import FinalEntryView from './FinalEntryView';
 import {
   COL, SETTINGS_ID, SWING_NUMBERS, KINDS, TRACKS, TRACK_IDS, DEFAULT_QUESTIONS, STARTER_TOPICS,
-  SEE_TEACHER_MESSAGE, kindOf, questionsFor, signalFields, isComplete, orderProblem,
+  SEE_TEACHER_MESSAGE, MEASURES, kindOf, questionsFor, signalFields, isComplete, orderProblem,
   topicKey, topicText, topicStatus, classKeyOf, trackLabel, normalizeTopic, mapTitle, mapSubtitle,
   measureOf, openUidsFor, withLatestStarters, startersOutOfDate,
 } from '../data/finalProject';
@@ -193,7 +193,7 @@ function StudentDetail({ uid, name, project, review, swings, signals, settings, 
 }
 
 // ── Topic editor ────────────────────────────────────────────────────────────
-const blankTopic = (track) => ({ id: null, track, name: '', place: '', flag: '', seeTeacher: false, start: '', leads: [] });
+const blankTopic = (track) => ({ id: null, track, name: '', place: '', flag: '', seeTeacher: false, start: '', leads: [], measures: [] });
 
 function TopicForm({ initial, onSave, onCancel }) {
   const [t, setT] = useState({ ...initial, leadsText: (initial.leads || []).join('\n') });
@@ -230,6 +230,18 @@ function TopicForm({ initial, onSave, onCancel }) {
         {small('Leads — one per line. Shown only after they choose, under “Where to look next”.')}
         <textarea rows={4} value={t.leadsText} onChange={e => set({ leadsText: e.target.value })} className={`${cls} resize-y`} style={innerStyle} />
       </label>
+      <div className="sm:col-span-2">
+        {small('Measures that fit — the others are greyed out for students. Leave all unticked to offer all four.')}
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {MEASURES.map(m => (
+            <label key={m} className="flex items-center gap-1.5 text-sm capitalize" style={{ color: 'var(--pg-text)' }}>
+              <input type="checkbox" checked={(t.measures || []).includes(m)}
+                onChange={e => set({ measures: e.target.checked ? [...(t.measures || []), m] : (t.measures || []).filter(x => x !== m) })} />
+              {m}
+            </label>
+          ))}
+        </div>
+      </div>
       <label className="flex items-center gap-2 text-sm sm:col-span-2" style={{ color: 'var(--pg-text)' }}>
         <input type="checkbox" checked={t.seeTeacher} onChange={e => set({ seeTeacher: e.target.checked })} />
         See teacher first — shows “{SEE_TEACHER_MESSAGE}” and holds the choice for your approval
@@ -562,6 +574,9 @@ export default function FinalProjectAdmin() {
                           {[t.start && `starts from: ${t.start}`, t.leads.length > 0 && `leads: ${t.leads.join(' / ')}`].filter(Boolean).join(' · ')}
                         </span>
                       )}
+                      <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>
+                        measures: {t.measures.length ? t.measures.join(', ') : 'all four'}
+                      </span>
                     </span>
                     <span className="flex gap-1.5 shrink-0">
                       <button onClick={() => setEditing(t.id)} className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={btnGhost}>Edit</button>
