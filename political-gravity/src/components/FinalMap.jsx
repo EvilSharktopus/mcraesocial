@@ -8,7 +8,7 @@
 // rather than left as var(--…), so the same markup survives being serialised
 // into a PNG, where no stylesheet comes along.
 import { useThemeColors } from '../hooks/useThemeColors';
-import { END_YEAR, SWING_NUMBERS, kindOf, timeOf, whenLabel } from '../data/finalProject';
+import { END_YEAR, SWING_NUMBERS, kindOf, timeOf, whenLabel, axisLabels } from '../data/finalProject';
 
 // Portrait: time runs down the page, placement runs left to right — the same
 // way round as the economic spectrum the class has used all year, with more
@@ -73,9 +73,12 @@ function placeLabels(points, avoid = []) {
   });
 }
 
-export default function FinalMap({ birthYear, swings, selected = null, onSelect, title, subtitle, svgRef, print = false }) {
+export default function FinalMap({ birthYear, swings, selected = null, onSelect, title, subtitle, measure, svgRef, print = false }) {
   const themed = useThemeColors();
   const c = print ? PRINT : themed;
+  // The measure names what "more state" is more of; a long one in the
+  // student's own words is cut so the two ends cannot run into each other.
+  const axis = axisLabels(measure ? clip(String(measure).trim(), 22) : '');
   const now = new Date();
   const today = now.getFullYear() + now.getMonth() / 12;
   const t0 = birthYear, t1 = END_YEAR + 1;
@@ -118,8 +121,8 @@ export default function FinalMap({ birthYear, swings, selected = null, onSelect,
       <line x1={sx(0)} x2={sx(0)} y1={M.top} y2={M.top + PH} stroke={c.border2} strokeDasharray="2 5" />
 
       {/* Placement axis, across the top */}
-      <text x={M.left} y={M.top - 34} textAnchor="start" fontSize="14" fontWeight="700" fill={c.text} fontFamily={FONT}>◀ More state</text>
-      <text x={M.left + PW} y={M.top - 34} textAnchor="end" fontSize="14" fontWeight="700" fill={c.text} fontFamily={FONT}>Less state ▶</text>
+      <text x={M.left} y={M.top - 34} textAnchor="start" fontSize="14" fontWeight="700" fill={c.text} fontFamily={FONT}>◀ {axis.more}</text>
+      <text x={M.left + PW} y={M.top - 34} textAnchor="end" fontSize="14" fontWeight="700" fill={c.text} fontFamily={FONT}>{axis.less} ▶</text>
       <text x={sx(0)} y={M.top - 34} textAnchor="middle" fontSize="11" fill={c.dim} fontFamily={FONT}>balanced</text>
 
       {/* Time axis, down the side: five-year ticks, the birth year, and today */}

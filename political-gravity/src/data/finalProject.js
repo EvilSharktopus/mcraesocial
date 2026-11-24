@@ -85,7 +85,7 @@ export const DEFAULT_QUESTIONS = {
       { id: 'promise',   label: 'The promise',   prompt: 'What did they say they would do differently about the role of the state?' },
       { id: 'signature', label: 'The signature decision', prompt: 'Which one law, budget or order best shows the new direction?' },
       { id: 'ideologyWhy', label: 'The ideology', prompt: 'Which ideology does that decision belong to, and which principle shows it?', ideology: true },
-      { id: 'placementWhy', label: 'Placement',  prompt: 'Is the state doing more or less overall? Say what you are measuring.', placement: true },
+      { id: 'placementWhy', label: 'Placement',  prompt: 'Is the state doing more or less overall than under the government before, and by how much?', placement: true },
     ],
     predicted: [
       { id: 'mood',      label: 'The mood',      prompt: 'What are people becoming unhappy about now?' },
@@ -112,6 +112,23 @@ export function questionsFor(settings, track, kind) {
     prompt: String(over[q.id]?.prompt ?? '').trim() || q.prompt,
   }));
 }
+
+// Shown once, under the third question (the evidence one), on every card.
+export const HARDEST_NOTE = "These two are the hardest. Look for the group's own report, statement or data, not only news coverage of it.";
+export const IDEOLOGY_NOTE = 'Use the ideologies from the course. If a source says libertarian, that is classical liberalism.';
+
+// ── The measure ─────────────────────────────────────────────────────────────
+// "More state" means nothing until you say more of what. The student picks
+// one measure in setup and holds it across all six swings; it labels the
+// map's axis and sits beside every placement control. It can be changed
+// later, with a warning to revisit the placements.
+export const MEASURES = ['spending', 'regulation', 'enforcement', 'restriction'];
+export const MEASURE_HELP = 'More state is not always obvious. Buying a pipeline is more state, even though it helps the oil industry. Legalizing a drug is less state on enforcement, even though it creates a regulator. Pick one measure and hold it.';
+export const measureOf = (project) => String(project?.measure ?? '').trim();
+export const axisLabels = (measure) => {
+  const m = String(measure ?? '').trim();
+  return m ? { more: `More state (${m})`, less: `Less state (${m})` } : { more: 'More state', less: 'Less state' };
+};
 
 export const LATER_SWING_HINT = 'The problem behind one swing is often the solution from the swing before.';
 
@@ -199,7 +216,7 @@ export const timeOf = (swing) => (typeof swing?.year === 'number' ? swing.year +
 
 // The three tests for a swing, shown on every card.
 export const SWING_TESTS = [
-  ['It has a date', 'A law, a budget, a court ruling, or an election that changed policy.'],
+  ['It is a real decision', 'A law, a budget, a court ruling, an executive order or decree, or an election that changed policy.'],
   ['It moved something', 'The state took on more, or gave something up, in a way you can point to.'],
   ['It has a cause', 'Pressure built before it, and you can show that pressure with evidence.'],
 ];
@@ -217,32 +234,42 @@ const RL = 'Rejection of liberalism';
 const S = (name, place, start, leads, flag = '') => ({ track: 'sector', name, place, start, leads, flag, seeTeacher: false });
 const B = (place, leads, seeTeacher = false) => ({ track: 'big', name: '', place, start: '', leads, flag: '', seeTeacher });
 export const STARTER_TOPICS = [
-  S('Carbon pricing', 'Canada', 'BC carbon tax', ["Alberta's carbon levy", 'Federal carbon pricing law', 'End of the consumer carbon charge']),
-  S('Drug policy', 'Canada', 'Supreme Court ruling on Insite', ['Cannabis legalized', 'BC decriminalization pilot', 'BC ends the pilot']),
-  S('Pipelines and oil', 'Canada', 'Northern Gateway approved', ['Federal purchase of Trans Mountain', 'Impact Assessment Act (Bill C-69)', 'Building Canada Act']),
-  S('Immigration', 'Canada', 'Limits on temporary foreign workers', ['Syrian refugee resettlement', 'Cap on international student permits', 'Cut to immigration targets']),
+  S('Carbon pricing', 'Canada', 'BC carbon tax', ['Federal carbon pricing law', 'Alberta repeals its carbon levy', 'End of the consumer carbon charge']),
+  S('Drug policy', 'Canada', 'Supreme Court ruling on Insite', ['Mandatory minimum sentences', 'Cannabis legalized', 'BC starts, then ends, decriminalization']),
+  S('Pipelines and oil', 'Canada', 'Environmental review law rewritten', ['Northern Gateway rejected', 'Impact Assessment Act (Bill C-69)', 'Building Canada Act']),
+  S('Immigration', 'Canada', 'Limits on temporary foreign workers', ['Syrian refugee resettlement', 'Immigration targets raised', 'Student cap and target cuts']),
   S('Gun control', 'Canada', 'Long-gun registry scrapped', ['Background-check law (Bill C-71)', 'Ban on assault-style firearms', 'National handgun freeze']),
   S('Public spending', 'Canada', 'Stimulus budget', ['Deficit-reduction budget', 'Deficit-spending budget', 'Pandemic emergency benefits']),
   S('Health insurance', 'United States', 'Affordable Care Act', ['Mandate penalty removed', 'Subsidies expanded', 'Medicaid cuts']),
   S('Bank regulation', 'United States', 'Bank bailout', ['Dodd-Frank Act', 'Partial rollback of Dodd-Frank', 'Silicon Valley Bank rescue']),
   S('Net neutrality', 'United States', 'Open internet rules', ['Rules repealed', 'Rules restored', 'Court strikes the rules down']),
-  S('Student debt', 'United States', 'Federal takeover of student lending', ['Payment pause', 'Loan forgiveness plan', 'Supreme Court blocks forgiveness']),
+  S('Student debt', 'United States', 'Federal takeover of student lending', ['Payment pause', 'Forgiveness plan blocked by the Supreme Court', 'Borrowing caps and stricter repayment']),
   S('Immigration', 'United States', 'DACA', ['Travel ban', "New president's first-day reversals", 'Expanded deportation campaign']),
-  S('Public spending', 'United Kingdom', 'Austerity budget', ['Furlough scheme', 'Truss mini-budget', "Labour's first budget"]),
+  S('Public spending', 'United Kingdom', 'Austerity budget', ['Furlough scheme', 'Autumn statement reverses the mini-budget', "Labour's first budget"]),
   S('Pensions', 'France', 'Retirement age raised to 62', ['Partial return to 60', 'Retirement age raised to 64', 'Reform suspended']),
-  S('Nuclear power', 'Germany', 'Phase-out decision', ['Reactor lifetimes extended', 'Last reactors kept running', 'Final shutdown']),
-  S('Public spending', 'Greece', 'First bailout', ['Syriza elected', 'Bailout referendum and third bailout', 'Exit from the bailout programme']),
-  S('Control of the economy', 'Argentina', 'Pension funds nationalized', ['YPF oil company nationalized', 'Currency controls lifted', "Milei's deregulation decree"]),
+  S('Nuclear power', 'Germany', 'Reactor lifetimes extended', ['Phase-out decision', 'State takes over nuclear waste costs', 'Last reactors kept running']),
+  S('Public spending', 'Greece', 'First bailout', ['Second bailout and debt write-down', 'Third bailout', 'Bailout exit and reversal of cuts']),
+  S('Control of the economy', 'Argentina', 'Pension funds nationalized', ['YPF oil company nationalized', 'Macri lifts currency controls', "Milei's deregulation decree"]),
   S('Family planning', 'China', 'One-child policy eased', ['Two-child policy', 'Three-child policy', 'National childcare subsidy'], RL),
   S('Control of the economy', 'Russia', 'Ban on Western food imports', ['Retirement age raised', 'Capital controls', 'Foreign company assets seized'], RL),
   B('United States', ['Obama', 'Trump', 'Biden', 'Trump']),
   B('Argentina', ['Fernández de Kirchner', 'Macri', 'Fernández', 'Milei']),
-  B('Brazil', ['Rousseff', 'Temer', 'Bolsonaro', 'Lula']),
-  B('South Korea', ['Lee Myung-bak', 'Park', 'Moon', 'Yoon', 'Lee Jae-myung']),
-  B('Italy', ['Berlusconi', 'Monti', 'Renzi', 'Conte', 'Draghi', 'Meloni']),
-  B('Canada', ['Harper', 'Trudeau', 'Carney'], true),
-  B('Alberta', ['Stelmach', 'Redford', 'Notley', 'Kenney', 'Smith']),
+  B('Brazil', ['Rousseff or her 2015 austerity turn', 'Temer', 'Bolsonaro', 'Lula']),
+  B('South Korea', ['Lee Myung-bak', 'Moon', 'Yoon', 'Lee Jae-myung']),
+  B('Italy', ['Monti', 'Renzi or Draghi', "Conte's first government", 'Meloni']),
+  B('Canada', ["Harper's stimulus", "Harper's cuts", 'Trudeau', 'Carney'], true),
+  B('Alberta', ['Stelmach', 'Redford', "Prentice's 2015 budget", 'Notley', 'Kenney', 'Use Smith as the starting point for predictions.']),
 ].map((t, i) => ({ id: `starter-${i + 1}`, ...t }));
+// Ids are by position, so a topic keeps its id when its wording changes —
+// which is what lets a student's choice follow an update to this list.
+export const isStarterTopic = (t) => /^starter-\d+$/.test(String(t?.id ?? ''));
+// The live list brought up to this one: every built-in topic replaced by its
+// current version (edits to them are lost), the teacher's own topics kept.
+export const withLatestStarters = (topics) => [...STARTER_TOPICS, ...topics.filter(t => !isStarterTopic(t))];
+export const startersOutOfDate = (topics) => {
+  const live = topics.filter(isStarterTopic);
+  return live.length > 0 && JSON.stringify(live.map(normalizeTopic)) !== JSON.stringify(STARTER_TOPICS.map(normalizeTopic));
+};
 
 // A topic as stored, tidied into the shape above. Tolerates a list saved
 // before tracks existed (topic/country, no track).
@@ -278,12 +305,19 @@ export function topicStatus(project, review) {
   return review.status === 'approved' ? 'approved' : review.status === 'rejected' ? 'rejected' : 'pending';
 }
 export const setupDone = (project, review) =>
-  Number.isInteger(project?.birthYear) && ['chosen', 'approved'].includes(topicStatus(project, review));
+  Number.isInteger(project?.birthYear) && !!measureOf(project)
+  && ['chosen', 'approved'].includes(topicStatus(project, review));
 
 // The map's title lines: the topic, then its track and any flag.
 export const mapTitle = (project) => (clean(project?.place) ? topicText(project) : null);
 export const mapSubtitle = (project) =>
   [trackLabel(project?.track) && `${trackLabel(project.track)} track`, clean(project?.flag)].filter(Boolean).join(' · ');
+
+// ── The teacher's student view ──
+// The teacher runs the project under their own account to check it. Their
+// writing window is its own switch (settings/finalProject.previewUid), kept
+// in openUids alongside the classes' students.
+export const openUidsFor = (classUids, previewUid) => [...new Set([...classUids, ...(previewUid ? [previewUid] : [])])];
 
 // ── Classes ── a class is the Desk roster's course + stream.
 export const classKeyOf = (row) => [row?.course, row?.stream].map(clean).filter(Boolean).join(' · ') || 'No class';
