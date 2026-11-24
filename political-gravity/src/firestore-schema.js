@@ -66,7 +66,10 @@
  *
  * settings/finalProject                          — teacher writes, all read
  *   topics:       [{ id, track, name, place, flag?, seeTeacher?, start?,
- *                    leads?: string[] }]
+ *                    leads?: string[], measures?: string[] }]
+ *                 — measures: which of spending / regulation / enforcement /
+ *                   restriction suit the topic; the rest are greyed out in
+ *                   setup. Empty or absent = all four.
  *   questions:    { [track]: { lived|predicted: { [questionId]:
  *                    { label?, prompt? } } } }
  *                 — the teacher's rewording only. The questions themselves,

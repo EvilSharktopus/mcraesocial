@@ -124,6 +124,11 @@ export const IDEOLOGY_NOTE = 'Use the ideologies from the course. If a source sa
 // later, with a warning to revisit the placements.
 export const MEASURES = ['spending', 'regulation', 'enforcement', 'restriction'];
 export const MEASURE_HELP = 'More state is not always obvious. Buying a pipeline is more state, even though it helps the oil industry. Legalizing a drug is less state on enforcement, even though it creates a regulator. Pick one measure and hold it.';
+// Shown under the choices: the four are a guide, not a fence.
+export const MEASURE_NOTE = 'This is just a framework. Some topics overlap with other measures; just do your best.';
+// The measures a topic offers: its own list, or all four when it has none
+// (big-picture topics, a student's own proposal, a topic the teacher left open).
+export const measuresFor = (topic) => (topic?.measures?.length ? topic.measures : MEASURES);
 export const measureOf = (project) => String(project?.measure ?? '').trim();
 export const axisLabels = (measure) => {
   const m = String(measure ?? '').trim();
@@ -222,36 +227,44 @@ export const SWING_TESTS = [
 ];
 
 // ── Topics ──────────────────────────────────────────────────────────────────
-// { id, track, name, place, flag?, seeTeacher?, start?, leads? }
+// { id, track, name, place, flag?, seeTeacher?, start?, leads?, measures? }
 //   name       what is being traced; blank on the big-picture track, where
 //              the place is the topic
 //   flag       a short label shown beside the topic and on the project
 //   seeTeacher holds the choice for approval, like a custom topic
 //   start      a swing to start from, shown before choosing
 //   leads      hints shown only after choosing, under "Where to look next"
+//   measures   which of the four measures suit it; the rest are greyed out
+//              in setup. Empty = all four.
 // This list is only the seed — the live one is settings/finalProject.topics.
 const RL = 'Rejection of liberalism';
-const S = (name, place, start, leads, flag = '') => ({ track: 'sector', name, place, start, leads, flag, seeTeacher: false });
-const B = (place, leads, seeTeacher = false) => ({ track: 'big', name: '', place, start: '', leads, flag: '', seeTeacher });
+// `fits` is which of the four measures suit the topic, by initial:
+// s(pending), r(egulation), e(nforcement), x = restriction.
+const FIT = { s: 'spending', r: 'regulation', e: 'enforcement', x: 'restriction' };
+const S = (name, place, fits, start, leads, flag = '') =>
+  ({ track: 'sector', name, place, start, leads, flag, seeTeacher: false, measures: [...fits].map(c => FIT[c]) });
+// A government's overall direction can be read on any measure, so the
+// big-picture topics leave all four open (an empty list means no limit).
+const B = (place, leads, seeTeacher = false) => ({ track: 'big', name: '', place, start: '', leads, flag: '', seeTeacher, measures: [] });
 export const STARTER_TOPICS = [
-  S('Carbon pricing', 'Canada', 'BC carbon tax', ['Federal carbon pricing law', 'Alberta repeals its carbon levy', 'End of the consumer carbon charge']),
-  S('Drug policy', 'Canada', 'Supreme Court ruling on Insite', ['Mandatory minimum sentences', 'Cannabis legalized', 'BC starts, then ends, decriminalization']),
-  S('Pipelines and oil', 'Canada', 'Environmental review law rewritten', ['Northern Gateway rejected', 'Impact Assessment Act (Bill C-69)', 'Building Canada Act']),
-  S('Immigration', 'Canada', 'Limits on temporary foreign workers', ['Syrian refugee resettlement', 'Immigration targets raised', 'Student cap and target cuts']),
-  S('Gun control', 'Canada', 'Long-gun registry scrapped', ['Background-check law (Bill C-71)', 'Ban on assault-style firearms', 'National handgun freeze']),
-  S('Public spending', 'Canada', 'Stimulus budget', ['Deficit-reduction budget', 'Deficit-spending budget', 'Pandemic emergency benefits']),
-  S('Health insurance', 'United States', 'Affordable Care Act', ['Mandate penalty removed', 'Subsidies expanded', 'Medicaid cuts']),
-  S('Bank regulation', 'United States', 'Bank bailout', ['Dodd-Frank Act', 'Partial rollback of Dodd-Frank', 'Silicon Valley Bank rescue']),
-  S('Net neutrality', 'United States', 'Open internet rules', ['Rules repealed', 'Rules restored', 'Court strikes the rules down']),
-  S('Student debt', 'United States', 'Federal takeover of student lending', ['Payment pause', 'Forgiveness plan blocked by the Supreme Court', 'Borrowing caps and stricter repayment']),
-  S('Immigration', 'United States', 'DACA', ['Travel ban', "New president's first-day reversals", 'Expanded deportation campaign']),
-  S('Public spending', 'United Kingdom', 'Austerity budget', ['Furlough scheme', 'Autumn statement reverses the mini-budget', "Labour's first budget"]),
-  S('Pensions', 'France', 'Retirement age raised to 62', ['Partial return to 60', 'Retirement age raised to 64', 'Reform suspended']),
-  S('Nuclear power', 'Germany', 'Reactor lifetimes extended', ['Phase-out decision', 'State takes over nuclear waste costs', 'Last reactors kept running']),
-  S('Public spending', 'Greece', 'First bailout', ['Second bailout and debt write-down', 'Third bailout', 'Bailout exit and reversal of cuts']),
-  S('Control of the economy', 'Argentina', 'Pension funds nationalized', ['YPF oil company nationalized', 'Macri lifts currency controls', "Milei's deregulation decree"]),
-  S('Family planning', 'China', 'One-child policy eased', ['Two-child policy', 'Three-child policy', 'National childcare subsidy'], RL),
-  S('Control of the economy', 'Russia', 'Ban on Western food imports', ['Retirement age raised', 'Capital controls', 'Foreign company assets seized'], RL),
+  S('Carbon pricing', 'Canada', 'r', 'BC carbon tax', ['Federal carbon pricing law', 'Alberta repeals its carbon levy', 'End of the consumer carbon charge']),
+  S('Drug policy', 'Canada', 'rex', 'Supreme Court ruling on Insite', ['Mandatory minimum sentences', 'Cannabis legalized', 'BC starts, then ends, decriminalization']),
+  S('Pipelines and oil', 'Canada', 'sr', 'Environmental review law rewritten', ['Northern Gateway rejected', 'Impact Assessment Act (Bill C-69)', 'Building Canada Act']),
+  S('Immigration', 'Canada', 'ex', 'Limits on temporary foreign workers', ['Syrian refugee resettlement', 'Immigration targets raised', 'Student cap and target cuts']),
+  S('Gun control', 'Canada', 'rex', 'Long-gun registry scrapped', ['Background-check law (Bill C-71)', 'Ban on assault-style firearms', 'National handgun freeze']),
+  S('Public spending', 'Canada', 's', 'Stimulus budget', ['Deficit-reduction budget', 'Deficit-spending budget', 'Pandemic emergency benefits']),
+  S('Health insurance', 'United States', 'sr', 'Affordable Care Act', ['Mandate penalty removed', 'Subsidies expanded', 'Medicaid cuts']),
+  S('Bank regulation', 'United States', 'sr', 'Bank bailout', ['Dodd-Frank Act', 'Partial rollback of Dodd-Frank', 'Silicon Valley Bank rescue']),
+  S('Net neutrality', 'United States', 'r', 'Open internet rules', ['Rules repealed', 'Rules restored', 'Court strikes the rules down']),
+  S('Student debt', 'United States', 's', 'Federal takeover of student lending', ['Payment pause', 'Forgiveness plan blocked by the Supreme Court', 'Borrowing caps and stricter repayment']),
+  S('Immigration', 'United States', 'ex', 'DACA', ['Travel ban', "New president's first-day reversals", 'Expanded deportation campaign']),
+  S('Public spending', 'United Kingdom', 's', 'Austerity budget', ['Furlough scheme', 'Autumn statement reverses the mini-budget', "Labour's first budget"]),
+  S('Pensions', 'France', 's', 'Retirement age raised to 62', ['Partial return to 60', 'Retirement age raised to 64', 'Reform suspended']),
+  S('Nuclear power', 'Germany', 'rx', 'Reactor lifetimes extended', ['Phase-out decision', 'State takes over nuclear waste costs', 'Last reactors kept running']),
+  S('Public spending', 'Greece', 's', 'First bailout', ['Second bailout and debt write-down', 'Third bailout', 'Bailout exit and reversal of cuts']),
+  S('Control of the economy', 'Argentina', 'srx', 'Pension funds nationalized', ['YPF oil company nationalized', 'Macri lifts currency controls', "Milei's deregulation decree"]),
+  S('Family planning', 'China', 'ex', 'One-child policy eased', ['Two-child policy', 'Three-child policy', 'National childcare subsidy'], RL),
+  S('Control of the economy', 'Russia', 'rx', 'Ban on Western food imports', ['Retirement age raised', 'Capital controls', 'Foreign company assets seized'], RL),
   B('United States', ['Obama', 'Trump', 'Biden', 'Trump']),
   B('Argentina', ['Fernández de Kirchner', 'Macri', 'Fernández', 'Milei']),
   B('Brazil', ['Rousseff or her 2015 austerity turn', 'Temer', 'Bolsonaro', 'Lula']),
@@ -280,6 +293,8 @@ export const normalizeTopic = (t) => ({
   place: String(t.place ?? t.country ?? '').trim(),
   flag: String(t.flag ?? '').trim(),
   seeTeacher: !!t.seeTeacher,
+  // Which of the four measures suit this topic. Empty = all of them.
+  measures: MEASURES.filter(m => (Array.isArray(t.measures) ? t.measures : []).includes(m)),
   start: String(t.start ?? '').trim(),
   leads: (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim()).filter(Boolean),
 });
