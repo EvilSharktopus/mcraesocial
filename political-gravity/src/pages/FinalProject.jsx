@@ -26,7 +26,7 @@ import { exportMapPng } from '../utils/exportMapPng';
 import FinalEntryView from '../components/FinalEntryView';
 import {
   COL, SETTINGS_ID, END_YEAR, SWING_NUMBERS, IDEOLOGIES, SWING_TESTS, TRACKS, TRACK_IDS,
-  LATER_SWING_HINT, SEE_TEACHER_MESSAGE,
+  LATER_SWING_HINT, SEE_TEACHER_MESSAGE, HARDEST_NOTE, IDEOLOGY_NOTE, MEASURES, MEASURE_HELP, measureOf,
   kindOf, questionsFor, swingKeys, pickSwing, swingWords, yearProblem, orderProblem, missingFrom,
   isComplete, stateLabel, topicText, topicStatus, setupDone, trackLabel, normalizeTopic,
   mapTitle, mapSubtitle,
@@ -93,7 +93,7 @@ function makeTracker() {
 // `initial` is what this page last had on screen for the card; `server` is the
 // last copy Firestore is known to hold. They differ while a save is still in
 // flight — which is exactly when the on-device draft must not be thrown away.
-function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, order, showHint, leads, readOnly, onChange, onSaved }) {
+function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, measure, order, showHint, leads, readOnly, onChange, onSaved }) {
   const kind = kindOf(n);
   const key = draftKey(uid, n);
   const keys = swingKeys(questions);
@@ -355,17 +355,26 @@ function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, 
               <input type="text" {...text('source', { allowPaste: true })} placeholder="https://… or a citation" className={boxClass} style={inputStyle} />
             </label>
           )}
+          {/* Questions 2 and 3 are where students stall, so the nudge sits
+              right under the pair. */}
+          {i === 2 && <p className="text-xs" style={{ color: 'var(--pg-muted)' }}>💡 {HARDEST_NOTE}</p>}
           {q.ideology && (
-            <label className="block max-w-xs">
-              <span className="block text-xs mb-1" style={{ color: 'var(--pg-dim)' }}>Ideology</span>
-              <select disabled={readOnly} value={s.ideology ?? ''} onChange={e => edit({ ideology: e.target.value })} className={boxClass} style={inputStyle}>
-                <option value="">Choose…</option>
-                {IDEOLOGIES.map(x => <option key={x} value={x}>{x}</option>)}
-              </select>
-            </label>
+            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-[minmax(0,16rem)_1fr] items-end">
+              <label className="block">
+                <span className="block text-xs mb-1" style={{ color: 'var(--pg-dim)' }}>Ideology</span>
+                <select disabled={readOnly} value={s.ideology ?? ''} onChange={e => edit({ ideology: e.target.value })} className={boxClass} style={inputStyle}>
+                  <option value="">Choose…</option>
+                  {IDEOLOGIES.map(x => <option key={x} value={x}>{x}</option>)}
+                </select>
+              </label>
+              <p className="text-xs pb-1.5" style={{ color: 'var(--pg-dim)' }}>{IDEOLOGY_NOTE}</p>
+            </div>
           )}
           {q.placement && (
             <div className="rounded-xl px-4 pt-3 pb-2" style={inputStyle}>
+              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--pg-text)' }}>
+                Placing on: <span style={{ color: 'var(--pg-primary)' }}>{measure || 'no measure chosen yet — pick one in Setup'}</span>
+              </p>
               <Spectrum
                 value={s.placement ?? 0}
                 onChange={(v) => edit({ placement: v })}
@@ -402,7 +411,7 @@ function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, 
 }
 
 // ── Setup: birth year, track, topic ─────────────────────────────────────────
-function Setup({ uid, project, review, topics, topicLocked, onDone }) {
+function Setup({ uid, project, review, topics, topicLocked, hasPlacements, onDone }) {
   const thisYear = new Date().getFullYear();
   const [birthYear, setBirthYear] = useState(project?.birthYear ?? '');
   const [trackId, setTrackId] = useState(TRACKS[project?.track] ? project.track : '');
@@ -410,6 +419,11 @@ function Setup({ uid, project, review, topics, topicLocked, onDone }) {
   const [name, setName] = useState(project?.custom ? project.name ?? '' : '');
   const [place, setPlace] = useState(project?.custom ? project.place ?? '' : '');
   const [candidates, setCandidates] = useState(project?.candidates ?? '');
+  // The measure: one of the four offered, or the student's own words.
+  const savedMeasure = measureOf(project);
+  const [measureMode, setMeasureMode] = useState(!savedMeasure ? '' : MEASURES.includes(savedMeasure) ? savedMeasure : 'own');
+  const [ownMeasure, setOwnMeasure] = useState(MEASURES.includes(savedMeasure) ? '' : savedMeasure);
+  const measure = measureMode === 'own' ? ownMeasure.trim().toLowerCase() : measureMode;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -429,17 +443,25 @@ function Setup({ uid, project, review, topics, topicLocked, onDone }) {
     const t = shown.find(x => x.id === mode);
     if (t) chosen = { track: t.track, name: t.name || '', place: t.place, custom: false, topicId: t.id, flag: t.flag || '', seeTeacher: !!t.seeTeacher, candidates: '' };
   }
-  const canSave = yearOk && (topicLocked || chosen);
+  const canSave = yearOk && measure && (topicLocked || chosen);
+  const measureChanging = !!savedMeasure && measure !== savedMeasure;
 
   async function save() {
+    // The placements were made against the old measure; nothing moves them.
+    if (measureChanging && hasPlacements && !confirm(
+      `Change your measure from “${savedMeasure}” to “${measure}”?\n\n` +
+      'Your placements were made on the old measure and will not move on their own. Go back through all six swings and check each one still sits where it should.')) return;
     setBusy(true); setError(null); setSaved(false);
     try {
       // A locked topic is left out of the write entirely: the rules refuse
-      // any change to it once a swing exists.
-      const data = { uid, birthYear: by, updatedAt: serverTimestamp(), ...(topicLocked ? {} : chosen) };
+      // any change to it once a swing exists. The measure is never locked.
+      const data = { uid, birthYear: by, measure, updatedAt: serverTimestamp(), ...(topicLocked ? {} : chosen) };
+      // Pin the Setup tab now, not when the server answers: the page shows
+      // the saved setup at once, and a student who has already moved on to a
+      // card by the time the reply lands must not be pulled back here.
+      onDone?.();
       await setDoc(doc(db, COL.projects, uid), data, { merge: true });
       setSaved(true);
-      onDone?.();
     } catch (err) {
       console.error('Setup save failed', err);
       setError(err.code === 'permission-denied'
@@ -549,6 +571,37 @@ function Setup({ uid, project, review, topics, topicLocked, onDone }) {
         </>
       )}
 
+      {(topicLocked || mode) && (
+        <div>
+          {heading('What are you measuring?')}
+          <p className="text-xs mb-2" style={{ color: 'var(--pg-muted)' }}>{MEASURE_HELP}</p>
+          <div className="flex flex-wrap gap-2">
+            {MEASURES.map(m => (
+              <label key={m} className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl cursor-pointer capitalize" style={choice(measureMode === m)}>
+                <input type="radio" name="measure" checked={measureMode === m} onChange={() => setMeasureMode(m)} />
+                {m}
+              </label>
+            ))}
+            <label className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl cursor-pointer" style={choice(measureMode === 'own')}>
+              <input type="radio" name="measure" checked={measureMode === 'own'} onChange={() => setMeasureMode('own')} />
+              In my own words
+              {measureMode === 'own' && (
+                <input type="text" maxLength={30} value={ownMeasure} onChange={e => setOwnMeasure(e.target.value)} placeholder="e.g. ownership"
+                  className="rounded-lg px-2 py-1 text-sm focus:outline-none w-40" style={inner} />
+              )}
+            </label>
+          </div>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--pg-dim)' }}>
+            One measure for all six swings. It labels your map: “More state ({measure || '…'})” and “Less state ({measure || '…'})”.
+          </p>
+          {measureChanging && hasPlacements && (
+            <p className="text-xs mt-1.5" role="status" style={{ color: '#f59e0b' }}>
+              ⚠ You have already placed swings on “{savedMeasure}”. If you change the measure, go back through all six and check each placement.
+            </p>
+          )}
+        </div>
+      )}
+
       {status === 'pending' && (
         <p className="text-sm px-3 py-2 rounded-xl" role="status" style={{ ...inputStyle, borderColor: 'var(--pg-primary)' }}>
           ⏳ <strong>{topicText(project)}</strong> is waiting for your teacher's approval.
@@ -609,7 +662,7 @@ function Presentation({ birthYear, swings, project, qFor, onClose }) {
       <div className="flex-1 flex min-h-0">
         <div className="flex-1 min-w-0 flex items-center justify-center p-4">
           <div className="w-full" style={{ maxWidth: 'min(100%, calc((100vh - 5rem) * 0.76))' }}>
-            <FinalMap birthYear={birthYear} swings={swings} title={mapTitle(project)} subtitle={mapSubtitle(project)} selected={sel} onSelect={setSel} />
+            <FinalMap birthYear={birthYear} swings={swings} title={mapTitle(project)} subtitle={mapSubtitle(project)} measure={measureOf(project)} selected={sel} onSelect={setSel} />
           </div>
         </div>
         {sel && (
@@ -641,7 +694,7 @@ function MapView({ birthYear, swings, project, qFor }) {
       </div>
       <div className="grid gap-4 md:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] items-start">
         <div className="rounded-2xl overflow-hidden" style={card}>
-          <FinalMap birthYear={birthYear} swings={swings} title={mapTitle(project)} subtitle={mapSubtitle(project)} selected={sel} onSelect={setSel} svgRef={svgRef} />
+          <FinalMap birthYear={birthYear} swings={swings} title={mapTitle(project)} subtitle={mapSubtitle(project)} measure={measureOf(project)} selected={sel} onSelect={setSel} svgRef={svgRef} />
         </div>
         <div className="rounded-2xl p-5" style={card}>
           {sel
@@ -655,7 +708,9 @@ function MapView({ birthYear, swings, project, qFor }) {
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
-export default function FinalProject() {
+// `preview` is the teacher's student view: the same page, run under the
+// teacher's own account as a practice project (see Settings).
+export default function FinalProject({ preview = false }) {
   const { user } = useAuth();
   const uid = user?.uid;
   const [settings, setSettings] = useState(null);
@@ -758,15 +813,22 @@ export default function FinalProject() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
-      <NavBar backTo="/dashboard" backLabel="Dashboard" />
+      <NavBar backTo={preview ? '/teacher' : '/dashboard'} backLabel={preview ? 'Teacher' : 'Dashboard'} />
 
       <main className="flex-1 w-full max-w-5xl mx-auto px-5 py-6 flex flex-col gap-5 no-print">
+        {preview && (
+          <p className="text-sm px-4 py-2.5 rounded-xl" role="status" style={{ ...inputStyle, borderColor: 'var(--pg-primary)' }}>
+            👀 <strong>Student view.</strong> This is your own practice project, exactly as a student gets it. Students never see it.
+            Its writing window and a reset are on the Settings tab.
+          </p>
+        )}
         <div>
           <h1 className="font-display font-bold text-2xl" style={{ color: 'var(--pg-text)' }}>The Orbit Map <span className="text-base font-semibold" style={{ color: 'var(--pg-muted)' }}>· final project</span></h1>
           <p className="text-sm mt-1" style={{ color: 'var(--pg-muted)' }}>
             {title
               ? <>
                   Your topic: <strong style={{ color: 'var(--pg-text)' }}>{title}</strong> · {trackLabel(track)} track
+                  {measureOf(project) && <> · measuring <strong style={{ color: 'var(--pg-text)' }}>{measureOf(project)}</strong></>}
                   {project?.flag && (
                     <span className="ml-2 text-[11px] font-semibold px-2 py-0.5 rounded-full align-middle"
                       style={{ border: '1px solid var(--pg-primary)', color: 'var(--pg-primary)' }}>{project.flag}</span>
@@ -797,7 +859,8 @@ export default function FinalProject() {
               /* Saving pins this tab, so an approval (and the teacher's note)
                  arrives in front of the student instead of the page jumping
                  to the first card the moment the topic clears. */
-              <Setup uid={uid} project={project} review={review} topics={topics} topicLocked={topicLocked} onDone={() => setTab('setup')} />
+              <Setup uid={uid} project={project} review={review} topics={topics} topicLocked={topicLocked}
+                hasPlacements={Object.values(swings || {}).some(x => typeof x?.placement === 'number')} onDone={() => setTab('setup')} />
             )}
 
             {SWING_NUMBERS.includes(current) && ready && (
@@ -821,7 +884,7 @@ export default function FinalProject() {
                   key={`${current}-${track}`}
                   n={current} uid={uid} birthYear={birthYear}
                   initial={swings[current]} server={server[current]} previous={current > 1 ? swings[current - 1] : null}
-                  questions={qFor(current)} order={order} leads={leads}
+                  questions={qFor(current)} measure={measureOf(project)} order={order} leads={leads}
                   showHint={current > 1 && done.includes(1)}
                   readOnly={!windowOpen} onChange={onSwingChange} onSaved={onSwingSaved}
                 />
@@ -852,7 +915,7 @@ export default function FinalProject() {
       {/* Print view: the map in fixed light colours, then all six cards. */}
       {mapReady && (
         <div className="final-print-only">
-          <FinalMap birthYear={birthYear} swings={swings} title={title} subtitle={mapSubtitle(project)} print />
+          <FinalMap birthYear={birthYear} swings={swings} title={title} subtitle={mapSubtitle(project)} measure={measureOf(project)} print />
           {SWING_NUMBERS.map(n => <div key={n} className="final-print-entry"><FinalEntryView n={n} swing={swings[n]} questions={qFor(n)} /></div>)}
         </div>
       )}

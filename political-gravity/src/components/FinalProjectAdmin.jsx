@@ -12,12 +12,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useRoster, nameFor } from '../hooks/useRoster';
+import { useAuth } from '../auth/AuthContext';
 import FinalMap from './FinalMap';
 import FinalEntryView from './FinalEntryView';
 import {
   COL, SETTINGS_ID, SWING_NUMBERS, KINDS, TRACKS, TRACK_IDS, DEFAULT_QUESTIONS, STARTER_TOPICS,
   SEE_TEACHER_MESSAGE, kindOf, questionsFor, signalFields, isComplete, orderProblem,
   topicKey, topicText, topicStatus, classKeyOf, trackLabel, normalizeTopic, mapTitle, mapSubtitle,
+  measureOf, openUidsFor, withLatestStarters, startersOutOfDate,
 } from '../data/finalProject';
 
 const btnPrimary = { backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' };
@@ -98,6 +100,7 @@ function StudentDetail({ uid, name, project, review, swings, signals, settings, 
               {project?.place ? topicText(project) : 'No topic yet'}
               <Flag text={project?.flag} />
               {project?.track ? ` · ${trackLabel(project.track)} track` : ''}
+              {measureOf(project) ? ` · measuring ${measureOf(project)}` : ''}
               {project?.custom ? ' · proposed by the student' : ''}
               {birthYear ? ` · born ${birthYear}` : ''}
               {' · '}<span style={{ color: STATUS[status].color }}>{STATUS[status].text}</span>
@@ -134,7 +137,7 @@ function StudentDetail({ uid, name, project, review, swings, signals, settings, 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] items-start">
           {birthYear
             ? <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--pg-border)' }}>
-                <FinalMap birthYear={birthYear} swings={swings || {}} title={mapTitle(project)} subtitle={mapSubtitle(project)} selected={n} onSelect={setN} />
+                <FinalMap birthYear={birthYear} swings={swings || {}} title={mapTitle(project)} subtitle={mapSubtitle(project)} measure={measureOf(project)} selected={n} onSelect={setN} />
               </div>
             : <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No birth year yet, so there is no map to draw.</p>}
           <div className="flex flex-col gap-5 min-w-0">
@@ -313,6 +316,7 @@ function QuestionEditor({ settings, run }) {
 // ── The tab ─────────────────────────────────────────────────────────────────
 export default function FinalProjectAdmin() {
   const roster = useRoster();
+  const { user } = useAuth();
   const [settings, setSettings] = useState(null);
   const projectRows = useCollection(COL.projects);
   const reviewRows  = useCollection(COL.reviews);
@@ -363,7 +367,7 @@ export default function FinalProjectAdmin() {
   const setWindow = (name, open) => {
     const next = open ? [...new Set([...openClasses, name])] : openClasses.filter(c => c !== name);
     return run(open ? 'Opening the writing window' : 'Closing the writing window', () =>
-      setDoc(settingsRef(), { openClasses: next, openUids: uidsFor(next) }, { merge: true }));
+      setDoc(settingsRef(), { openClasses: next, openUids: openUidsFor(uidsFor(next), settings?.previewUid) }, { merge: true }));
   };
 
   // A student added to an open class after the window was opened is not in
@@ -371,7 +375,7 @@ export default function FinalProjectAdmin() {
   const rosterLoaded = Object.keys(roster).length > 0;
   useEffect(() => {
     if (!settings || !rosterLoaded || !openClasses.length) return;
-    const want = [...new Set(openClasses.flatMap(c => classes[c] || []))];
+    const want = openUidsFor(openClasses.flatMap(c => classes[c] || []), settings.previewUid);
     if (!sameSet(want, settings.openUids || [])) {
       setDoc(settingsRef(), { openUids: want }, { merge: true }).catch(err => console.warn('Window resync failed', err.code));
     }
@@ -388,10 +392,13 @@ export default function FinalProjectAdmin() {
   }
 
   const qFor = (p, n) => questionsFor(settings, p?.track, kindOf(n));
+  // The teacher's own practice project (Settings → Student view) sits in
+  // the list like any other, so approvals and the detail view can be tried.
+  const nameOf = (uid) => (uid === user?.uid ? 'You · student view' : nameFor(roster, uid, `Student ${uid.slice(0, 5)}`));
   const shownClass = classFilter && classes[classFilter] ? classFilter
     : (classNames.find(c => (classes[c] || []).some(u => projects[u])) ?? classNames[0]);
   const students = (classes[shownClass] || [])
-    .map(uid => ({ uid, name: nameFor(roster, uid, `Student ${uid.slice(0, 5)}`) }))
+    .map(uid => ({ uid, name: nameOf(uid) }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const pending = Object.keys(projects).filter(uid => topicStatus(projects[uid], reviews[uid]) === 'pending');
   const classOf = (uid) => (roster[uid] ? classKeyOf(roster[uid]) : 'No class');
@@ -443,7 +450,7 @@ export default function FinalProjectAdmin() {
                 <p className="text-sm">
                   <strong>{topicText(projects[uid])}</strong>
                   <Flag text={projects[uid].flag} />
-                  <span style={{ color: 'var(--pg-dim)' }}> · {trackLabel(projects[uid].track)} track · {nameFor(roster, uid, 'Unknown student')} · {classOf(uid)}</span>
+                  <span style={{ color: 'var(--pg-dim)' }}> · {trackLabel(projects[uid].track)} track · {nameOf(uid)} · {classOf(uid)}</span>
                 </p>
                 <Verdict key={topicKey(projects[uid])} uid={uid} project={projects[uid]} review={reviews[uid]} run={run} />
               </div>
@@ -483,7 +490,10 @@ export default function FinalProjectAdmin() {
                     <tr key={uid} style={{ borderTop: '1px solid var(--pg-border)' }}>
                       <td className="py-2 pr-3 whitespace-nowrap">{name}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">{trackLabel(p?.track) || <span style={{ color: 'var(--pg-dim)' }}>—</span>}</td>
-                      <td className="py-2 pr-3">{p?.place ? <>{topicText(p)}<Flag text={p.flag} /></> : <span style={{ color: 'var(--pg-dim)' }}>—</span>}</td>
+                      <td className="py-2 pr-3">
+                        {p?.place ? <>{topicText(p)}<Flag text={p.flag} /></> : <span style={{ color: 'var(--pg-dim)' }}>—</span>}
+                        {measureOf(p) && <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>measuring {measureOf(p)}</span>}
+                      </td>
                       <td className="py-2 pr-3 whitespace-nowrap" style={{ color: STATUS[status].color }}>{STATUS[status].text}</td>
                       <td className="py-2 pr-3 whitespace-nowrap">
                         <strong>{complete}</strong> / 6 complete
@@ -514,6 +524,21 @@ export default function FinalProjectAdmin() {
             <p className="text-sm" style={{ color: 'var(--pg-dim)' }}>No topics yet — students can only propose their own.</p>
             <button onClick={() => saveTopics(STARTER_TOPICS)} className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={btnPrimary}>
               Load the starting list ({STARTER_TOPICS.filter(t => t.track === 'sector').length} sector, {STARTER_TOPICS.filter(t => t.track === 'big').length} big picture)
+            </button>
+          </div>
+        )}
+        {startersOutOfDate(topics) && (
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-3 px-3 py-2 rounded-xl" style={{ ...inputStyle, borderColor: '#f59e0b' }}>
+            <p className="text-sm" style={{ color: 'var(--pg-text)' }}>
+              The built-in starting topics have been revised since you loaded them.
+            </p>
+            <button className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={btnPrimary}
+              onClick={() => {
+                if (confirm('Replace the built-in topics with the latest versions?\n\n' +
+                  'Topics you added yourself are kept. Any edits you made to a built-in topic (a flag, reworded leads) are overwritten. ' +
+                  'Students who already chose a topic keep it.')) saveTopics(withLatestStarters(topics));
+              }}>
+              Update starting topics
             </button>
           </div>
         )}
@@ -566,7 +591,7 @@ export default function FinalProjectAdmin() {
       {openUid && (
         <StudentDetail
           uid={openUid}
-          name={nameFor(roster, openUid, 'Student')}
+          name={nameOf(openUid)}
           project={projects[openUid]} review={reviews[openUid]}
           swings={swings[openUid]} signals={signals[openUid]} settings={settings}
           run={run} onClose={() => setOpenUid(null)}

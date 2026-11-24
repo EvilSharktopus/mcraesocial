@@ -73,6 +73,9 @@
  *                   their ids and their defaults are DEFAULT_QUESTIONS.
  *   openClasses:  string[]  — classes (roster course · stream) whose writing
  *                             window is open
+ *   previewUid:   string | null — the teacher's own uid while the writing
+ *                             window of their practice project (Settings →
+ *                             Student view) is open; kept in openUids too
  *   openUids:     string[]  — the students those classes contain. This is
  *                             what the rules check on every swing write, and
  *                             what the student page reads: students cannot
@@ -85,6 +88,10 @@
  *   custom:       boolean  — proposed by the student
  *   seeTeacher:   boolean  — copied from the topic; held like a custom one
  *   topicId, flag: from the topic list; null / '' on a custom topic
+ *   measure:      string   — what "more state" is more of: spending,
+ *                            regulation, enforcement, restriction, or the
+ *                            student's own words. One for all six swings;
+ *                            labels the map axis. Never frozen.
  *   candidates:   string   — custom only: candidate swings, or governments
  *   updatedAt:    Timestamp
  *   track/name/place/custom/topicId/flag/seeTeacher freeze once any swing

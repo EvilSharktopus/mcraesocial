@@ -16,6 +16,7 @@ import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 import FinalProjectAdmin from '../components/FinalProjectAdmin';
 import AccountMerge from '../components/AccountMerge';
+import StudentViewCard from '../components/StudentViewCard';
 
 // The collections that hold student work for a reading, in the order the
 // Reset confirmation lists them. Diploma Vault flags are deliberately not
@@ -1048,6 +1049,12 @@ function SettingsTab({ userEmail }) {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Student view */}
+        <div className="rounded-2xl p-6" style={cardStyle}>
+          <h2 className="font-semibold mb-1" style={{ color: 'var(--pg-text)' }}>👀 Student view</h2>
+          <StudentViewCard />
         </div>
 
         {/* Merge two accounts */}
