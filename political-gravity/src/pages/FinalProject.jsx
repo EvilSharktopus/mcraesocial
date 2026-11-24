@@ -26,7 +26,7 @@ import { exportMapPng } from '../utils/exportMapPng';
 import FinalEntryView from '../components/FinalEntryView';
 import {
   COL, SETTINGS_ID, END_YEAR, SWING_NUMBERS, IDEOLOGIES, SWING_TESTS, TRACKS, TRACK_IDS,
-  LATER_SWING_HINT, SEE_TEACHER_MESSAGE, HARDEST_NOTE, IDEOLOGY_NOTE, MEASURES, MEASURE_HELP, MEASURE_NOTE, measuresFor, measureOf,
+  LATER_SWING_HINT, SEE_TEACHER_MESSAGE, HARDEST_NOTE, IDEOLOGY_NOTE, MEASURES, MEASURE_HELP, MEASURE_NOTE, measuresFor, measureOf, leadPlan,
   kindOf, questionsFor, swingKeys, pickSwing, swingWords, yearProblem, orderProblem, missingFrom,
   isComplete, stateLabel, topicText, topicStatus, setupDone, trackLabel, normalizeTopic,
   mapTitle, mapSubtitle,
@@ -93,7 +93,7 @@ function makeTracker() {
 // `initial` is what this page last had on screen for the card; `server` is the
 // last copy Firestore is known to hold. They differ while a save is still in
 // flight — which is exactly when the on-device draft must not be thrown away.
-function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, measure, order, showHint, leads, readOnly, onChange, onSaved }) {
+function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, measure, order, showHint, leadPlan: plan, readOnly, onChange, onSaved }) {
   const kind = kindOf(n);
   const key = draftKey(uid, n);
   const keys = swingKeys(questions);
@@ -308,12 +308,40 @@ function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, 
       {showHint && (
         <p className="text-sm px-3 py-2 rounded-lg" style={{ ...inputStyle, borderColor: 'var(--pg-primary)' }}>💡 {LATER_SWING_HINT}</p>
       )}
-      {leads?.length > 0 && (
-        <details className="text-xs px-3 py-2 rounded-lg" style={inputStyle}>
-          <summary className="cursor-pointer font-semibold" style={{ color: 'var(--pg-text)' }}>Where to look next</summary>
-          <p className="mt-1.5" style={{ color: 'var(--pg-muted)' }}>{leads.join(' · ')}</p>
-          <p className="mt-1" style={{ color: 'var(--pg-dim)' }}>Suggestions, not required swings.</p>
-        </details>
+      {/* Where to look next follows the card: swing 1 points at the first
+          lead, swing 2 at the second, and so on. Predictions have none. */}
+      {plan?.pool.length > 0 && (
+        <div className="text-xs px-3 py-2 rounded-lg" style={inputStyle}>
+          <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Where to look next</p>
+          {plan.perCard && kind === 'lived' && (
+            <p className="mt-1 text-sm" style={{ color: 'var(--pg-text)' }}>
+              For swing {n}, start with: <strong style={{ color: 'var(--pg-primary)' }}>{plan.pool[n - 1]}</strong>
+            </p>
+          )}
+          {plan.perCard && kind === 'predicted' && (
+            <p className="mt-1 text-sm" style={{ color: 'var(--pg-text)' }}>
+              There is no lead for a prediction. It follows from the pattern on your own map and from pressure you can show today.
+            </p>
+          )}
+          {(!plan.perCard || kind === 'lived') && (
+            <p className="mt-1.5" style={{ color: 'var(--pg-muted)' }}>
+              {plan.perCard ? 'All four: ' : ''}
+              {plan.pool.map((l, i) => (
+                <span key={`${l}-${i}`}>
+                  {i > 0 && ' · '}
+                  <span style={plan.perCard && i === n - 1 ? { color: 'var(--pg-text)', fontWeight: 600 } : undefined}>{l}</span>
+                </span>
+              ))}
+            </p>
+          )}
+          {!(plan.perCard && kind === 'predicted') && (
+            <p className="mt-1" style={{ color: 'var(--pg-dim)' }}>
+              {plan.perCard
+                ? 'A suggestion, not a required swing. Replace it with one you find yourself if it does not hold up.'
+                : 'Suggestions, not required swings.'}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
@@ -810,7 +838,7 @@ export default function FinalProject({ preview = false }) {
   const topicLocked = !!project?.place && Object.keys(swings || {}).length > 0 && !review?.topicUnlocked;
   const loading = project === undefined || settings === null || (swings === null && !loadErr);
   const liveTopic = topics.find(t => t.id === project?.topicId);
-  const leads = !project?.custom && liveTopic?.leads?.length ? liveTopic.leads : [];
+  const plan = leadPlan(project?.custom ? null : liveTopic);
 
   // Land on the first thing that still needs doing.
   const current = tab ?? (!ready ? 'setup' : mapReady ? 'map' : (SWING_NUMBERS.find(n => !done.includes(n)) ?? 1));
@@ -903,7 +931,7 @@ export default function FinalProject({ preview = false }) {
                   key={`${current}-${track}`}
                   n={current} uid={uid} birthYear={birthYear}
                   initial={swings[current]} server={server[current]} previous={current > 1 ? swings[current - 1] : null}
-                  questions={qFor(current)} measure={measureOf(project)} order={order} leads={leads}
+                  questions={qFor(current)} measure={measureOf(project)} order={order} leadPlan={plan}
                   showHint={current > 1 && done.includes(1)}
                   readOnly={!windowOpen} onChange={onSwingChange} onSaved={onSwingSaved}
                 />
