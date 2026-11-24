@@ -310,7 +310,7 @@ function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, 
       )}
       {/* Where to look next follows the card: swing 1 points at the first
           lead, swing 2 at the second, and so on. Predictions have none. */}
-      {plan?.pool.length > 0 && (
+      {(plan?.pool.length > 0 || plan?.predict) && (
         <div className="text-xs px-3 py-2 rounded-lg" style={inputStyle}>
           <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>Where to look next</p>
           {plan.perCard && kind === 'lived' && (
@@ -320,7 +320,14 @@ function SwingEditor({ n, uid, birthYear, initial, server, previous, questions, 
           )}
           {plan.perCard && kind === 'predicted' && (
             <p className="mt-1 text-sm" style={{ color: 'var(--pg-text)' }}>
-              There is no lead for a prediction. It follows from the pattern on your own map and from pressure you can show today.
+              {plan.predict
+                ? <>For your predictions: <strong style={{ color: 'var(--pg-primary)' }}>{plan.predict}</strong></>
+                : 'There is no lead for a prediction. It follows from the pattern on your own map and from pressure you can show today.'}
+            </p>
+          )}
+          {!plan.perCard && plan.predict && kind === 'predicted' && (
+            <p className="mt-1 text-sm" style={{ color: 'var(--pg-text)' }}>
+              For your predictions: <strong style={{ color: 'var(--pg-primary)' }}>{plan.predict}</strong>
             </p>
           )}
           {(!plan.perCard || kind === 'lived') && (
@@ -672,6 +679,7 @@ function Setup({ uid, project, review, topics, topicLocked, hasPlacements, onDon
           <ul className="list-disc ml-5 mt-1" style={{ color: 'var(--pg-muted)' }}>
             {leads.map((l, i) => <li key={`${l}-${i}`}>{l}</li>)}
           </ul>
+          {live?.predict && <p className="mt-1.5" style={{ color: 'var(--pg-muted)' }}>For your predictions: {live.predict}</p>}
           <p className="text-xs mt-1.5" style={{ color: 'var(--pg-dim)' }}>Suggestions, not required swings. Replace any that do not hold up with one you find yourself.</p>
         </div>
       )}

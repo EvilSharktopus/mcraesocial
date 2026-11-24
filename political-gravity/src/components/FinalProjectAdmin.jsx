@@ -193,7 +193,7 @@ function StudentDetail({ uid, name, project, review, swings, signals, settings, 
 }
 
 // ── Topic editor ────────────────────────────────────────────────────────────
-const blankTopic = (track) => ({ id: null, track, name: '', place: '', flag: '', seeTeacher: false, start: '', leads: [], measures: [] });
+const blankTopic = (track) => ({ id: null, track, name: '', place: '', flag: '', seeTeacher: false, start: '', leads: [], predict: '', measures: [] });
 
 function TopicForm({ initial, onSave, onCancel }) {
   const [t, setT] = useState({ ...initial, leadsText: (initial.leads || []).join('\n') });
@@ -227,8 +227,12 @@ function TopicForm({ initial, onSave, onCancel }) {
         <input type="text" value={t.start} onChange={e => set({ start: e.target.value })} className={cls} style={innerStyle} />
       </label>
       <label className="block sm:col-span-2">
-        {small('Leads — one per line. Shown only after they choose, under “Where to look next”.')}
+        {small('Leads — one per line, in date order. Shown only after they choose, under “Where to look next”. With four hints in all (a starting swing and three leads, or four leads), each lived card points at its own.')}
         <textarea rows={4} value={t.leadsText} onChange={e => set({ leadsText: e.target.value })} className={`${cls} resize-y`} style={innerStyle} />
+      </label>
+      <label className="block sm:col-span-2">
+        {small('A hint for the two predicted swings (optional, shown on cards 5 and 6)')}
+        <input type="text" value={t.predict || ''} onChange={e => set({ predict: e.target.value })} className={cls} style={innerStyle} />
       </label>
       <div className="sm:col-span-2">
         {small('Measures that fit — the others are greyed out for students. Leave all unticked to offer all four.')}
@@ -569,9 +573,9 @@ export default function FinalProjectAdmin() {
                     <span className="min-w-0">
                       {topicText(t)}<Flag text={t.flag} />
                       {t.seeTeacher && <span className="ml-2 text-[11px] font-semibold" style={{ color: '#f59e0b' }}>⚑ see teacher first</span>}
-                      {(t.start || t.leads.length > 0) && (
+                      {(t.start || t.leads.length > 0 || t.predict) && (
                         <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>
-                          {[t.start && `starts from: ${t.start}`, t.leads.length > 0 && `leads: ${t.leads.join(' / ')}`].filter(Boolean).join(' · ')}
+                          {[t.start && `starts from: ${t.start}`, t.leads.length > 0 && `leads: ${t.leads.join(' / ')}`, t.predict && `predictions: ${t.predict}`].filter(Boolean).join(' · ')}
                         </span>
                       )}
                       <span className="block text-xs" style={{ color: 'var(--pg-dim)' }}>

@@ -227,13 +227,14 @@ export const SWING_TESTS = [
 ];
 
 // ── Topics ──────────────────────────────────────────────────────────────────
-// { id, track, name, place, flag?, seeTeacher?, start?, leads?, measures? }
+// { id, track, name, place, flag?, seeTeacher?, start?, leads?, predict?, measures? }
 //   name       what is being traced; blank on the big-picture track, where
 //              the place is the topic
 //   flag       a short label shown beside the topic and on the project
 //   seeTeacher holds the choice for approval, like a custom topic
 //   start      a swing to start from, shown before choosing
 //   leads      hints shown only after choosing, under "Where to look next"
+//   predict    a hint for the two predicted swings, shown on those cards
 //   measures   which of the four measures suit it; the rest are greyed out
 //              in setup. Empty = all four.
 // This list is only the seed — the live one is settings/finalProject.topics.
@@ -242,10 +243,10 @@ const RL = 'Rejection of liberalism';
 // s(pending), r(egulation), e(nforcement), x = restriction.
 const FIT = { s: 'spending', r: 'regulation', e: 'enforcement', x: 'restriction' };
 const S = (name, place, fits, start, leads, flag = '') =>
-  ({ track: 'sector', name, place, start, leads, flag, seeTeacher: false, measures: [...fits].map(c => FIT[c]) });
+  ({ track: 'sector', name, place, start, leads, predict: '', flag, seeTeacher: false, measures: [...fits].map(c => FIT[c]) });
 // A government's overall direction can be read on any measure, so the
 // big-picture topics leave all four open (an empty list means no limit).
-const B = (place, leads, seeTeacher = false) => ({ track: 'big', name: '', place, start: '', leads, flag: '', seeTeacher, measures: [] });
+const B = (place, leads, seeTeacher = false, predict = '') => ({ track: 'big', name: '', place, start: '', leads, predict, flag: '', seeTeacher, measures: [] });
 export const STARTER_TOPICS = [
   S('Carbon pricing', 'Canada', 'r', 'BC carbon tax', ['Federal carbon pricing law', 'Alberta repeals its carbon levy', 'End of the consumer carbon charge']),
   S('Drug policy', 'Canada', 'rex', 'Supreme Court ruling on Insite', ['Mandatory minimum sentences', 'Cannabis legalized', 'BC starts, then ends, decriminalization']),
@@ -271,7 +272,7 @@ export const STARTER_TOPICS = [
   B('South Korea', ['Lee Myung-bak', 'Moon', 'Yoon', 'Lee Jae-myung']),
   B('Italy', ['Monti', 'Renzi or Draghi', "Conte's first government", 'Meloni']),
   B('Canada', ["Harper's stimulus", "Harper's cuts", 'Trudeau', 'Carney'], true),
-  B('Alberta', ['Stelmach', 'Redford', "Prentice's 2015 budget", 'Notley', 'Kenney', 'Use Smith as the starting point for predictions.']),
+  B('Alberta', ['Stelmach', "Prentice's 2015 budget", 'Notley', 'Kenney'], false, 'Use Smith as the starting point for predictions.'),
 ].map((t, i) => ({ id: `starter-${i + 1}`, ...t }));
 // Ids are by position, so a topic keeps its id when its wording changes —
 // which is what lets a student's choice follow an update to this list.
@@ -296,33 +297,55 @@ function fitOf(t) {
   return builtInFits[topicKey({ track: TRACKS[t.track] ? t.track : 'sector', name: t.name ?? t.topic, place: t.place ?? t.country })] ?? [];
 }
 
+// Built-in topics whose hints have been reissued. A stored topic that still
+// carries one of these lists word for word has not been edited by the
+// teacher, so it follows the built-in list to its current version without
+// waiting for "Update starting topics". One that has been edited no longer
+// matches, and is left exactly as the teacher wrote it.
+const REISSUED = [
+  { key: 'big||alberta', leads: ['Stelmach', 'Redford', "Prentice's 2015 budget", 'Notley', 'Kenney', 'Use Smith as the starting point for predictions.'] },
+];
+function current(t) {
+  const key = topicKey({ track: TRACKS[t.track] ? t.track : 'sector', name: t.name ?? t.topic, place: t.place ?? t.country });
+  const stored = (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim());
+  const old = REISSUED.find(r => r.key === key && r.leads.length === stored.length && r.leads.every((l, i) => l === stored[i]));
+  if (!old) return t;
+  const now = STARTER_TOPICS.find(x => topicKey(x) === key);
+  return now ? { ...t, leads: now.leads, predict: now.predict } : t;
+}
+
 // A topic as stored, tidied into the shape above. Tolerates a list saved
 // before tracks existed (topic/country, no track).
-export const normalizeTopic = (t) => ({
-  id: t.id,
-  track: TRACKS[t.track] ? t.track : 'sector',
-  name: String(t.name ?? t.topic ?? '').trim(),
-  place: String(t.place ?? t.country ?? '').trim(),
-  flag: String(t.flag ?? '').trim(),
-  seeTeacher: !!t.seeTeacher,
-  // Which of the four measures suit this topic. Empty = all of them.
-  measures: MEASURES.filter(m => fitOf(t).includes(m)),
-  start: String(t.start ?? '').trim(),
-  leads: (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim()).filter(Boolean),
-});
+// (One argument only: this is handed straight to Array.map.)
+export function normalizeTopic(raw) {
+  const t = current(raw);
+  return {
+    id: t.id,
+    track: TRACKS[t.track] ? t.track : 'sector',
+    name: String(t.name ?? t.topic ?? '').trim(),
+    place: String(t.place ?? t.country ?? '').trim(),
+    flag: String(t.flag ?? '').trim(),
+    seeTeacher: !!t.seeTeacher,
+    // Which of the four measures suit this topic. Empty = all of them.
+    measures: MEASURES.filter(m => fitOf(t).includes(m)),
+    start: String(t.start ?? '').trim(),
+    leads: (Array.isArray(t.leads) ? t.leads : []).map(x => String(x).trim()).filter(Boolean),
+    predict: String(t.predict ?? '').trim(),
+  };
+}
 
 // ── Leads, card by card ──
 // A topic's hints in the order a student meets them: on the sector track the
 // starting swing and then its leads, on the big-picture track the
 // governments to trace. When that comes to exactly four, they line up with
 // the four lived swings, so each card can point at its own. Any other count
-// (Alberta lists five governments and a note about predictions) cannot be
-// lined up honestly, and the card shows the whole list instead.
+// cannot be lined up honestly, and the card shows the whole list instead.
+// `predict` is a separate hint for the two predicted swings.
 export function leadPlan(topic) {
-  if (!topic) return { pool: [], perCard: false };
+  if (!topic) return { pool: [], perCard: false, predict: '' };
   const pool = (topic.track === 'sector' ? [topic.start, ...(topic.leads || [])] : (topic.leads || []))
     .map(x => String(x ?? '').trim()).filter(Boolean);
-  return { pool, perCard: pool.length === 4 };
+  return { pool, perCard: pool.length === 4, predict: String(topic.predict ?? '').trim() };
 }
 
 export const SEE_TEACHER_MESSAGE = 'Talk to Mr. McRae before choosing this';
