@@ -111,6 +111,19 @@ function clearDraft(key) {
 }
 const millis = (ts) => ts?.toMillis?.() ?? 0;
 
+// When the student-led flow (submit, read a classmate's point, reflect) went
+// in. Positions saved before it carry no `submitted` flag, because there was
+// nothing to submit: the teacher's Reflect switch showed the whole class's
+// dots to everyone. That work is finished and was already shared, so it
+// counts as submitted. Without this, a time period the class did before the
+// change has no dots at all, and a student catching up on it can never read
+// a point and so can never reach Reflect.
+const STUDENT_LED_SINCE_MS = Date.UTC(2026, 9, 13, 12, 46);
+const sharedWithClass = (p) => p.submitted === true
+  || (p.submitted === undefined
+      && millis(p.updatedAt) > 0 && millis(p.updatedAt) < STUDENT_LED_SINCE_MS
+      && (hasPosition(p.positionX) || hasPosition(p.positionY)));
+
 // The article, isolated behind memo so it re-renders ONLY when the HTML itself
 // changes. React re-applies dangerouslySetInnerHTML on re-render, which tears
 // out and rebuilds the text nodes — and any selection the student is holding
@@ -746,7 +759,8 @@ export default function Reading() {
 
   // Only SUBMITTED classmates appear: nobody's half-written justification is
   // readable, and every visible dot has a rationale behind it to tap into.
-  const submittedPlots = classPlots.filter(p => p.uid !== user?.uid && p.submitted === true);
+  // (Work from before there was a Submit counts — see sharedWithClass.)
+  const submittedPlots = classPlots.filter(p => p.uid !== user?.uid && sharedWithClass(p));
   const classDotsX = submittedPlots
     .filter(p => typeof p.positionX === 'number')
     .map(p => ({ value: p.positionX, label: 'Classmate — tap to read why', uid: p.uid, axis: 'economic', justification: p.justification || '' }));
