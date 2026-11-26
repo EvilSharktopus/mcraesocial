@@ -1,5 +1,5 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -13,6 +13,15 @@ import Seminar      from './pages/Seminar';
 import Teacher      from './pages/Teacher';
 import StudyPackage from './pages/StudyPackage';
 import FinalProject from './pages/FinalProject';
+
+// One Reading per time period. Going from one period straight to the next
+// (the missing-work queue does) would otherwise keep the same component, and
+// with it the last period's marker and text, ready to be autosaved into this
+// one. Keying on the id gives each period a fresh page.
+function ReadingRoute() {
+  const { id } = useParams();
+  return <Reading key={id} />;
+}
 
 function RootRedirect() {
   const { user, isTeacher, isLegacyStudent } = useAuth();
@@ -45,7 +54,7 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/" element={<RootRedirect />} />
               <Route path="/dashboard"     element={<ProtectedRoute role="student"><Dashboard /></ProtectedRoute>} />
-              <Route path="/reading/:id"   element={<ProtectedRoute role="student"><Reading /></ProtectedRoute>} />
+              <Route path="/reading/:id"   element={<ProtectedRoute role="student"><ReadingRoute /></ProtectedRoute>} />
               <Route path="/study-package" element={<ProtectedRoute role="student"><StudyPackage /></ProtectedRoute>} />
               <Route path="/final-project" element={<ProtectedRoute role="student"><FinalProject /></ProtectedRoute>} />
               <Route path="/teacher/student-view" element={<ProtectedRoute role="teacher"><FinalProject preview /></ProtectedRoute>} />

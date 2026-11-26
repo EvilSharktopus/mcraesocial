@@ -12,6 +12,7 @@ import { useReadings } from '../hooks/useReadings';
 import { STANDARD_READINGS, positionLabel } from '../data/readings';
 import { GRADE_SCALE, gradeKey, scoreOf, overallFor, readingMark, partlyMarked } from '../data/rubric';
 import { classKeyOf } from '../data/finalProject';
+import { redoneSinceMarked } from '../data/catchup';
 import { dateStamp, downloadJson } from '../utils/download';
 import ReadingEditorModal from '../components/ReadingEditorModal';
 import FinalProjectAdmin from '../components/FinalProjectAdmin';
@@ -738,7 +739,10 @@ function GradingTab() {
     const next = grades[key]?.[field] === code ? null : code;
     try {
       await setDoc(doc(db, 'pg_grades', key),
-        { uid, readingId, [field]: next, updatedAt: serverTimestamp() }, { merge: true });
+        // Each piece keeps the time of its own mark, so the missing-work queue
+        // can tell a piece redone since it was marked Poor from one that was
+        // not, even after the other piece is marked later.
+        { uid, readingId, [field]: next, [`${field}At`]: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
     } catch (err) {
       console.error('Failed to save grade:', err);
       alert(err.code === 'permission-denied'
@@ -796,6 +800,9 @@ function GradingTab() {
           const isOpen    = expanded === r.id;
           // Autosaved drafts are visible below but do not count as handed in.
           const nDone     = subs.filter(s => s.reflection && s.reflection.draft !== true).length;
+          // Marked Poor, then handed in again: these want a second look.
+          const nRedone   = subs.filter(s => ['justification', 'reflection'].some(piece =>
+            redoneSinceMarked({ plot: s.plot, reflection: s.reflection, grade: grades[gradeKey(s.uid, r.id)] }, piece))).length;
 
           return (
             <div key={r.id} className="rounded-2xl p-5" style={cardStyle}>
@@ -812,6 +819,7 @@ function GradingTab() {
                     ? 'No submissions'
                     : `${subs.length} submission${subs.length === 1 ? '' : 's'}` +
                       (nDone ? ` · ${nDone} reflected` : '')}
+                  {nRedone > 0 && <span style={{ color: '#f59e0b' }}> · ↻ {nRedone} redone since marked</span>}
                 </span>
               </div>
 
@@ -876,7 +884,7 @@ function GradingTab() {
   );
 }
 
-function RubricRow({ label, value, onPick }) {
+function RubricRow({ label, value, onPick, redone = false }) {
   return (
     <div className="flex items-center gap-2 mt-2 flex-wrap">
       <span className="text-[11px] w-20 shrink-0" style={{ color: 'var(--pg-dim)' }}>{label}</span>
@@ -896,6 +904,12 @@ function RubricRow({ label, value, onPick }) {
           </button>
         );
       })}
+      {/* The student has handed this in again since it was marked Poor. */}
+      {redone && (
+        <span className="text-[11px] font-semibold px-2 py-1 rounded-md" style={{ border: '1px solid #f59e0b', color: '#f59e0b' }}>
+          ↻ redone since you marked it
+        </span>
+      )}
     </div>
   );
 }
@@ -930,6 +944,7 @@ function GradingDetail({ view, sub, grade, onGrade }) {
           ? <p className="text-xs" style={body}>{sub.plot.justification}</p>
           : <p className="text-xs" style={dim}>No justification written.</p>}
         <RubricRow label="Justification" value={grade?.justification}
+          redone={redoneSinceMarked({ plot: sub.plot, reflection: sub.reflection, grade }, 'justification')}
           onPick={code => onGrade('justification', code)} />
       </>
     );
@@ -948,6 +963,7 @@ function GradingDetail({ view, sub, grade, onGrade }) {
           ? <p className="text-xs" style={body}>{sub.reflection.reflection}</p>
           : <p className="text-xs" style={dim}>No reflection submitted.</p>}
         <RubricRow label="Reflection" value={grade?.reflection}
+          redone={redoneSinceMarked({ plot: sub.plot, reflection: sub.reflection, grade }, 'reflection')}
           onPick={code => onGrade('reflection', code)} />
       </>
     );

@@ -7,6 +7,8 @@ import { useAuth } from '../auth/AuthContext';
 import { HANDOUT_URL, RUBRIC_URL } from '../data/readings';
 import { FINAL_HANDOUT_URL } from '../data/finalProject';
 import { useReadings } from '../hooks/useReadings';
+import { useCatchUp } from '../hooks/useCatchUp';
+import { owedText } from '../data/catchup';
 import { isGraded, overallOf, readingMark, partlyMarked, bandName, scoreOf } from '../data/rubric';
 
 const STATUS_CONFIG = {
@@ -27,6 +29,7 @@ export default function Dashboard() {
   const [graded,    setGraded]    = useState(null);
   const { readings, loading } = useReadings();
   const [showGrades, setShowGrades] = useState(false);
+  const catchUp = useCatchUp(user?.uid);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'global'), (docSnap) => {
@@ -148,6 +151,28 @@ export default function Dashboard() {
               </div>
             )}
           </button>
+        )}
+
+        {/* Missing work — a queue to run through, one time period after another */}
+        {catchUp.ready && catchUp.queue.length > 0 && (
+          <div className="mb-4 rounded-2xl p-5 flex items-center justify-between gap-4"
+            style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-primary)' }}>
+            <div className="min-w-0">
+              <p className="font-semibold" style={{ color: 'var(--pg-text)' }}>
+                Missing work · {catchUp.queue.length} time period{catchUp.queue.length === 1 ? '' : 's'}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--pg-dim)' }}>
+                Not handed in, or marked Poor. First up: <strong style={{ color: 'var(--pg-muted)' }}>{catchUp.queue[0].reading.title}</strong> — {owedText(catchUp.queue[0].owed)}
+              </p>
+            </div>
+            <Link
+              to={`/reading/${catchUp.queue[0].reading.id}?catchup=1`}
+              className="shrink-0 text-sm font-semibold px-4 py-2 rounded-xl transition-opacity hover:opacity-80 whitespace-nowrap"
+              style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
+            >
+              Catch up →
+            </Link>
+          </div>
         )}
 
         {/* Project Overview Links */}

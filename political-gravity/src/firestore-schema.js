@@ -36,6 +36,8 @@
  *   submittedAt:   Timestamp — set when submitted flips true
  *   updatedAt:     Timestamp
  *   Autosaved as the student works; any doc here shows as "In Progress".
+ *   submittedAt moves only when the student presses Submit (or resubmits a
+ *   justification marked Poor), which is what the missing-work queue reads.
  *
  * pg_reflections/{uid}_{readingId}               — post-seminar move + reflection
  *   uid, readingId
@@ -57,6 +59,9 @@
  *   uid, readingId
  *   justification: 'P' | 'L' | 'S' | 'Pf' | 'E' | null   (see data/rubric.js)
  *   reflection:    same
+ *   justificationAt, reflectionAt: Timestamp — when each piece was last
+ *                  marked. A piece marked 'P' is on the student's
+ *                  missing-work queue until handed in again after this.
  *   updatedAt:     Timestamp
  *
  * ── Final project (Social 30-1, "The Orbit Map") — see data/finalProject.js ──
