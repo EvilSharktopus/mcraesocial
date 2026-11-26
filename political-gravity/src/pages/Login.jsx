@@ -200,7 +200,11 @@ export default function Login() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      if (who === 'student') await signInWithCode(code, password);
+      // An email address typed into the student box is the teacher on the
+      // wrong form, not a mistyped code: sign them in rather than send them
+      // hunting for the small Teacher sign-in link.
+      if (who === 'student' && code.includes('@')) await signIn(code, password);
+      else if (who === 'student') await signInWithCode(code, password);
       else await signIn(email, password);
       navigate('/');
       // `loading` stays set on purpose: the profile lookup in AuthContext is

@@ -9,7 +9,7 @@
 // The Save button still exists because students expect one; it flushes the
 // autosave immediately and, for reflections, marks the piece as submitted.
 import { memo, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { collection, doc, getDoc, getDocFromCache, getDocs, getDocsFromCache, limit, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import NavBar from '../components/NavBar';
@@ -22,6 +22,8 @@ import { useReadings } from '../hooks/useReadings';
 import { useConsensus } from '../hooks/useConsensus';
 import { societyDrift } from '../data/drift';
 import { hasPosition, positionLabel } from '../data/readings';
+import { sharedWithClass, owedText } from '../data/catchup';
+import { useCatchUp } from '../hooks/useCatchUp';
 
 const needXAxis = (axes) => axes !== 'political';
 const needYAxis = (axes) => axes !== 'economic';
@@ -111,19 +113,6 @@ function clearDraft(key) {
 }
 const millis = (ts) => ts?.toMillis?.() ?? 0;
 
-// When the student-led flow (submit, read a classmate's point, reflect) went
-// in. Positions saved before it carry no `submitted` flag, because there was
-// nothing to submit: the teacher's Reflect switch showed the whole class's
-// dots to everyone. That work is finished and was already shared, so it
-// counts as submitted. Without this, a time period the class did before the
-// change has no dots at all, and a student catching up on it can never read
-// a point and so can never reach Reflect.
-const STUDENT_LED_SINCE_MS = Date.UTC(2026, 9, 13, 12, 46);
-const sharedWithClass = (p) => p.submitted === true
-  || (p.submitted === undefined
-      && millis(p.updatedAt) > 0 && millis(p.updatedAt) < STUDENT_LED_SINCE_MS
-      && (hasPosition(p.positionX) || hasPosition(p.positionY)));
-
 // The article, isolated behind memo so it re-renders ONLY when the HTML itself
 // changes. React re-applies dangerouslySetInnerHTML on re-render, which tears
 // out and rebuilds the text nodes — and any selection the student is holding
@@ -160,6 +149,23 @@ export default function Reading() {
   // seeded off a period nobody discussed.
   const activeReadings = useMemo(() => readings.filter(r => !r.archived), [readings]);
   const { user, isTeacher } = useAuth();
+  // Missing-work mode: reached from the dashboard's catch-up button. Only
+  // then does this page look up the student's whole record.
+  const [params] = useSearchParams();
+  const wantCatchUp = params.get('catchup') === '1';
+  const catchUp = useCatchUp(wantCatchUp ? user?.uid : null);
+  // Catch-up only reaches periods the class has got to: adding ?catchup=1 to
+  // a period the teacher has not opened yet changes nothing.
+  const catchUpHere = wantCatchUp && catchUp.ready && catchUp.due.some(r => r.id === id);
+  const owedHere = catchUpHere ? (catchUp.queue.find(q => q.reading.id === id)?.owed ?? []) : [];
+  const nextUp = catchUpHere ? (() => {
+    const ids = catchUp.due.map(r => r.id), here = ids.indexOf(id);
+    const rest = catchUp.queue.filter(q => q.reading.id !== id);
+    return rest.find(q => ids.indexOf(q.reading.id) > here) ?? rest[0] ?? null;
+  })() : null;
+  // Redoing a justification the teacher marked Poor: the one case where a
+  // submitted justification opens again.
+  const [revising, setRevising] = useState(false);
 
   const [positionX,     setPositionX]     = useState(null);
   const [positionY,     setPositionY]     = useState(null);
@@ -171,6 +177,7 @@ export default function Reading() {
   const [savedPlot,     setSavedPlot]     = useState(null);   // what they submitted first time
   const [reflectMode,   setReflectMode]   = useState(false);  // teacher-controlled
   const [classPlots,    setClassPlots]    = useState([]);     // everyone's positions
+  const [classLoaded,   setClassLoaded]   = useState(false);  // …and they have arrived
   const [reflection,    setReflection]    = useState('');
   const [hadReflection, setHadReflection] = useState(false);  // a pg_reflections doc exists
   const [reflectionSubmitted, setReflectionSubmitted] = useState(false); // …and it is not a draft
@@ -372,8 +379,11 @@ export default function Reading() {
   // hadReflection covers readings from before the submitted flag existed:
   // anyone with a reflection on file has plainly been through submit.
   const plotSubmitted = savedPlot?.submitted === true || hadReflection;
-  const discussionOpen = reflectMode;
-  const reflectPhase = discussionOpen && plotSubmitted;      // saves go to pg_reflections
+  // Catching up opens the discussion for this student on a period the class
+  // has already done, whatever the teacher's switch for it now says —
+  // otherwise old periods could never be finished.
+  const discussionOpen = reflectMode || catchUpHere;
+  const reflectPhase = discussionOpen && plotSubmitted && !revising;   // saves go to pg_reflections
   const inReflectUI  = reflectPhase && reflectStarted;        // the reflection box is up
 
   // ── Save engine ───────────────────────────────────────────────────────────
@@ -383,7 +393,7 @@ export default function Reading() {
   useEffect(() => {
     latest.current = {
       user, reading, positionX, positionY, axes, justification, reflection,
-      reflectPhase, respondingTo, hadSaved, hadReflection, savedPlot,
+      reflectPhase, respondingTo, hadSaved, hadReflection, savedPlot, revising,
       draftKey: user && reading ? draftKey(user.uid, reading.id) : null,
     };
   });
@@ -412,8 +422,11 @@ export default function Reading() {
 
       const needX = needXAxis(l.axes), needY = needYAxis(l.axes);
       // Centre is "no position" — never store it as one.
-      const px = needX && hasPosition(l.positionX) ? l.positionX : null;
-      const py = needY && hasPosition(l.positionY) ? l.positionY : null;
+      // While a justification is being redone only its words change. The
+      // marker on screen may be where a reflection moved it to, so the
+      // original placement is taken from the saved copy, not the screen.
+      const px = l.revising ? (l.savedPlot?.positionX ?? null) : needX && hasPosition(l.positionX) ? l.positionX : null;
+      const py = l.revising ? (l.savedPlot?.positionY ?? null) : needY && hasPosition(l.positionY) ? l.positionY : null;
 
       try {
         if (l.reflectPhase) {
@@ -441,7 +454,7 @@ export default function Reading() {
           };
           // A draft becomes a submission only when the student says so; an
           // autosave never flips it either way.
-          if (submit) data.draft = false;
+          if (submit) { data.draft = false; data.submittedAt = serverTimestamp(); }
           else if (!l.hadReflection) data.draft = true;
           await setDoc(doc(db, 'pg_reflections', `${l.user.uid}_${l.reading.id}`), data, { merge: true });
           setHadReflection(true);
@@ -611,18 +624,18 @@ export default function Reading() {
   // RENDERED after this student has submitted (see reflectPhase), so nobody
   // gets anchored by the spread before committing their own read.
   useEffect(() => {
-    if (!reflectMode || !id) return;
+    if (!discussionOpen || !id) return;
     const unsub = onSnapshot(
       query(collection(db, 'plots'), where('readingId', '==', id)),
-      snap => setClassPlots(snap.docs.map(d => d.data())),
+      snap => { setClassPlots(snap.docs.map(d => d.data())); setClassLoaded(true); },
       err => console.error('Could not load class positions', err));
     return () => unsub();
-  }, [reflectMode, id]);
+  }, [discussionOpen, id]);
 
   // Restore a reflection already written for this reading — text and, if they
   // moved, the marker where they moved it to (not back at the original).
   useEffect(() => {
-    if (!uid || !readingId || !reflectMode) return;
+    if (!uid || !readingId || !discussionOpen) return;
     let cancelled = false;
     const key = draftKey(uid, readingId);
     (async () => {
@@ -659,7 +672,7 @@ export default function Reading() {
       else if (draft) clearDraft(key);
     })();
     return () => { cancelled = true; };
-  }, [uid, readingId, reflectMode, applyDraft, loadAttempt]);
+  }, [uid, readingId, discussionOpen, applyDraft, loadAttempt]);
 
   // The "restored" notice only needs a moment.
   useEffect(() => {
@@ -702,6 +715,7 @@ export default function Reading() {
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2500);
     }
+    return ok;
   }
 
   // The student read a classmate's point — remember it so Reflect can go live
@@ -709,13 +723,15 @@ export default function Reading() {
   const viewDot = (d) => { setOpenDot(d); setViewedDot(d); };
   const startReflection = (dot) => {
     const d = dot ?? viewedDot;
-    if (!d) return;
-    setRespondingTo({
+    // No point to answer is only possible when catching up on a period with
+    // nobody else's work in it; the reflection then stands on its own.
+    if (!d && !canReflectAlone) return;
+    setRespondingTo(d ? {
       uid: d.uid ?? null,
       axis: d.axis,
       position: d.value,
       label: positionLabel(d.value),
-    });
+    } : null);
     setReflectStarted(true);
     setOpenDot(null);
   };
@@ -767,6 +783,11 @@ export default function Reading() {
   const classDotsY = submittedPlots
     .filter(p => typeof p.positionY === 'number')
     .map(p => ({ value: p.positionY, label: 'Classmate — tap to read why', uid: p.uid, axis: 'political', justification: p.justification || '' }));
+  // Catching up on a period where no classmate has shared anything: there is
+  // no point to read, so reading one cannot be the price of reflecting. Only
+  // once the class's positions have actually arrived, and only in catch-up —
+  // in class the first student to submit waits for the others.
+  const canReflectAlone = catchUpHere && classLoaded && classDotsX.length + classDotsY.length === 0;
 
   // During a live seminar a student moving their point is autosaved as soon
   // as they stop dragging, so the class board updates without a click.
@@ -807,9 +828,53 @@ export default function Reading() {
     : reflectPhase ? 'Class discussion'
     : 'Justify your position';
 
+  // Redo is offered only where there is a submitted justification to redo.
+  const canRevise = owedHere.some(o => o.piece === 'justification' && o.why === 'poor') && plotSubmitted && !revising;
+
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--pg-bg)' }}>
       <NavBar backTo="/dashboard" backLabel="Dashboard" />
+
+      {/* Missing-work mode: what is owed here, and the way to the next one. */}
+      {catchUpHere && (
+        <div className="shrink-0 px-5 py-2 flex items-center justify-between gap-3 flex-wrap text-sm"
+          style={{ backgroundColor: 'var(--pg-surface2)', borderBottom: '1px solid var(--pg-border)', color: 'var(--pg-text)' }}>
+          <span className="min-w-0">
+            <strong>Missing work</strong>
+            <span style={{ color: 'var(--pg-muted)' }}>
+              {' · '}{owedHere.length
+                ? <>still owed here: {owedText(owedHere)}</>
+                : <span style={{ color: '#22c55e' }}>✓ nothing owed on this time period</span>}
+            </span>
+          </span>
+          <span className="flex items-center gap-2 shrink-0">
+            {canRevise && (
+              <button onClick={() => setRevising(true)} className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-primary)', color: 'var(--pg-text)' }}>
+                ✎ Rewrite my justification
+              </button>
+            )}
+            {revising && (
+              <button onClick={() => { setJustification(savedPlot?.justification || ''); setRevising(false); }} className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                style={{ backgroundColor: 'var(--pg-surface)', border: '1px solid var(--pg-border)', color: 'var(--pg-muted)' }}>
+                Cancel rewrite
+              </button>
+            )}
+            <span className="text-xs" style={{ color: 'var(--pg-dim)' }}>
+              {catchUp.queue.length} time period{catchUp.queue.length === 1 ? '' : 's'} left
+            </span>
+            {nextUp
+              ? <Link to={`/reading/${nextUp.reading.id}?catchup=1`} className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                  Next: {nextUp.reading.title} →
+                </Link>
+              : <Link to="/dashboard" className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                  style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}>
+                  {owedHere.length ? 'Back to dashboard' : '✓ All caught up — dashboard'}
+                </Link>}
+          </span>
+        </div>
+      )}
 
       {selection && !extractorOpen && (
         <button
@@ -911,10 +976,12 @@ export default function Reading() {
             onClick={e => e.stopPropagation()}
           >
             <h2 className="font-display font-bold text-base mb-2" style={{ color: 'var(--pg-text)' }}>
-              Submit your position?
+              {revising ? 'Resubmit your justification?' : 'Submit your position?'}
             </h2>
             <p className="text-sm mb-4" style={{ color: 'var(--pg-muted)', lineHeight: '1.6' }}>
-              This is final — you won't be able to edit your position or justification afterwards.
+              {revising
+                ? 'This replaces the justification your teacher marked. '
+                : ''}This is final — you won't be able to edit your position or justification afterwards.
               You'll then see where the rest of the class landed, and your justification becomes
               readable (without your name) by classmates.
             </p>
@@ -927,7 +994,7 @@ export default function Reading() {
                 Keep editing
               </button>
               <button
-                onClick={() => { setConfirmSubmit(false); handleSaveClick({ submit: true }); }}
+                onClick={() => { setConfirmSubmit(false); handleSaveClick({ submit: true }).then(ok => { if (ok) setRevising(false); }); }}
                 className="flex-1 font-semibold py-2.5 rounded-xl transition-opacity hover:opacity-90"
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
               >
@@ -1010,7 +1077,7 @@ export default function Reading() {
                   <Spectrum
                     value={positionX ?? 0}
                     onChange={changeX}
-                    disabled={formLocked || (reflectPhase && !inReflectUI)}
+                    disabled={formLocked || revising || (reflectPhase && !inReflectUI)}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectPhase ? classDotsX : []}
                     onDotClick={reflectPhase ? viewDot : null}
@@ -1033,7 +1100,7 @@ export default function Reading() {
                   <Spectrum
                     value={positionY ?? 0}
                     onChange={changeY}
-                    disabled={formLocked || (reflectPhase && !inReflectUI)}
+                    disabled={formLocked || revising || (reflectPhase && !inReflectUI)}
                     leftLabel={null} rightLabel={null} sublabels={[]}
                     classDots={reflectPhase ? classDotsY : []}
                     onDotClick={reflectPhase ? viewDot : null}
@@ -1273,6 +1340,8 @@ export default function Reading() {
                 <p className="text-xs" style={{ color: 'var(--pg-dim)' }}>
                   {viewedDot
                     ? 'Read a few more, or press Reflect when you’re ready.'
+                    : canReflectAlone
+                    ? 'Nobody else has shared a point for this time period, so there is none to read. Press Reflect and reflect on your own position.'
                     : 'Tap a classmate’s dot on the spectrum above to read their justification. Reflect unlocks after you’ve read one.'}
                 </p>
               </div>
@@ -1336,7 +1405,7 @@ export default function Reading() {
             ) : reflectPhase ? (
               <button
                 onClick={() => startReflection()}
-                disabled={!viewedDot}
+                disabled={!viewedDot && !canReflectAlone}
                 className="w-full font-semibold py-3 rounded-xl transition-opacity disabled:opacity-35"
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
                 title={viewedDot ? 'Write your reaction to the point you just read' : 'Read a classmate’s justification first'}
@@ -1351,7 +1420,7 @@ export default function Reading() {
                 style={{ backgroundColor: 'var(--pg-primary)', color: 'var(--pg-on-primary)' }}
                 title="Hands your position and justification in — final — and shows you the rest of the class"
               >
-                {justSaved ? '✓ Submitted!' : 'Submit Position'}
+                {justSaved ? '✓ Submitted!' : revising ? 'Resubmit Justification' : 'Submit Position'}
               </button>
             ) : (
               <button
